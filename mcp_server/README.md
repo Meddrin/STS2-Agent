@@ -1,73 +1,73 @@
 # STS2 MCP Server
 
-普通玩家一起玩：**不要装本目录**。游戏内 F8 → 自动打 / 邀请队友即可。
+To play with others as an ordinary player: **do not install this directory**. In game, press F8 -> auto-play / invite a teammate.
 
-外部客户端（Cursor / Claude / Codex）：游戏内 **接入** 页打开 **原生 MCP**，复制页面上的实际地址（与 HTTP API 同一端口，不一定是 8080，更不是 8765）。不需要 Python / uv。
+External clients (Cursor / Claude / Codex): open **Native MCP** on the in-game **Connect** page and copy the actual address shown on the page (the same port as the HTTP API, not necessarily 8080, and certainly not 8765). No Python / uv needed.
 
-`mcp_server/` 是可选 Python FastMCP sidecar，给开发者做 **stdio**、**layered/full** profile 和契约测试。它把 Mod 的 HTTP API 再包一层。
+`mcp_server/` is an optional Python FastMCP sidecar, giving developers **stdio**, the **layered/full** profiles, and contract tests. It wraps the Mod's HTTP API one more layer.
 
-从仓库或 GitHub 发布包根目录运行 sidecar：`scripts/start-mcp-stdio.ps1`（stdio）或
-`scripts/start-mcp-network.ps1`（HTTP）。发布包还带 `scripts/test-mcp-tool-profile.ps1`，
-用于不连接游戏地检查 profile 工具表面。
+Run the sidecar from the repository or the GitHub release package root: `scripts/start-mcp-stdio.ps1` (stdio) or
+`scripts/start-mcp-network.ps1` (HTTP). The release package also carries `scripts/test-mcp-tool-profile.ps1`,
+for checking the profile tool surface without connecting to the game.
 
 ## Tool Profile
 
-`STS2_MCP_TOOL_PROFILE`（或在代码里 `create_server(tool_profile=...)`）选档：
+`STS2_MCP_TOOL_PROFILE` (or `create_server(tool_profile=...)` in code) selects the profile:
 
-- `guided` — 默认 profile，17 个工具：`health_check`、`get_game_state`、`get_raw_game_state`、
-  `get_available_actions`、`get_decision_log`、`get_run_summary`、`get_scene_guidance`、`diff_state`、
-  `get_game_data_item`、`get_game_data_items`、`get_relevant_game_data`、`wait_for_event`、
-  `wait_until_actionable`、`decide`、`act`、`get_planner_briefing`、`update_play_strategy`。用途见下方「当前工具」表；
-  实时清单以 `scripts/test-mcp-tool-profile.ps1` 的 `ESSENTIAL_TOOLS` 为准
-- `layered` — 面向主 / 副 Agent 分层编排，在 guided 基础上额外暴露 8 个 handoff / knowledge 工具：
-  `get_planner_context`、`create_planner_handoff`、`get_combat_context`、`create_combat_handoff`、
-  `complete_combat_handoff`、`append_combat_knowledge`、`append_event_knowledge`、`complete_event_handoff`
-- `full` — 包含 layered 工具，另外继续暴露 legacy per-action tools，适合验证和兼容性测试
+- `guided`: the default profile, 17 tools: `health_check`, `get_game_state`, `get_raw_game_state`,
+  `get_available_actions`, `get_decision_log`, `get_run_summary`, `get_scene_guidance`, `diff_state`,
+  `get_game_data_item`, `get_game_data_items`, `get_relevant_game_data`, `wait_for_event`,
+  `wait_until_actionable`, `decide`, `act`, `get_planner_briefing`, `update_play_strategy`. For their purposes see the "Current Tools" table below;
+  the live list is whatever `ESSENTIAL_TOOLS` in `scripts/test-mcp-tool-profile.ps1` says
+- `layered`: for layered orchestration of a primary / secondary Agent, exposing 8 additional handoff / knowledge tools on top of guided:
+  `get_planner_context`, `create_planner_handoff`, `get_combat_context`, `create_combat_handoff`,
+  `complete_combat_handoff`, `append_combat_knowledge`, `append_event_knowledge`, `complete_event_handoff`
+- `full`: includes the layered tools and continues to expose the legacy per-action tools, suitable for validation and compatibility testing
 
-## 当前工具
+## Current Tools
 
-下表是 guided 的 17 个工具与一句话用途。**每个工具的逐参数契约不在本文件复述**：以
-[src/sts2_mcp/server.py](src/sts2_mcp/server.py) 里它自己的 docstring 与 input schema 为准，那里改了这里不会漂。
+The table below lists the 17 guided tools with a one-line purpose each. **The per-parameter contract of each tool is not repeated in this file**: go by
+each tool's own docstring and input schema in [src/sts2_mcp/server.py](src/sts2_mcp/server.py); a change made there cannot drift from here.
 
-| 工具 | 用途 |
+| Tool | Purpose |
 |------|------|
-| `health_check` | Mod 是否加载且可达 |
-| `get_game_state` | compact `agent_view` 状态；`compact_agent_view: false` 表示回退成完整载荷 |
-| `get_raw_game_state` | 完整原始 `/state`，查 compact 没有的字段时用 |
-| `get_available_actions` | 当前可用动作及其 `requires_index` / `requires_target` / 目标提示 |
-| `get_decision_log` | 最近被接受的决策及其理由，最新在最后 |
-| `get_run_summary` | 角色、楼层、Act、Boss、HP、金币、能量与牌库 / 遗物 / 药水计数（联机含队伍块） |
-| `get_scene_guidance` | 当前屏的策略与 playbook，返回 `screen` / `scene` / `guidance` / `playbook` |
-| `diff_state` | 两份 `/state` 的逐路径差异（前后值），`truncated` 标明触顶 |
-| `get_game_data_item` | 按 id 查单个游戏元数据条目 |
-| `get_game_data_items` | 按逗号分隔的 id 批量查游戏元数据 |
-| `get_relevant_game_data` | 按当前场景自动裁剪字段的相关元数据（默认用它） |
-| `wait_for_event` | 等一条匹配的 `/events/stream` 事件 |
-| `wait_until_actionable` | 等到重新可操作，返回 `matched`（有事件命中）与 `actionable` |
-| `decide` | 一次调用给出 `state` + `available_actions` + `scene_guidance`，即一次决策要读的全部内容 |
-| `act` | 统一动作入口（动作名 + 参数，附 `reason`）；返回动作之后的 compact `state` |
-| `get_planner_briefing` | 双层模式的规划简报：当前策略、双层 / Jev 开关、本局摘要、Jev 最近选择与置信度趋势（转发 `GET /strategy`） |
-| `update_play_strategy` | 更新 Jev 遵循的策略：`goal`（一句宏观目标）/ `posture` / `instructions` / 按动作类别的 `option_hints`；省略的字段保留原值 |
+| `health_check` | Whether the Mod is loaded and reachable |
+| `get_game_state` | Compact `agent_view` state; `compact_agent_view: false` means falling back to the full payload |
+| `get_raw_game_state` | The full raw `/state`, for looking up fields the compact view lacks |
+| `get_available_actions` | Currently available actions and their `requires_index` / `requires_target` / target hints |
+| `get_decision_log` | The most recently accepted decisions and their reasons, newest last |
+| `get_run_summary` | Character, floor, Act, boss, HP, gold, energy, and deck / relic / potion counts (with a team block in multiplayer) |
+| `get_scene_guidance` | The current screen's strategy and playbook, returning `screen` / `scene` / `guidance` / `playbook` |
+| `diff_state` | The per-path difference (before/after values) of two `/state` snapshots, with `truncated` marking a hit on the cap |
+| `get_game_data_item` | Look up a single game metadata entry by id |
+| `get_game_data_items` | Look up game metadata in batch by comma-separated ids |
+| `get_relevant_game_data` | Relevant metadata with fields trimmed automatically for the current scene (use this by default) |
+| `wait_for_event` | Wait for one matching `/events/stream` event |
+| `wait_until_actionable` | Wait until actionable again, returning `matched` (an event hit) and `actionable` |
+| `decide` | One call gives `state` + `available_actions` + `scene_guidance`, i.e. everything one decision needs to read |
+| `act` | The unified action entry point (action name + parameters, with `reason` attached); returns the compact `state` after the action |
+| `get_planner_briefing` | The planning briefing for dual-layer mode: the current strategy, the dual-layer / Jev switches, the run summary, and Jev's recent choices and confidence trend (forwards `GET /strategy`) |
+| `update_play_strategy` | Update the strategy Jev follows: `goal` (a one-sentence macro goal) / `posture` / `instructions` / `option_hints` per action category; omitted fields keep their values |
 
-layered / full 的额外工具见上文「Tool Profile」；legacy per-action tools 见下方区块。
+For the extra tools of layered / full see "Tool Profile" above; for the legacy per-action tools see the block below.
 
-`get_game_data_item`、`get_game_data_items`、`get_relevant_game_data` 读取的元数据全部来自运行中的 Mod（`GET /data/{collection}`），包内不再附带任何游戏数据快照。
+The metadata read by `get_game_data_item`, `get_game_data_items`, and `get_relevant_game_data` all comes from the running Mod (`GET /data/{collection}`), and the package no longer carries any game data snapshot.
 
-`get_scene_guidance` 与 `decide` 里的策略正文与游戏内循环注入的是同一份 `skills/sts2-mcp-player/references/strategy.md`（外加同一份 `screen-playbooks.md`），两侧的「屏 → 章节」映射与共享键由 `tests/test_scene_guidance_alignment.py` 逐条比对（C# 为准）；`EVENT` 屏的逐选项 `event_id` / `event_options` 只有 sidecar 有，原生 MCP 面只回四个共享键。
+The strategy text in `get_scene_guidance` and `decide` is the same `skills/sts2-mcp-player/references/strategy.md` that the in-game loop injects (plus the same `screen-playbooks.md`), and the "screen -> section" mapping and the shared keys on both sides are compared item by item by `tests/test_scene_guidance_alignment.py` (C# is authoritative); the per-option `event_id` / `event_options` of the `EVENT` screen exist only in the sidecar, and the native MCP surface returns only the four shared keys.
 
 <!-- BEGIN LEGACY ACTION TOOLS -->
 <!-- The bullets below are the full profile's per-action tools. They are bound to
      _LEGACY_ACTION_TOOLS in src/sts2_mcp/server.py by tests/test_legacy_action_coverage.py,
      so adding or removing a legacy tool without updating both sides fails the MCP tests. -->
 
-战斗：
+Combat:
 
 - `play_card`
 - `end_turn`
 - `use_potion`
 - `discard_potion`
 
-房间 / 流程推进：
+Rooms / flow advancement:
 
 - `continue_run`
 - `continue_game_over`
@@ -103,7 +103,7 @@ layered / full 的额外工具见上文「Tool Profile」；legacy per-action to
 - `remove_card_at_shop`
 - `return_to_main_menu`
 
-多人 / 组队：
+Multiplayer / teaming:
 
 - `host_multiplayer_lobby`
 - `join_multiplayer_lobby`
@@ -112,81 +112,81 @@ layered / full 的额外工具见上文「Tool Profile」；legacy per-action to
 - `invite_ai_teammate`
 - `continue_ai_teammate`
 
-奖励 / 选牌：
+Rewards / card selection:
 
 - `claim_reward`
 - `choose_reward_card`
 - `skip_reward_cards`
 - `collect_rewards_and_proceed`
 - `resolve_rewards`
-  - 可省略 `option_index`（默认取第一张奖励牌），也可改用向后兼容的 `card_index` 别名
+  - `option_index` can be omitted (defaults to the first reward card), or the backward-compatible `card_index` alias can be used instead
 - `select_deck_card`
 - `confirm_selection`
 - `choose_capstone_option`
 - `choose_bundle`
 - `confirm_bundle`
 
-Modal：
+Modal:
 
 - `confirm_modal`
 - `dismiss_modal`
 <!-- END LEGACY ACTION TOOLS -->
 
-开发期调试（不受 profile 影响，只在 `STS2_ENABLE_DEBUG_ACTIONS=1` 时注册，默认关闭）：
+Development-time debugging (not affected by the profile, registered only when `STS2_ENABLE_DEBUG_ACTIONS=1`, off by default):
 
-- `run_console_command` — 跑一条游戏 dev-console 命令，只用于开发和验证
-- `inject_event_churn` — 发 `option_index` 条 `debug_churn` 合成事件，把 `/events/stream` 慢订阅者的队列顶满，
-  验证「满队列关闭该订阅者」而不是静默丢事件；`option_index` 必须大于单订阅者队列容量（256），否则 Mod 返回 400 `invalid_request`
+- `run_console_command`: runs one game dev-console command, for development and validation only
+- `inject_event_churn`: emits `option_index` synthetic `debug_churn` events to fill the queue of a slow `/events/stream` subscriber,
+  to verify "a full queue closes that subscriber" rather than silently dropping events; `option_index` must be greater than the single-subscriber queue capacity (256), otherwise the Mod returns 400 `invalid_request`
 
-参数细节见两者各自的 docstring。
+For parameter details see the docstring of each.
 
-## 使用要点
+## Usage Notes
 
-这个 MCP 已经不算小，所以真正影响稳定性的，不只是“工具有没有”，还包括“模型是不是按正确节奏调用”：
+This MCP is no longer small, so what really affects stability is not only "whether the tools exist" but also "whether the model calls them at the right rhythm":
 
-1. 会话开始先调 `health_check`。
-2. 每次决策前读一次状态：`decide`（一次拿到状态、动作与指引）或 `get_game_state`。
-3. 只调用当前 `available_actions` 里出现的动作；`act` 附一条简短的 `reason`，供玩家界面与决策日志解释本步选择。
-4. `act` 返回的 `state` 就是下一个决策的输入，不必再读一次；只有 `pending` / 屏幕变化时才重读，要完整载荷才传 `raw_state=True`（一次约 4,000–9,500 token）。
-5. `wait_until_actionable` 的 `state` 与 `act` / `get_game_state` 同形（compact），同样支持 `raw_state=True`：跨动画等待不需要完整载荷。
-6. 索引被拒时错误对象带 `field` / `submitted` / `valid_indices` / `valid_field`：按它改正索引，而不是重发同一个值。
-7. 优先用高层动作，不要把可合并流程拆碎（优先级见下）。
+1. Call `health_check` first at the start of a session.
+2. Read the state once before each decision: `decide` (gets the state, actions, and guidance in one go) or `get_game_state`.
+3. Call only actions that appear in the current `available_actions`; attach a short `reason` to `act`, so the player UI and the decision log can explain this step's choice.
+4. The `state` returned by `act` is the input of the next decision and need not be read again; reread only on `pending` / a screen change, and pass `raw_state=True` only when the full payload is needed (about 4,000-9,500 tokens each time).
+5. The `state` of `wait_until_actionable` has the same shape as `act` / `get_game_state` (compact) and likewise supports `raw_state=True`: waiting across an animation does not need the full payload.
+6. When an index is rejected the error object carries `field` / `submitted` / `valid_indices` / `valid_field`: correct the index accordingly instead of resending the same value.
+7. Prefer high-level actions, and do not break up flows that can be combined (priorities below).
 
-**`outcome_unknown`（动作响应丢失）**：`status` 为 `outcome_unknown` 时，动作可能已经执行，只是响应没回来。
-客户端只做**一次** `/state` 对齐，读到的状态放在 `reconciliation.state`（compact，带 `compact_agent_view` 标记）；
-`reconciliation.state_read` / `action_effect_compared`（恒为 `false`）/ `action_outcome`（恒为 `"unknown"`）说明
-「读了状态、但没有把动作效果与它比对」，`succeeded` / `status` 描述的是那次读取而不是动作本身。
-**绝不要自动重放该动作**：先看对齐到的状态，再决定下一步。
+**`outcome_unknown` (the action response was lost)**: when `status` is `outcome_unknown`, the action may already have executed, and only the response did not come back.
+The client does **one** `/state` reconciliation only, and puts the state it read in `reconciliation.state` (compact, with the `compact_agent_view` marker);
+`reconciliation.state_read` / `action_effect_compared` (always `false`) / `action_outcome` (always `"unknown"`) say
+"the state was read, but the action's effect was not compared against it", and `succeeded` / `status` describe that read rather than the action itself.
+**Never replay the action automatically**: look at the reconciled state first, then decide the next step.
 
-`get_game_state` 默认回 compact `agent_view`；Mod 未暴露 `agent_view` 时回退完整 `/state` 并带 `compact_agent_view: false`，那是降级信号而不是常规契约。compact 里一批键改过名（商店打开标志在 compact 里是 `shop.open`，raw state 里是 `shop.is_open`），读 compact 前先看 `docs/api.md` 的「compact 的字段改名对照表」。
+`get_game_state` returns the compact `agent_view` by default; when the Mod does not expose `agent_view` it falls back to the full `/state` with `compact_agent_view: false`, which is a degradation signal and not the regular contract. A batch of keys is renamed in compact (the shop-open flag is `shop.open` in compact and `shop.is_open` in raw state); before reading compact, see the section `compact field rename table` ("compact field rename table") of `docs/api.md`.
 
-`guided` / `layered` 用统一 `act` 时，水晶球动作额外接受 `x`、`y`、`tool`：`crystal_clear_cell` 必须传坐标（可同时传 `tool="big"|"small"`），`crystal_set_tool` 只传 `tool`；完整棋盘来自 `get_game_state().crystal_sphere`。
+When `guided` / `layered` use the unified `act`, crystal sphere actions additionally accept `x`, `y`, and `tool`: `crystal_clear_cell` must pass coordinates (and may also pass `tool="big"|"small"`), and `crystal_set_tool` passes only `tool`; the full board comes from `get_game_state().crystal_sphere`.
 
-高层动作优先级：奖励房 `collect_rewards_and_proceed`；休息点 `choose_rest_option`；商店先 `open_shop_inventory`、离开内层库存先 `close_shop_inventory`；宝箱 `open_chest -> choose_treasure_relic -> proceed`；`MODAL` 优先 `confirm_modal` / `dismiss_modal`。
+High-level action priority: reward room `collect_rewards_and_proceed`; rest site `choose_rest_option`; in the shop first `open_shop_inventory`, and to leave the inner inventory first `close_shop_inventory`; chest `open_chest -> choose_treasure_relic -> proceed`; for `MODAL` prefer `confirm_modal` / `dismiss_modal`.
 
-## 推荐配套 Skill
+## Recommended Companion Skill
 
-用外部 AI Agent 经 MCP 操作本 Mod 时，请同时加载 [sts2-mcp-player](../skills/sts2-mcp-player/SKILL.md)：游戏内自动游玩就是按这份合同决策的。只接 MCP 工具、不加载 skill 的客户端也能点合法动作，但达不到游戏内自动游玩的效果。
+When operating this Mod through MCP with an external AI Agent, also load [sts2-mcp-player](../skills/sts2-mcp-player/SKILL.md): the in-game auto-play decides according to this contract. A client that connects only the MCP tools without loading the skill can also click legal actions, but will not reach the effect of in-game auto-play.
 
-## 费用字段说明
+## Cost Fields
 
-卡牌 payload 同时暴露 `costs_x` / `star_costs_x`（是否 X 费卡）与 `energy_cost` / `star_cost`（当前消耗，含战斗中的临时修正），因为 STS2 里这两类费用会被动态改写：能量费如 `Bullet Time`，星星费 / 星星 X 费如 `Stardust`。按静态费用表判断会误判。
+The card payload exposes both `costs_x` / `star_costs_x` (whether it is an X-cost card) and `energy_cost` / `star_cost` (the current cost, including temporary in-combat modifiers), because in STS2 these two kinds of cost are rewritten dynamically: energy costs such as `Bullet Time`, and star costs / star X costs such as `Stardust`. Judging by a static cost table would misjudge.
 
-## 环境变量
+## Environment Variables
 
-| 变量 | 默认 | 作用 |
+| Variable | Default | Effect |
 |------|------|------|
-| `STS2_API_BASE_URL` | `http://127.0.0.1:8080` | Mod API 地址 |
-| `STS2_AGENT_REPO_ROOT` | 自动探测（从 `sts2_mcp` 包位置向上找含 `mcp_server/pyproject.toml` 的目录） | 定位仓库根与 `reference_files` 的 `docs/game-knowledge/*.md`；wheel / pipx 安装态探测不到时返回空列表而不是猜路径 |
-| `STS2_AGENT_KNOWLEDGE_DIR` | 仓库根下的 `agent_knowledge/`；不在检出内时回退当前工作目录并打 WARNING | 保存 combat / event 的运行时知识文件（不写进 Python 安装目录） |
-| `STS2_API_READ_TIMEOUT` | `10`（秒） | `GET` 请求与状态对账的读取超时 |
-| `STS2_API_ACTION_TIMEOUT` | `75`（秒） | `POST /action` 的读取超时；动作要等游戏稳定后才返回（`continue_game_over` 最多等 60 秒），必须明显长于读取超时 |
-| `STS2_API_MAX_RETRIES` | `2` | 可重试读取类请求的重试次数；动作请求从不自动重放 |
-| `STS2_ENABLE_DEBUG_ACTIONS` | 未设置 / `0` | 启用开发期 debug 工具（`run_console_command`、`inject_event_churn`）；发布建议保持关闭 |
+| `STS2_API_BASE_URL` | `http://127.0.0.1:8080` | Mod API address |
+| `STS2_AGENT_REPO_ROOT` | Auto-detected (searching upward from the `sts2_mcp` package location for a directory containing `mcp_server/pyproject.toml`) | Locates the repository root and the `docs/game-knowledge/*.md` of `reference_files`; when it cannot be detected in a wheel / pipx install it returns an empty list instead of guessing a path |
+| `STS2_AGENT_KNOWLEDGE_DIR` | `agent_knowledge/` under the repository root; when not inside a checkout it falls back to the current working directory and logs a WARNING | Where the combat / event runtime knowledge files are saved (not written into the Python install directory) |
+| `STS2_API_READ_TIMEOUT` | `10` (seconds) | Read timeout for `GET` requests and state reconciliation |
+| `STS2_API_ACTION_TIMEOUT` | `75` (seconds) | Read timeout for `POST /action`; an action returns only after the game stabilizes (`continue_game_over` waits up to 60 seconds), so it must be clearly longer than the read timeout |
+| `STS2_API_MAX_RETRIES` | `2` | Retry count for retryable read-type requests; action requests are never replayed automatically |
+| `STS2_ENABLE_DEBUG_ACTIONS` | Unset / `0` | Enables the development-time debug tools (`run_console_command`, `inject_event_churn`); keeping it off is recommended for release |
 
-## 运行时知识库
+## Runtime Knowledge Base
 
-`layered` / `full` profile 会按稳定 id 自动维护一个简单知识库：
+The `layered` / `full` profiles automatically maintain a simple knowledge base keyed by stable id:
 
 ```text
 agent_knowledge/
@@ -195,21 +195,21 @@ agent_knowledge/
   events/global/cleric.md
 ```
 
-- 战斗文件按 `enemy_id_xcount` 聚合并排序，不依赖本地化名字；事件文件按 `event_id` 命名
-- 还没有 chapter 字段时目录先落在 `global/`；追加内容自动带上 `run_id`、`floor`、`screen`、UTC 时间戳
-- 不在仓库检出内时（wheel / pipx 安装态）不再猜路径：知识库落到当前工作目录的 `agent_knowledge/`，可用 `STS2_AGENT_KNOWLEDGE_DIR` 固定
+- Combat files are aggregated and sorted by `enemy_id_xcount` and do not depend on localized names; event files are named by `event_id`
+- When there is no chapter field yet the directory lands in `global/` first; appended content automatically carries `run_id`, `floor`, `screen`, and a UTC timestamp
+- When not inside a repository checkout (a wheel / pipx install) paths are no longer guessed: the knowledge base lands in `agent_knowledge/` of the current working directory, which can be pinned with `STS2_AGENT_KNOWLEDGE_DIR`
 
-`get_planner_context` / `get_combat_context` 返回的 `reference_files` 是离线知识库的入口，键就是状态里对应的 id 字段（映射见 `docs/game-knowledge/agent-reference.md`）：`cards`（`card_id`）、`monsters` / `monster_behaviors`（`enemy_id`）、`potions`（`potion_id`）、`events`（`event_id`）、`relics`（`relic_id`）、`powers`（`power_id`）、`characters`、`playbook`。
+The `reference_files` returned by `get_planner_context` / `get_combat_context` are the entry point of the offline knowledge base, and the keys are the corresponding id fields in the state (mapping in `docs/game-knowledge/agent-reference.md`): `cards` (`card_id`), `monsters` / `monster_behaviors` (`enemy_id`), `potions` (`potion_id`), `events` (`event_id`), `relics` (`relic_id`), `powers` (`power_id`), `characters`, `playbook`.
 
-## 主 / 副 Agent 交接
+## Primary / Secondary Agent Handoff
 
-主 Agent 负责路线和房间决策、副 Agent 专管战斗时，推荐这样接：
+When the primary Agent handles route and room decisions and the secondary Agent handles combat alone, the recommended connection is:
 
-1. 主 Agent 每次非战斗决策前调 `create_planner_handoff`；`screen=COMBAT` 时改调 `create_combat_handoff`，把返回包整体交给战斗 Agent。
-2. 战斗 Agent 战斗结束后调 `complete_combat_handoff`，主 Agent 把 `planner_summary` 当作上一场战斗的压缩记忆，再继续下一次 `create_planner_handoff`。
-3. 事件同理：按 `create_planner_handoff` 里的 `event` 和 `event_knowledge` 决策，结算后调 `complete_event_handoff` 写回结果。
+1. The primary Agent calls `create_planner_handoff` before each non-combat decision; when `screen=COMBAT` it calls `create_combat_handoff` instead and hands the returned package to the combat Agent as a whole.
+2. After combat ends the combat Agent calls `complete_combat_handoff`, and the primary Agent treats `planner_summary` as the compressed memory of the previous combat, then continues with the next `create_planner_handoff`.
+3. Events work the same way: decide according to the `event` and `event_knowledge` in `create_planner_handoff`, and after settlement call `complete_event_handoff` to write the result back.
 
-## 本地启动
+## Local Start
 
 ```powershell
 cd "<repo-root>/mcp_server"
@@ -217,11 +217,11 @@ uv sync
 uv run sts2-mcp-server
 ```
 
-默认通过 `stdio` 运行，适合直接接入 MCP 客户端。
+It runs over `stdio` by default, suited for connecting directly to an MCP client.
 
-## 本地验证与发布前检查
+## Local Validation and Pre-Release Checks
 
-单元测试与导入自检（标准库 unittest，不需要游戏；CI 执行的就是同一条命令）：
+Unit tests and import self-check (standard-library unittest, no game needed; CI runs the same command):
 
 ```powershell
 cd "<repo-root>/mcp_server"
@@ -229,22 +229,22 @@ uv run --locked python -m unittest discover -s tests -v
 uv run python -c "from sts2_mcp.server import create_server; create_server(); print('MCP_IMPORT_OK')"
 ```
 
-Mod 在线时读一次状态，验证 HTTP 通路：
+Read the state once while the Mod is online, to verify the HTTP path:
 
 ```powershell
 cd "<repo-root>/mcp_server"
 uv run python -c "from sts2_mcp.client import Sts2Client; import json; print(json.dumps(Sts2Client().get_state(), ensure_ascii=False, indent=2))"
 ```
 
-发布前：
+Before release:
 
 ```powershell
 dotnet build "<repo-root>/STS2AIAgent/STS2AIAgent.csproj" -c Release
 python -m py_compile "<repo-root>/mcp_server/src/sts2_mcp/client.py" "<repo-root>/mcp_server/src/sts2_mcp/server.py"
 ```
 
-源码仓库还能跑实机脚本：`scripts/start-game-session.ps1 -EnableDebugActions` 启动游戏，
-`scripts/test-debug-console-gating.ps1`（加 `-EnableDebugActions` 跑开启态）验证 debug 工具门控。
-发布包只带 sidecar 的启动 / profile 检查脚本，不要在发布包里找这些实机脚本。
+Live scripts can also be run from the source repository: `scripts/start-game-session.ps1 -EnableDebugActions` launches the game, and
+`scripts/test-debug-console-gating.ps1` (add `-EnableDebugActions` to run the enabled state) verifies the debug tool gating.
+The release package carries only the sidecar's launch / profile check scripts; do not look in the release package for these live scripts.
 
-发布流程入口见 [release-readiness.md](../docs/release-readiness.md)；当前版本、验收证据与剩余缺口见 [当前状态页](https://github.com/CharTyr/STS2-Agent/blob/main/PRODUCT_PLAN_CURRENT.md)。
+For the release process entry see [release-readiness.md](../docs/release-readiness.md); for the current version, acceptance evidence, and remaining gaps see the [current status page](https://github.com/CharTyr/STS2-Agent/blob/main/PRODUCT_PLAN_CURRENT.md).

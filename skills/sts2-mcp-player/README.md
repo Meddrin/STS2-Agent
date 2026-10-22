@@ -1,194 +1,194 @@
-# STS2 MCP Player 使用说明
+# STS2 MCP Player Usage Guide
 
-游戏内自动游玩和这份技能共用同一份游玩合同：in-game agent 把 SKILL.md 的 shared play contract 作为 system prompt，再按当前 screen 注入 screen-playbooks.md 与 strategy.md 里对应的那一节（未匹配到分节时注入分节索引），而不是整份文档。
+In-game auto-play and this skill share the same play contract: the in-game agent uses the shared play contract of SKILL.md as the system prompt, then injects, per the current screen, the corresponding section of screen-playbooks.md and strategy.md (injecting the section index when no section matches), rather than the whole document.
 
-这是一个给 Codex/Agent 用的技能，目标是更稳定地通过 `sts2-ai-agent` MCP 接口游玩或验证《Slay the Spire 2》。
+This is a skill for Codex/Agent use, aiming to play or validate *Slay the Spire 2* more reliably through the `sts2-ai-agent` MCP interface.
 
-它解决的核心问题是：
+The core problems it solves:
 
-- 每一步都先读状态，再决定动作
-- 不误用 `proceed`、旧索引、过期 screen 信息
-- 区分普通游玩、全量验证、debug 注入三种场景
-- 优先使用精简的 guided 工具集，减少 AI 被过多 MCP 工具干扰
-- 普通游玩时把每一步有意义决策写入 `agent_knowledge/run_logs/`，便于后续复盘
+- Read the state before every decision, then decide the action
+- Do not misuse `proceed`, stale indices, or outdated screen information
+- Distinguish three scenarios: ordinary play, full validation, and debug injection
+- Prefer the lean guided tool set, to reduce distraction from too many MCP tools
+- In ordinary play, write each meaningful decision into `agent_knowledge/run_logs/` for later review
 
-## 适用场景
+## When to Use
 
-在这些情况下调用它：
+Invoke it in these cases:
 
-- 让 Agent 直接玩一局 STS2
-- 让 Agent 接管战斗、事件、商店、奖励、休息点等流程
-- 验证 MCP 行为是否和游戏状态一致
-- 在开启 debug actions 时复现特定战斗或状态问题
+- Have the Agent play a whole STS2 run directly
+- Have the Agent take over flows such as combat, events, shop, rewards, and rest sites
+- Verify that MCP behavior matches the game state
+- Reproduce a specific combat or state problem when debug actions are enabled
 
-## 如何触发
+## How to Trigger
 
-在提示词里直接提到技能名：
-
-```text
-使用 $sts2-mcp-player 继续当前这一局，优先走稳定流程，不要乱点 debug。
-```
-
-也可以这样写：
+Mention the skill name directly in the prompt:
 
 ```text
-用 $sts2-mcp-player 帮本小姐检查当前 reward 流程有没有异常，并把关键状态告诉我。
+Use $sts2-mcp-player to continue the current run, prefer the stable flow, and do not click debug carelessly.
+```
+
+You can also write it like this:
+
+```text
+Use $sts2-mcp-player to check whether the current reward flow has any anomaly, and tell me the key state.
 ```
 
 ```text
-用 $sts2-mcp-player 跑一遍主菜单到新开局的完整链路，必要时做 MCP 验证。
+Use $sts2-mcp-player to run the full chain from the main menu to a new run, and do MCP validation when necessary.
 ```
 
-## 推荐前置条件
+## Recommended Preconditions
 
-普通游玩：
+Ordinary play:
 
-- 游戏已启动
-- mod 已加载
-- MCP server 可访问
+- The game has started
+- The mod is loaded
+- The MCP server is reachable
 
-验证模式：
+Validation mode:
 
-- 先运行 `scripts/build-mod.ps1`
-- 再确认 `/health` 正常
+- First run `scripts/build-mod.ps1`
+- Then confirm `/health` is normal
 
-debug 模式：
+Debug mode:
 
-- 明确启用 `STS2_ENABLE_DEBUG_ACTIONS=1`
-- 只在开发和复现问题时使用 `run_console_command`
+- Explicitly enable `STS2_ENABLE_DEBUG_ACTIONS=1`
+- Use `run_console_command` only during development and when reproducing problems
 
-## 标准使用方式
+## Standard Usage
 
-### 1. 普通游玩
+### 1. Ordinary Play
 
-让 Agent 接管当前局面：
+Have the Agent take over the current position:
 
 ```text
-使用 $sts2-mcp-player 接管当前局面。
-先检查 health 和 game state，
-然后按 state-first 规则继续推进，遇到 card selection、reward、shop 时按技能约定处理。
+Use $sts2-mcp-player to take over the current position.
+First check health and game state,
+then proceed by the state-first rules, and handle card selection, reward, and shop as the skill specifies.
 ```
 
-### 2. 单点状态处理
+### 2. Single-Point State Handling
 
-只处理当前 screen：
+Handle only the current screen:
 
 ```text
-使用 $sts2-mcp-player 只处理当前 screen。
-如果现在是 CARD_SELECTION，就把这一步结清后停下并汇报结果。
+Use $sts2-mcp-player to handle only the current screen.
+If it is CARD_SELECTION now, settle this step, stop, and report the result.
 ```
 
-### 3. 战斗接管
+### 3. Combat Takeover
 
 ```text
-使用 $sts2-mcp-player 处理当前战斗。
-优先不浪费免费价值，按最新 hand 和 enemy 状态决策，不要复用旧索引。
+Use $sts2-mcp-player to handle the current combat.
+Do not waste free value, decide from the latest hand and enemy state, and do not reuse old indices.
 ```
 
-### 4. 流程验证
+### 4. Flow Validation
 
 ```text
-使用 $sts2-mcp-player 验证当前 MCP 流程。
-优先使用 guided 工具集，必要时再切到 full profile。
-检查 state.available_actions 是否与当前 screen 一致。
+Use $sts2-mcp-player to validate the current MCP flow.
+Prefer the guided tool set, and switch to the full profile only when necessary.
+Check whether state.available_actions is consistent with the current screen.
 ```
 
-### 5. 给游戏内自动游玩当规划层
+### 5. Acting as the Planning Layer for In-Game Auto-Play
 
 ```text
-使用 $sts2-mcp-player 给正在进行的双层自动游玩当规划层。
-先 get_planner_briefing 看当前策略和 Jev 的置信度趋势，
-需要调整时用 update_play_strategy 写一句宏观目标和按动作类别的提示；不要自己 act。
+Use $sts2-mcp-player to act as the planning layer for the dual-layer auto-play in progress.
+First get_planner_briefing to see the current strategy and Jev's confidence trend,
+and when an adjustment is needed use update_play_strategy to write a macro goal and per-action-category hints; do not act yourself.
 ```
 
-### 6. Debug 复现
+### 6. Debug Reproduction
 
 ```text
-使用 $sts2-mcp-player 复现一个 potion/card-selection 相关 bug。
-只有在检测到 debug actions 可用时才使用 run_console_command，
-否则退回普通 MCP 流程。
+Use $sts2-mcp-player to reproduce a potion/card-selection related bug.
+Use run_console_command only when debug actions are detected as available,
+otherwise fall back to the ordinary MCP flow.
 ```
 
-## 这个技能会怎么工作
+## How This Skill Works
 
-它的核心循环很简单：
+Its core loop is simple:
 
-1. 先 `health_check`
-2. 每次决策前读一次状态：`decide`（一次拿到 compact `state`、`available_actions` 与 `scene_guidance`）
-   或 `get_game_state`
-3. 只调用 `available_actions` 里真实存在的动作
-4. `act` 返回的 `state` 就是下一个决策的输入；只有 `pending`、屏幕变化或需要完整载荷（`raw_state=true`）时才重读
-5. 所有索引都从最新 payload 重新计算；索引被拒时按 `error.details` 的 `field` / `valid_indices` / `valid_field` 改正
-6. 按 `agent_knowledge/run_logs/README.md` 模板维护单局决策日志，记录种子号、角色、路线、阶段选择和理由
+1. First `health_check`
+2. Read the state once before each decision: `decide` (gets the compact `state`, `available_actions`, and `scene_guidance` in one go)
+   or `get_game_state`
+3. Call only actions that truly exist in `available_actions`
+4. The `state` returned by `act` is the input of the next decision; reread only on `pending`, a screen change, or when the full payload is needed (`raw_state=true`)
+5. Recompute all indices from the latest payload; when an index is rejected, correct it per the `field` / `valid_indices` / `valid_field` of `error.details`
+6. Maintain a per-run decision log following the `agent_knowledge/run_logs/README.md` template, recording the seed, character, route, stage choices, and reasons
 
-这意味着它特别适合处理这些容易出错的情况：
+This makes it especially suited to handling these error-prone situations:
 
-- `REWARD` 里卡牌奖励和底层 reward item 不是一回事
-- `CARD_SELECTION` 会覆盖原本房间 screen
-- `SHOP` 分为外层房间和内层库存
-- `EVENT` 可能在战斗后回到事件本体
-- `MAIN_MENU` 里 timeline gate 会阻塞开局
+- In `REWARD`, card rewards and the underlying reward items are not the same thing
+- `CARD_SELECTION` overrides the original room screen
+- `SHOP` is divided into the outer room and the inner inventory
+- `EVENT` may return to the event itself after combat
+- In `MAIN_MENU` the timeline gate can block starting a run
 
-## 工具使用建议
+## Tool Usage Suggestions
 
-优先使用 guided profile（该档共 17 个工具，完整清单以 `scripts/test-mcp-tool-profile.ps1` 的
-`ESSENTIAL_TOOLS` 为准）。游玩最常用的是：
+Prefer the guided profile (that tier has 17 tools in total; the full list is whatever `ESSENTIAL_TOOLS` in `scripts/test-mcp-tool-profile.ps1` says).
+The most commonly used for play are:
 
 - `health_check`
 - `get_game_state`
 - `get_raw_game_state`
 - `get_available_actions`
-- `decide`（一次读取同时给出 `state` / `available_actions` / `scene_guidance`）
+- `decide` (one read gives `state` / `available_actions` / `scene_guidance` together)
 - `get_relevant_game_data` / `get_game_data_item` / `get_game_data_items`
 - `wait_until_actionable`
 - `act`
 
-复盘与排查另有 `get_decision_log`（读回被接受的决策及其理由）、`get_run_summary`（本轮概览）与
-`diff_state`（两份状态的逐路径差异）。
+For review and troubleshooting there are also `get_decision_log` (reads back accepted decisions and their reasons), `get_run_summary` (the run overview), and
+`diff_state` (the per-path difference of two states).
 
-双层决策模式（Jev 逐动作执行、LLM 只定策略）下，外部 Agent 可以不亲自出牌，而是当规划层：
-`get_planner_briefing` 读当前策略、Jev 最近的选择与置信度趋势，`update_play_strategy` 写一句宏观目标
-`goal` 以及 `posture` / `instructions` / 按**动作类别**写的 `option_hints`；省略的字段保留原值。
-规则见 SKILL.md 的 "Planning for the In-Game Loop"。
+In dual-layer decision mode (Jev executes action by action and the LLM only sets strategy), an external Agent can act as the planning layer instead of playing cards in person:
+`get_planner_briefing` reads the current strategy, Jev's recent choices, and the confidence trend, and `update_play_strategy` writes a one-sentence macro goal
+`goal` plus `posture` / `instructions` / `option_hints` written per **action category**; omitted fields keep their values.
+For the rules see "Planning for the In-Game Loop" in SKILL.md.
 
-`health_check` 的 `play_running` 为 `true` 时游戏内自动游玩正在出牌，mod 不会拦外部 `act`：
-这时要么先暂停自动游玩，要么只当规划层，不要两边同时操作。
+When `play_running` of `health_check` is `true`, in-game auto-play is playing cards and the mod will not block an external `act`:
+then either pause auto-play first or act only as the planning layer, and do not operate on both sides at once.
 
-只有在这些情况下才建议用 full profile：
+Use the full profile only in these cases:
 
-- 需要逐动作覆盖测试
-- 需要验证 legacy per-action tools
-- 需要明确比较 guided 和 full 的工具暴露差异
+- Per-action coverage testing is needed
+- The legacy per-action tools need to be validated
+- The tool exposure difference between guided and full needs to be compared explicitly
 
-## 常见注意事项
+## Common Cautions
 
-- 不要把 `completed` 当成绝对完成，仍然要看返回的 `state`
-- `act` 返回的 `state` 是 compact `agent_view`（与 `get_game_state` 同形），不是完整 `/state`；要看完整载荷传 `raw_state=true`
-- 索引被拒时不要重发同一个索引：读 `error.details.valid_indices` 与 `valid_field` 再改
-- 不要在 reward 流程里乱用 `proceed`
-- 不要假设一次 `select_deck_card` 就一定结束多选流程
-- 不要在 compact `shop.open=true` 时直接认为商店已经处理完（raw state 里才叫 `shop.is_open`）
-- 不要在 debug 不可用时依赖 `run_console_command`
+- Do not treat `completed` as absolute completion; still look at the returned `state`
+- The `state` returned by `act` is the compact `agent_view` (the same shape as `get_game_state`), not the full `/state`; pass `raw_state=true` to see the full payload
+- When an index is rejected, do not resend the same index: read `error.details.valid_indices` and `valid_field` and then correct it
+- Do not use `proceed` carelessly in the reward flow
+- Do not assume a single `select_deck_card` always ends a multi-select flow
+- Do not conclude the shop has been fully handled just because compact `shop.open=true` (in raw state it is called `shop.is_open`)
+- Do not rely on `run_console_command` when debug is unavailable
 
-## 相关文件
+## Related Files
 
-- 技能主说明：
+- Main skill description:
   [SKILL.md](./SKILL.md)
-- 分 screen 剧本：
+- Per-screen playbooks:
   [screen-playbooks.md](./references/screen-playbooks.md)
-- 选择策略（路线、休息、商店、药水、集火、联机分工）：
+- Choice strategy (route, rest, shop, potions, focus fire, multiplayer division of labor):
   [strategy.md](./references/strategy.md)
-- 调试与验证说明：
+- Debugging and validation notes:
   [debug-and-validation.md](./references/debug-and-validation.md)
-- 远程连接检查清单：
+- Remote connection checklist:
   [remote-connection.md](./references/remote-connection.md)
-- UI metadata：
+- UI metadata:
   [openai.yaml](./agents/openai.yaml)
 
-## 一句话模板
+## One-Line Template
 
-如果你懒得写，就直接用这一句：
+If you cannot be bothered to write one, just use this line:
 
 ```text
-使用 $sts2-mcp-player 接管当前 STS2 MCP 会话，按 state-first 工作流推进，并在每个关键阶段汇报当前 screen、可用动作和下一步决策理由。
+Use $sts2-mcp-player to take over the current STS2 MCP session, advance by the state-first workflow, and at each key stage report the current screen, available actions, and the reason for the next decision.
 ```

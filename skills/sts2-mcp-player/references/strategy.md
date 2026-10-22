@@ -39,7 +39,7 @@ Read `shop.cards[]`, `shop.relics[]`, `shop.potions[]` and `shop.remove`. **`aff
 
 1. **Card removal first when the deck carries a curse or a dead starter card.** Removing a card improves every future draw; `shop.remove` is once per shop and its `used` flag says whether it is already spent.
 2. **Relics over cards when both are affordable and the deck is already functional.** A relic is unconditional; a card has to be drawn.
-3. **Buy a potion only into an empty slot.** Compact `run.potions[].line` reads `N: 空` when the slot is empty. With every slot full, `buy_potion` will not stay available, and buying to discard wastes gold.
+3. **Buy a potion only into an empty slot.** Compact `run.potions[].line` reads `N: Empty` (`N: 空` on a Chinese-language client) when the slot is empty. With every slot full, `buy_potion` will not stay available, and buying to discard wastes gold.
 4. **Keep a reserve.** Spending `run.gold` to zero means the next shop cannot sell the card removal wanted after a bad act. Leave roughly 75 gold behind unless the purchase wins the act outright.
 5. **`on_sale` is a discount, not a reason.** A discounted card you would not otherwise take is still a card you did not want.
 
