@@ -1,34 +1,34 @@
-# 实施计划：v0.12.4 后问题修复
+# Implementation plan: fixes for issues after v0.12.4
 
-## 门槛与基线
+## Gate and baseline
 
-- [ ] 等用户在本**修订版计划**公布后另发消息明确批准实施；任务创建同意、前述三项产品选择与“单一主模型”选择不等于实施批准。
-- [ ] 获批后先记录 `git status --short --branch`，将原产品代码 17 项修改的 `git diff --binary HEAD` 与 4 个未跟踪产品文件完整备份到 `.trellis/tasks/09-23-audit-remediation/` 下不打包的基线目录，列 SHA256、日期和文件清单，检查无明文密钥；备份无效则不派 worker。随后 `python ./.trellis/scripts/task.py start .trellis/tasks/09-23-audit-remediation`；禁止 reset/clean/整文件覆盖。
-- [ ] worker 同步读取 PRD、design、implement 与 `.trellis/spec/mod/`、MCP、operations 指南；不提交、不 push、不部署，所有工作共享同一工作树、严格文件独占。
+- [ ] Wait for the user to send a separate message explicitly approving implementation after this **revised plan** is published; consent to create the task, the three product choices above, and the "single main model" choice do not equal implementation approval.
+- [ ] After approval, first record `git status --short --branch`, and back up in full the `git diff --binary HEAD` of the 17 original product code modifications and the 4 untracked product files into a non-packaged baseline directory under `.trellis/tasks/09-23-audit-remediation/`, listing SHA256, date, and file list, and check there are no plaintext keys; if the backup is invalid do not dispatch workers. Then `python ./.trellis/scripts/task.py start .trellis/tasks/09-23-audit-remediation`; reset/clean/whole-file overwrite are forbidden.
+- [ ] Workers read the PRD, design, implement, and the `.trellis/spec/mod/`, MCP, and operations guides in sync; no commit, no push, no deploy, all work shares the same working tree with strict file exclusivity.
 
-## 分工和依赖
+## Division of work and dependencies
 
-| 顺序 | Worker | 修复 | 独占生产文件 | 交付 |
+| Order | Worker | Fix | Exclusive production files | Deliverable |
 | --- | --- | --- | --- | --- |
-| 1，并行启动 | A—会话归属 | 外部 HTTP run 归属、旧局迟到日志与同局恢复 | `Server/Router.cs` 的 `/action`、`Agent/AgentRuntime.Session.cs`、`Agent/PlaySessionMemory.cs`、必要时 `PlaySessionStore.cs`，新 `AuditRemediationSession*Tests.cs` | Run-ID 决策矩阵、恢复与 legacy/collision 测试、Router 同屏快照说明 |
-| 1，并行启动 | B—Jev 引擎 | 429 一次重试逐次计费、统一 90 秒默认总期限、错误分类、Choice+Score、规划触发；在自身决策文件消费由集成者提供的下回合聊天指令 | `Llm/Jev{Client,Types}.cs`、`Agent/{JevExecutionDecider,StrategyPlanner,AgentLoop.Decision,ExecutionDecision,IGameBridge}.cs`，新 `AuditRemediationJev*Tests.cs` | 真实 attempts 收据、score/latency DTO、所需预算与指令委托签名 |
-| 1，并行启动 | C—体验控制 | 切换先暂停、运行中同伴白名单配置同步、维护单一主模型、聊天/结果展示与双模式 Jev 面板 | `Ui/AgentOverlayHost.{Pages,Settings,ChatCard}.cs`、`Multiplayer/CompanionConnection.cs`、新的控制 partial/纯策略/`AuditRemediationUi*Tests.cs` | UI/控制源码与纯策略测试、主 runtime/Router 接线清单 |
-| 1，并行启动 | D—简报两面 | 同源 MCP 简报投影、Python 消费、API 文档和对齐测试 | `Server/NativeMcpServer.Tools.cs`、`Agent/AgentTools.cs`、Python MCP client/server 与测试、`docs/api.md`、新纯投影 | 字段 schema、原生/sidecar 测试、Router 所需接线 |
-| 2，汇合 | Integrator（主代理） | 修正共享接口并串联；注册测试、生成 OpenAPI 和本地化 | `AgentRuntime{,.Jev,.Accounting}.cs`、`AgentLoop{,.Probes}.cs`、`Tests/{TestRunner.cs,STS2AIAgent.Tests.csproj}`、`Loc.Strings.*.cs`、`scripts/api_schema.py`、`docs/openapi.json`、`CHANGELOG.md`，A 完成后串行接 `Router.cs` | 无重叠覆盖的完整链路、旧 PRD 修订、全部回归 |
+| 1, start in parallel | A: session ownership | External HTTP run ownership, late old-run logs, and same-run recovery | `/action` of `Server/Router.cs`, `Agent/AgentRuntime.Session.cs`, `Agent/PlaySessionMemory.cs`, `PlaySessionStore.cs` if necessary, new `AuditRemediationSession*Tests.cs` | Run-ID decision matrix, recovery and legacy/collision tests, a Router same-screen snapshot note |
+| 1, start in parallel | B: Jev engine | One retry on 429 billed per attempt, a unified 90-second default total deadline, error classification, Choice+Score, planning triggers; consume the next-turn chat instruction provided by the integrator in its own decision file | `Llm/Jev{Client,Types}.cs`, `Agent/{JevExecutionDecider,StrategyPlanner,AgentLoop.Decision,ExecutionDecision,IGameBridge}.cs`, new `AuditRemediationJev*Tests.cs` | Real attempts receipt, score/latency DTO, the signatures of the needed budget and instruction delegates |
+| 1, start in parallel | C: experience control | Switching pauses first, whitelisted in-run companion configuration sync, maintaining the single main model, chat/result display and the two-mode Jev panel | `Ui/AgentOverlayHost.{Pages,Settings,ChatCard}.cs`, `Multiplayer/CompanionConnection.cs`, new control partial/pure policy/`AuditRemediationUi*Tests.cs` | UI/control source and pure policy tests, a wiring checklist for the main runtime/Router |
+| 1, start in parallel | D: briefing on both surfaces | A same-source MCP briefing projection, Python consumption, API docs and alignment tests | `Server/NativeMcpServer.Tools.cs`, `Agent/AgentTools.cs`, Python MCP client/server and tests, `docs/api.md`, a new pure projection | Field schema, native/sidecar tests, the wiring Router needs |
+| 2, converge | Integrator (main agent) | Fix shared interfaces and chain them together; register tests, generate OpenAPI and localization | `AgentRuntime{,.Jev,.Accounting}.cs`, `AgentLoop{,.Probes}.cs`, `Tests/{TestRunner.cs,STS2AIAgent.Tests.csproj}`, `Loc.Strings.*.cs`, `scripts/api_schema.py`, `docs/openapi.json`, `CHANGELOG.md`, and wire `Router.cs` serially after A completes | A full chain with no overlapping coverage, the old PRD revisions, all regressions |
 
-同名文档或局部源冲突一律由主代理处理，不派两个 worker 写同一文件。worker 完成时写清修改清单、测试命令与输出、仍未接的接口；共享工作树不得并发 `dotnet build/run`，因为 `obj/bin` 可能相互锁住且新增测试尚未由集成者注册。worker D 可独立运行 Python 专项测试；C# 新测试均由集成者加入 `.csproj`（新纯模块才可编译进入无游戏项目）及 `TestRunner.AllTests` 后统一运行。`AgentRuntime` 基文件行数接近 ratchet，新增功能应优先落新 partial，Pages/Settings 页亦需避免新增超过行数上限。
+Conflicts in same-named documents or local source are always handled by the main agent, and two workers are never assigned to write the same file. When a worker finishes it states the modified file list, the test commands and output, and the interfaces still not wired; the shared working tree must not run `dotnet build/run` concurrently, since `obj/bin` may lock each other and the new tests are not yet registered by the integrator. Worker D can run the Python dedicated tests independently; all new C# tests are added by the integrator to the `.csproj` (only new pure modules may be compiled into the game-free project) and `TestRunner.AllTests` and then run together. The line count of the `AgentRuntime` base file is close to the ratchet, so new features should go into new partials first, and the Pages/Settings pages must also avoid exceeding the line limit.
 
-## 验收场景
+## Acceptance scenarios
 
-1. 未开启自动游玩，经 HTTP `/action` 操作时记录真实 run；下一局迟到事件不会切回旧 run；MCP、单步、自动游玩各入口近期记忆一致。
-2. Solo→Coop 切换中 solo 正在出牌：先完成/确认暂停才更新滑块；超时或队友拒绝时保持原模式；Coop→Solo 同理；新的模式不自动开始。
-3. Solo 自动游玩中发送“下次优先防御”：确认排队，后续同局 prompt 消费一次；暂停后仍可继续消费、下一局不复用，当前动作不被重放。对话动作结果简短可见；仍使用单一主模型，旧 PlayModelId 迁移至默认主模型须可见且无悬挂引用。
-4. 已连接队友时切换双层与 Jev 参数，下一手生效且能够确认 companion 的真实配置；失败提示不谎报已生效。面板读取对应实例而不是主实例旧数据。
-5. Jev 429→成功最多两次网络尝试，预算计数=2；预算不足/取消/总超时仅实际发生的次数；400 配置错误不重试，408/5xx 分类网络；score 与 elapsed 可用。
-6. 规划层使用同 run 最近决策和当前策略，屏/Act/Boss 改变、连续低置信、N 手触发；请求受预算/取消控制；外部 MCP 两面字段/值源相符。
-7. C# 测试编译并运行（修复前基线在权限变化后已重跑通过；若再次出现 `File.Replace`/监听失败仍须区分环境限制）；`dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-restore`；`mcp_server/.venv/Scripts/python.exe -m unittest discover -s tests -q`；`python scripts/check_verification_gates.py --only api-facts,api-schema` 与必要的全量静态闸门，`git diff --check`；新响应字段和控制路由须同步 `scripts/api_schema.py` 再生成 `docs/openapi.json`，不可手改生成物。仅有环境可用时可运行 `uv run --locked`。不擅自运行会启动/修改游戏的命令。
+1. With auto-play off, operating through HTTP `/action` records the real run; late events of the next run do not switch back to the old run; the recent memory is consistent across the MCP, single-step, and auto-play entry points.
+2. During a Solo->Coop switch while solo is playing a card: the slider is updated only after the pause completes/is confirmed; on timeout or teammate refusal the original mode is kept; Coop->Solo likewise; the new mode does not start automatically.
+3. During Solo auto-play, sending "prefer defense next time": confirm it is queued and consumed once by later same-run prompts; it can still be consumed after pause, is not reused in the next run, and the current action is not replayed. Chat action results are visible in brief; the single main model is still used, and the migration of the old PlayModelId to the default main model must be visible with no dangling references.
+4. When switching two-layer and Jev parameters with a teammate connected, it takes effect next move and the companion's real configuration can be confirmed; a failure notice does not falsely claim it took effect. The panel reads the corresponding instance rather than stale data from the main instance.
+5. Jev 429 -> success makes at most two network attempts, with budget count = 2; on insufficient budget/cancellation/total timeout only the attempts that actually happened count; a 400 configuration error is not retried, and 408/5xx are classified as network; score and elapsed are available.
+6. The planning layer uses the same-run recent decisions and the current strategy, triggered by a screen/Act/Boss change, consecutive low confidence, or every N moves; requests are controlled by budget/cancellation; the fields/value sources of the external MCP surfaces match.
+7. C# tests compile and run (the pre-fix baseline was rerun and passed after the permission change; if `File.Replace`/listener failures appear again environment limits must still be distinguished); `dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-restore`; `mcp_server/.venv/Scripts/python.exe -m unittest discover -s tests -q`; `python scripts/check_verification_gates.py --only api-facts,api-schema` and the necessary full static gates, `git diff --check`; new response fields and control routes must sync `scripts/api_schema.py` and then regenerate `docs/openapi.json`, and generated artifacts must not be hand-edited. `uv run --locked` may be run only when the environment allows. Do not run commands that would start/modify the game on your own.
 
-## 回滚与人工验证
+## Rollback and manual verification
 
-- 回滚以获批后写入的原始 WIP patch + 四个未跟踪文件备份为参照，定向移除本轮增量；禁止整文件 checkout 或 reset 擦除原改动。不 commit、push、release。
-- 双开/游戏线程/真实 Jev 429 和风险读数需要隔离存档与受控额度实机复测；无证据时最终报告写“未验证”，不宣称线上验收完成。
+- Rollback is referenced to the original WIP patch + the backup of the four untracked files written after approval, removing this round's increments in a targeted way; whole-file checkout or reset to wipe the original changes is forbidden. No commit, push, or release.
+- Two-instance/game thread/real Jev 429 and risk readouts need a live retest with an isolated save and a controlled quota; without evidence the final report says "unverified" and does not claim live acceptance complete.

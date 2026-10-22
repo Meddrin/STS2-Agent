@@ -11,7 +11,7 @@
 5. `## Unreleased` in CHANGELOG, with the convention written into CONTRIBUTING, AGENTS.md and the
    operations spec; cross-version index at `history/build-fingerprints.md`. -- done
 6. Play skill guidance for `action_readiness`. -- done
-7. Status page: post-tag "主线未发布" section per rule 3 of its own maintenance rules. -- done
+7. Status page: post-tag "mainline unreleased" section per rule 3 of its own maintenance rules. -- done
 8. Full offline validation and the health sweep. -- done, see evidence.md
 
 ## Second pass (the rest of the /state contract)

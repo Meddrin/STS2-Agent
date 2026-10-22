@@ -1,13 +1,13 @@
-# 给 16 个未编译的 mod 源文件补上 CI 安全网
+# Add a CI safety net for the 16 uncompiled mod source files
 
-## 背景
+## Background
 
-CI（`.github/workflows/validate.yml`）只跑 `STS2AIAgent.Tests`，而该测试工程只
-`<Compile Include>` 了 79 个 tracked `.cs` 里的 63 个（含 `Config/*`、`Llm/*`、
-`Loc.Strings.*` 通配符）。**16 个文件、18007 行在 CI 里完全不可见**——连语法错误都不会被任何
-自动化检查拦住：
+CI (`.github/workflows/validate.yml`) runs only `STS2AIAgent.Tests`, and that test project only
+`<Compile Include>`s 63 of the 79 tracked `.cs` files (including the `Config/*`, `Llm/*`,
+`Loc.Strings.*` wildcards). **16 files, 18007 lines, are completely invisible in CI**: even syntax errors would not be caught by any
+automated check:
 
-| 文件 | 行数 |
+| File | Lines |
 | --- | --- |
 | Game/GameStateService.cs | 6850 |
 | Game/GameActionService.cs | 5786 |
@@ -26,25 +26,25 @@ CI（`.github/workflows/validate.yml`）只跑 `STS2AIAgent.Tests`，而该测�
 | ModEntry.cs | 73 |
 | Vision/ScreenshotService.cs | 47 |
 
-根因：它们依赖游戏 DLL（Godot/sts2），无法离线编译。但**语法层**检查零依赖可做：.NET SDK 自带
-Roslyn（`$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll`），
-本任务开工前已 spike 证实该引用可用（`ROSLYN_SPIKE_OK`，335 个既有测试照常通过，spike 已回滚）。
+Root cause: they depend on the game DLLs (Godot/sts2) and cannot be compiled offline. But a **syntax-level** check can be done with zero dependencies: the .NET SDK ships with
+Roslyn (`$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll`),
+and before this task started a spike confirmed that reference works (`ROSLYN_SPIKE_OK`, the 335 existing tests passing as usual, spike rolled back).
 
-## 目标
+## Goals
 
-CI 对每个 tracked `.cs` 至少做一次语法解析；新文件不能同时绕开"编译"与"解析"两条路。
+CI parses the syntax of every tracked `.cs` at least once; a new file must not bypass both the "compile" and "parse" paths.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `STS2AIAgent.Tests.csproj` 引用 SDK 自带 Roslyn（零 NuGet），干净机器 `dotnet run` 可用。
-- [x] 新增语法测试：对 `AgentSourceFixture.SourceFiles()` 的每个文件
-      `CSharpSyntaxTree.ParseText(...)` 断言 0 error；可否证（给任一未编译文件注入语法错误 → 红 → 还原）。
-- [x] `AgentSourceFixture.SourceFiles()` 过滤 `obj/` 与 `bin/`（否则本地会多出生成文件）。
-- [x] 覆盖面断言：csproj 未编译的文件集合 == 显式白名单（上表 16 个）；新增未注册文件时测试红。
-- [x] 全量 C# 测试 / gates / preflight 绿。
+- [x] `STS2AIAgent.Tests.csproj` references the Roslyn shipped with the SDK (zero NuGet), and `dotnet run` works on a clean machine.
+- [x] New syntax test: for every file of `AgentSourceFixture.SourceFiles()`,
+      `CSharpSyntaxTree.ParseText(...)` asserts 0 errors; falsifiable (inject a syntax error into any uncompiled file -> red -> restore).
+- [x] `AgentSourceFixture.SourceFiles()` filters `obj/` and `bin/` (otherwise extra generated files appear locally).
+- [x] Coverage assertion: the set of files the csproj leaves uncompiled == the explicit whitelist (the 16 in the table above); the test goes red when an unregistered file is added.
+- [x] Full C# tests / gates / preflight green.
 
-## 范围外
+## Out of scope
 
-- 不把 16 个文件真正编译进测试工程（需要游戏 DLL）。
-- 不做跨文件语义/类型检查（单文件 Roslyn 解析不解析引用）。
+- Do not actually compile the 16 files into the test project (that needs the game DLLs).
+- Do not do cross-file semantic/type checking (single-file Roslyn parsing does not resolve references).
 

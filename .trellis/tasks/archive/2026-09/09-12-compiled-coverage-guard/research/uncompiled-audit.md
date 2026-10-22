@@ -1,10 +1,10 @@
-# 证据：未编译的 16 个源文件
+# Evidence: the 16 uncompiled source files
 
-## 覆盖面对比（git ls-files vs csproj Compile Include）
+## Coverage comparison (git ls-files vs csproj Compile Include)
 
-- tracked `STS2AIAgent/**/*.cs`：79 个（含 `ModEntry.cs`）；
-- csproj `<Compile Include>`：49 条（含 3 条通配符），展开后 63 个；
-- 差集 16 个，合计 18007 行：
+- tracked `STS2AIAgent/**/*.cs`: 79 (including `ModEntry.cs`);
+- csproj `<Compile Include>`: 49 entries (including 3 wildcards), 63 files after expansion;
+- set difference 16, 18007 lines in total:
 
 ```
   6850  STS2AIAgent/Game/GameStateService.cs
@@ -25,30 +25,30 @@
     47  STS2AIAgent/Vision/ScreenshotService.cs
 ```
 
-## 根因
+## Root cause
 
-以上文件 `using` Godot / `MegaCrit.Sts2.*`（游戏 DLL），离线编译器拿不到引用，所以从来没进过
-测试工程的编译集。既有的源码契约测试（`AgentSourceFixture.Read`）只能断言"文件里的文本形状"，
-断言不了"文件本身是否是可解析的 C#"。
+The files above `using` Godot / `MegaCrit.Sts2.*` (the game DLLs), and the offline compiler cannot get the references, so they never entered the
+compile set of the test project. The existing source contract tests (`AgentSourceFixture.Read`) can only assert "the text shape inside the file"
+and cannot assert "whether the file itself is parseable C#".
 
-## 已有部分缓解（不代表覆盖）
+## Partial mitigation already present (does not mean coverage)
 
-部分测试用字符串断言覆盖了未编译文件的**局部**：
-`TimelineIndexContractTests`（GameActionService.ResolveTimelineSlot）、
-`UnlockScreenContractTests` / `RewardFlowContractTests`（GameStateService 的分支）、
-`McpPlayerSkillTests`（SKILL.md 与内嵌契约一致）——但都依赖文件"恰好在作者写断言的那一处没错"，
-文件其余 99% 的语法错误无人拦。
+Some tests use string assertions to cover **parts** of the uncompiled files:
+`TimelineIndexContractTests` (GameActionService.ResolveTimelineSlot),
+`UnlockScreenContractTests` / `RewardFlowContractTests` (branches of GameStateService),
+`McpPlayerSkillTests` (SKILL.md matches the embedded contract), but all depend on the file being correct "exactly at the spot where the author wrote the assertion",
+and syntax errors in the other 99% of the file are caught by no one.
 
-## spike 记录（本任务开工前由主代理执行）
+## Spike record (run by the main agent before this task started)
 
-1. csproj 加 Roslyn Reference（上文 design 的片段）；
-2. `_RoslynSpike.cs`：`[ModuleInitializer]` 调 `CSharpSyntaxTree.ParseText("class A { void B() { } }")`
-   并断言 0 error；
-3. `dotnet run --project STS2AIAgent.Tests -c Release` → 输出 `ROSLYN_SPIKE_OK`，335 个测试全 PASS；
-4. 两处改动已回滚（`git checkout -- STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` + 删除 spike 文件）。
+1. Add the Roslyn Reference to the csproj (the snippet in the design above);
+2. `_RoslynSpike.cs`: a `[ModuleInitializer]` calls `CSharpSyntaxTree.ParseText("class A { void B() { } }")`
+   and asserts 0 errors;
+3. `dotnet run --project STS2AIAgent.Tests -c Release` -> prints `ROSLYN_SPIKE_OK`, all 335 tests PASS;
+4. Both changes rolled back (`git checkout -- STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` + deleting the spike file).
 
-## 待确认（只能 CI 侧确认）
+## To confirm (CI side only)
 
-上面只在本地 Windows + SDK 9.0.311 验证；CI 的 `windows-latest` + `dotnet-version: 9.0.x`
-装配同一形态的 SDK（`Roslyn/bincore` 随 SDK 分发），但本仓库本轮没有 push，CI 未运行。
+The above was verified only on local Windows + SDK 9.0.311; CI's `windows-latest` + `dotnet-version: 9.0.x`
+sets up the same kind of SDK (`Roslyn/bincore` ships with the SDK), but this repo had no push this round, so CI did not run.
 

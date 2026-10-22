@@ -1,53 +1,53 @@
-# 修好 knowledge 根目录解析，并给 knowledge / handoff 补测试
+# Fix knowledge root directory resolution, and add tests for knowledge / handoff
 
-## 背景
+## Background
 
-`mcp_server/src/sts2_mcp/knowledge.py:12-30`：
+`mcp_server/src/sts2_mcp/knowledge.py:12-30`:
 
 ```python
 def _repo_root() -> Path:
     env = os.getenv("STS2_AGENT_REPO_ROOT")
     ...
-    for parent in ...:                     # 找 mcp_server/pyproject.toml
+    for parent in ...:                     # look for mcp_server/pyproject.toml
         ...
-    return current.parents[3]              # ← 兜底：纯猜测
+    return current.parents[3]              # <- fallback: pure guesswork
 ```
 
-wheel/pipx 安装态下 `__file__` 在 `<site-packages>/sts2_mcp/knowledge.py`，
-往上找不到 `mcp_server/pyproject.toml`，于是 `parents[3]` 返回 **venv 或 Python 安装根**：
+In a wheel/pipx install `__file__` is at `<site-packages>/sts2_mcp/knowledge.py`,
+searching upward cannot find `mcp_server/pyproject.toml`, so `parents[3]` returns the **venv or the Python install root**:
 
-- `_default_knowledge_root()` → `<venv>/agent_knowledge`，写分支 `mkdir(parents=True, exist_ok=True)`
-  会在 venv 里静默建目录（升级/重装即丢，且用户永远找不到）；
-- `reference_files`（:334-339 / :366-371）指向 `<venv>/docs/game-knowledge/*.md`（不存在）。
+- `_default_knowledge_root()` -> `<venv>/agent_knowledge`, and the write branch `mkdir(parents=True, exist_ok=True)`
+  silently creates a directory inside the venv (lost on upgrade/reinstall, and the user can never find it);
+- `reference_files` (:334-339 / :366-371) points to `<venv>/docs/game-knowledge/*.md` (which does not exist).
 
-`STS2_AGENT_REPO_ROOT` 全仓只出现在 knowledge.py:13，README 环境变量表也没有它。
+`STS2_AGENT_REPO_ROOT` appears in the whole repo only at knowledge.py:13, and the README environment variable table does not have it either.
 
-同时 `knowledge.py`（约 540 行）与 `handoff.py`（约 210 行）**零测试**：
-`rg -n 'knowledge|handoff' mcp_server/tests` 无命中。
+Also `knowledge.py` (about 540 lines) and `handoff.py` (about 210 lines) have **zero tests**:
+`rg -n 'knowledge|handoff' mcp_server/tests` has no hits.
 
-## 目标
+## Goals
 
-1. 去掉 `parents[3]` 猜测：找不到仓库标记时**不猜**，改用一个明确、可见、可写的回退目录，
-   并在日志里说明（绝不写 stdout —— stdio 传输协议要干净）。
-2. `reference_files` 在无仓库根时返回空列表，而不是指向 venv 里的假路径。
-3. 给 `knowledge.py` 与 `handoff.py` 补离线测试（全部可注入 `root_dir` 或环境变量，
-   绝不写仓库真实的 `agent_knowledge/`）。
-4. README 环境变量表补 `STS2_AGENT_REPO_ROOT` / `STS2_AGENT_KNOWLEDGE_DIR`。
+1. Remove the `parents[3]` guess: when no repo marker is found, **do not guess**; use an explicit, visible, writable fallback directory instead,
+   and say so in the log (never write to stdout: the stdio transport protocol must stay clean).
+2. `reference_files` returns an empty list when there is no repo root, instead of pointing to fake paths inside the venv.
+3. Add offline tests for `knowledge.py` and `handoff.py` (all injectable via `root_dir` or environment variables,
+   never writing the repo's real `agent_knowledge/`).
+4. Add `STS2_AGENT_REPO_ROOT` / `STS2_AGENT_KNOWLEDGE_DIR` to the README environment variable table.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `knowledge.py` 中不存在 `parents[3]` 这类无依据兜底。
-- [x] 根解析矩阵有测试：env 覆盖优先 / 找到 marker 时用仓库根 / 都失败时回退到
-      `Path.cwd()/agent_knowledge`（或 design 里确认的等价方案）且**不落在安装目录内**。
-- [x] `reference_files` 在无仓库根时为空列表（有测试）。
-- [x] 新测试覆盖：combat key 归一化与解析、section 追加幂等、战斗/事件条目生命周期
-      （创建→追加→`to_payload()`）、空 `event_id`/`summary` 的 `ValueError`、
-      handoff 报文结构（`handoff_type`/`reset_context`/instructions 条数/知识写入条数随可选参数递增）。
-- [x] 测试只写 `tempfile` 目录；仓库 `agent_knowledge/` 保持只有 `run_logs/`。
-- [x] `cd mcp_server; uv run --locked python -m unittest discover -s tests` 全绿。
+- [x] `knowledge.py` contains no unfounded fallback like `parents[3]`.
+- [x] The root resolution matrix has tests: env override first / use the repo root when the marker is found / fall back to
+      `Path.cwd()/agent_knowledge` when both fail (or an equivalent confirmed in the design), and **not landing inside the install directory**.
+- [x] `reference_files` is an empty list when there is no repo root (tested).
+- [x] New tests cover: combat key normalization and parsing, section append idempotence, the combat/event entry lifecycle
+      (create -> append -> `to_payload()`), `ValueError` for empty `event_id`/`summary`,
+      handoff message structure (`handoff_type`/`reset_context`/instruction count/number of knowledge writes increasing with the optional parameter).
+- [x] Tests write only `tempfile` directories; the repo `agent_knowledge/` keeps only `run_logs/`.
+- [x] `cd mcp_server; uv run --locked python -m unittest discover -s tests` all green.
 
-## 范围外
+## Out of scope
 
-- 不改知识文件的目录结构（`combat/global/{solo,groups}/<key>.md`、`events/global/<id>.md`）。
-- 不改 `mcp_server/data/eng/` 的去留（用户决策项）。
-- 不动 skill 侧 `agent_knowledge/run_logs/` 的约定。
+- Do not change the directory structure of knowledge files (`combat/global/{solo,groups}/<key>.md`, `events/global/<id>.md`).
+- Do not decide the fate of `mcp_server/data/eng/` (a user decision item).
+- Do not touch the skill-side `agent_knowledge/run_logs/` convention.

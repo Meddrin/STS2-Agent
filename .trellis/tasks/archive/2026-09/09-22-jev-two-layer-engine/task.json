@@ -1,8 +1,8 @@
 {
   "id": "jev-two-layer-engine",
   "name": "jev-two-layer-engine",
-  "title": "Jev 双层决策：执行层 + LLM 规划层 + MCP parity",
-  "description": "JevClient/IActionDecider/选项枚举/策略存储/置信度门控接入 AgentLoop；MCP 双面新增 planner 工具",
+  "title": "Jev two-layer decisions: execution layer + LLM planning layer + MCP parity",
+  "description": "JevClient/IActionDecider/option enumeration/policy store/confidence gating wired into AgentLoop; new planner tools on both MCP surfaces",
   "status": "completed",
   "dev_type": null,
   "scope": null,

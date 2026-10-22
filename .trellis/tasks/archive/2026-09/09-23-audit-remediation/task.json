@@ -1,7 +1,7 @@
 {
   "id": "audit-remediation",
   "name": "audit-remediation",
-  "title": "修复 v0.12.4 以来审查问题",
+  "title": "Fix review issues since v0.12.4",
   "description": "",
   "status": "completed",
   "dev_type": null,

@@ -1,22 +1,22 @@
-# 设计：结构化启动结果
+# Design: structured launch outcome
 
-## 数据流
+## Data flow
 
 ```
 GameActionService.ExecuteInviteAiTeammateAsync (GameActionService.cs:5085-5130)
-  └─ await AgentRuntime.LaunchDualInstanceAsync        ← 目前无返回值，只能回读文案
+  └─ await AgentRuntime.LaunchDualInstanceAsync        <- currently returns no value, so only the text can be read back
         └─ LaunchDualInstanceCoreAsync (AgentRuntime.cs:713-765)
-              ├─ gate 抢占失败 (_dualLaunchGate.WaitAsync(0) 失败) → InProgress
-              ├─ 队伍消息 / 队伍控制 pending          → Rejected
+              ├─ gate preemption failed (_dualLaunchGate.WaitAsync(0) fails) -> InProgress
+              ├─ team message / team control pending   -> Rejected
               ├─ CoopLaunchPolicy.GetError != null    → Rejected
-              ├─ await HostLocalCoopAsync(...)        → Succeeded / Failed（需结构化）
+              ├─ await HostLocalCoopAsync(...)        -> Succeeded / Failed (needs structuring)
               ├─ OperationCanceledException           → Canceled
-              └─ 其它异常                              → Failed
+              └─ other exceptions                      -> Failed
 ```
 
-## 落点
+## Landing points
 
-### 1. 新文件 `STS2AIAgent/Agent/DualLaunchOutcome.cs`（纯 BCL，无 Godot / 无 MegaCrit 引用）
+### 1. New file `STS2AIAgent/Agent/DualLaunchOutcome.cs` (pure BCL, no Godot / no MegaCrit references)
 
 ```csharp
 internal enum DualLaunchOutcome { Idle, InProgress, Succeeded, Rejected, Failed, Canceled }
@@ -28,48 +28,48 @@ internal static class DualLaunchOutcomePolicy
 }
 ```
 
-加入 `STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` 的 `<Compile Include>`（紧跟同类纯策略文件）。
+Add it to the `<Compile Include>` of `STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` (right after the similar pure policy files).
 
 ### 2. `STS2AIAgent/Agent/AgentRuntime.cs`
 
-- 字段与属性：`private DualLaunchOutcome _dualLaunchOutcome = DualLaunchOutcome.Idle;` /
+- Fields and properties: `private DualLaunchOutcome _dualLaunchOutcome = DualLaunchOutcome.Idle;` /
   `public DualLaunchOutcome DualLaunchOutcome => _dualLaunchOutcome;`
-- `LaunchDualInstanceCoreAsync`（:713-765）**每个 return / catch 路径**都写入结果：
-  - gate 抢不到 → `InProgress`（并发启动在途，既非成功也非失败）
-  - 队伍消息 pending（:726-729）、`CoopLaunchPolicy` 拒绝（:731-737）→ `Rejected`
-  - 协调器返回（:744）→ `Ok ? Succeeded : Failed`
-  - 取消（:746-749）→ `Canceled`；其它异常（:750-753）→ `Failed`
-- 写入位置与对应 `_dualStatus` 赋值同处，不允许只写文案不写结果。
+- **Every return / catch path** of `LaunchDualInstanceCoreAsync` (:713-765) writes the outcome:
+  - gate cannot be acquired -> `InProgress` (a concurrent launch is in flight, neither success nor failure)
+  - team message pending (:726-729), `CoopLaunchPolicy` rejection (:731-737) -> `Rejected`
+  - coordinator returns (:744) -> `Ok ? Succeeded : Failed`
+  - cancellation (:746-749) -> `Canceled`; other exceptions (:750-753) -> `Failed`
+- The write sits at the same place as the matching `_dualStatus` assignment; writing only the text without the outcome is not allowed.
 
 ### 3. `STS2AIAgent/Multiplayer/DualInstanceCoordinator.cs`
 
-- 新增 `public static async Task<(bool Ok, string Message)> HostLocalCoopResultAsync(CancellationToken)`，
-  分支映射：非 MAIN_MENU `(false, msg)`；4 人大厅创建异常 `(false, msg)`；`!launch.Ok`
-  `(false, launch.Message)`；成功 `(true, 成功文案)`；**取消仍然 rethrow**（不吞）。
-- 现有 `HostLocalCoopAsync` 改为转调并返回 `Message`，签名与文案逐字不变。
+- Add `public static async Task<(bool Ok, string Message)> HostLocalCoopResultAsync(CancellationToken)`,
+  branch mapping: non-MAIN_MENU `(false, msg)`; 4-player lobby creation exception `(false, msg)`; `!launch.Ok`
+  `(false, launch.Message)`; success `(true, success message)`; **cancellation is still rethrown** (not swallowed).
+- The existing `HostLocalCoopAsync` is changed to delegate and return `Message`, with the signature and message text unchanged verbatim.
 
 ### 4. `STS2AIAgent/Game/GameActionService.cs:5088-5130`
 
-- 保留 `CoopLaunchPolicy.GetError` 前置校验（409 `invalid_action`）。
-- 删除 :5103-5106 的子串判定，改为读 `AgentRuntime.Instance.DualLaunchOutcome`：
+- Keep the `CoopLaunchPolicy.GetError` precheck (409 `invalid_action`).
+- Delete the substring check at :5103-5106 and read `AgentRuntime.Instance.DualLaunchOutcome` instead:
 
-| 结果 | 响应 |
+| Outcome | Response |
 |---|---|
-| `Succeeded` | 200，`status:"completed"`，`message = DualStatus` |
-| `InProgress` | 200，`status:"pending"`，`stable:false`，`message = DualStatus` |
-| `Rejected`/`Failed`/`Canceled` | 409 `invite_failed`，details 带 `action`/`screen`/`outcome` |
-| `Idle`（理论上不可达） | 409 `invite_failed`（不谎报成功） |
+| `Succeeded` | 200, `status:"completed"`, `message = DualStatus` |
+| `InProgress` | 200, `status:"pending"`, `stable:false`, `message = DualStatus` |
+| `Rejected`/`Failed`/`Canceled` | 409 `invite_failed`, details carry `action`/`screen`/`outcome` |
+| `Idle` (theoretically unreachable) | 409 `invite_failed` (does not falsely report success) |
 
-错误码沿用既有 `invite_failed`，不新增错误码。
+The error code keeps the existing `invite_failed`; no new error code is added.
 
-### 5. 测试 `STS2AIAgent.Tests/DualLaunchOutcomeTests.cs` + `TestRunner.cs` 注册
+### 5. Tests `STS2AIAgent.Tests/DualLaunchOutcomeTests.cs` + `TestRunner.cs` registration
 
-- 真值表：6 个枚举值逐个断言 `IsFailure`/`IsInProgress`（必须可否证：改一个分支即变红）。
-- 语言无关性：一条源码契约断言（`AgentSourceFixture.Read("Game/GameActionService.cs")`）
-  证明 `Contains("失败"` 已消失、且存在 `DualLaunchOutcome` 读取；用反射/枚举真值表证明判定不吃文案。
-- 补一条"每个分支都写结果"的契约断言（`_dualLaunchOutcome =` 出现次数 ≥ 5，且 gate 分支内为 `InProgress`）。
+- Truth table: assert `IsFailure`/`IsInProgress` for each of the 6 enum values (must be falsifiable: changing one branch turns it red).
+- Language independence: a source contract assertion (`AgentSourceFixture.Read("Game/GameActionService.cs")`)
+  proves `Contains("失败"` is gone and a `DualLaunchOutcome` read exists; use reflection/the enum truth table to prove the decision does not consume display text.
+- Add a "every branch writes the outcome" contract assertion (`_dualLaunchOutcome =` appears >= 5 times, and is `InProgress` inside the gate branch).
 
-## 兼容与回滚
+## Compatibility and rollback
 
-- HTTP 面：成功路径响应体字段不变；失败路径由"假成功"变为 409 —— 正是本次要修的行为。
-- 回滚：四个文件 + 一个新测试文件，独立提交，可整体 revert。
+- HTTP surface: the success-path response body fields are unchanged; the failure path changes from "false success" to 409, which is exactly the behavior this task fixes.
+- Rollback: four files + one new test file, committed separately, can be reverted as a whole.

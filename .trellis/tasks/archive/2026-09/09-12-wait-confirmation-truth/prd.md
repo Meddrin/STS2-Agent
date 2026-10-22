@@ -1,50 +1,50 @@
-# 节点消失不等于目标达成：修正菜单等待与四个动作处理器
+# A vanished node does not mean the target was reached: fix the menu waits and four action handlers
 
-## 背景
+## Background
 
-`GameActionService.cs` 的菜单等待把"我盯着的那个节点被销毁了"当成"目标状态已达成的证据"：
+The menu waits in `GameActionService.cs` treat "the node I was watching was destroyed" as "evidence that the target state was reached":
 
-| 等待助手 | 行 | 危险写法 | 后果 |
+| Wait helper | Line | Dangerous pattern | Consequence |
 |---|---|---|---|
-| `WaitForMainMenuSubmenuOpenAsync` | :5609-5630 | `if (!IsInstanceValid(screen)) return true;` | 主菜单被销毁（例如直接进了游戏）也算"子菜单已打开" |
-| `WaitForCharacterSelectionTransitionAsync` | :5826-5829 | 同款 `return true;` | 选人界面消失 ≠ 已选中该角色 |
-| `WaitForLobbyReadyTransitionAsync` | :5880-5883 | `return ready;` | `ready=true` 时房间销毁被报成"已准备" |
+| `WaitForMainMenuSubmenuOpenAsync` | :5609-5630 | `if (!IsInstanceValid(screen)) return true;` | A destroyed main menu (for example entering the game directly) also counts as "submenu opened" |
+| `WaitForCharacterSelectionTransitionAsync` | :5826-5829 | The same `return true;` | The character select screen vanishing != that character being selected |
+| `WaitForLobbyReadyTransitionAsync` | :5880-5883 | `return ready;` | When `ready=true` a destroyed room is reported as "ready" |
 
-`open_timeline`（:588 `PushSubmenuType<NTimelineScreen>` → 等待）是当前唯一的直接受害动作：
-主菜单一旦被销毁，`status` 直接报 `"completed"`。`WaitForMainMenuSubmenuOpenAsync` 另有
-`open_character_select`（:540）与邀请链路（:4809/:4816）两个调用点。
+`open_timeline` (:588 `PushSubmenuType<NTimelineScreen>` -> wait) is currently the only directly affected action:
+once the main menu is destroyed, `status` directly reports `"completed"`. `WaitForMainMenuSubmenuOpenAsync` also has
+two other call sites: `open_character_select` (:540) and the invite chain (:4809/:4816).
 
-同批要一起收口的四个处理器（都已定位、都属"报的结果比事实更乐观"）：
+Four handlers to be tightened in the same batch (all located, all cases of "the reported result is more optimistic than the facts"):
 
-1. `select_deck_card`（:2028+）守卫宽于执行识别：`CanSelectDeckCard` 放行但战斗手牌/卡牌网格
-   两条元数据都不匹配时会点空，然后只回 `pending`。
-2. `confirm_timeline_overlay`（:702+）三个浮层分支复用同一点击路径，点击前不重新校验可用性。
-3. `crystal_set_tool`（:1607+）`status` 硬编码 `"completed"`，需以证据确认 `TrySetCrystalSphereTool`
-   的返回值是否真的等价于"工具已切换"。
-4. `run_console_command`（:4924+）`consoleTimedOut` 只进 message 不进 `status`：命令任务超时后
-   只要屏幕稳定就报 `completed`。
+1. `select_deck_card` (:2028+): the guard is wider than the executor's recognition: `CanSelectDeckCard` lets it through but when neither the combat hand nor the card grid
+   metadata matches it clicks nothing and then returns only `pending`.
+2. `confirm_timeline_overlay` (:702+): the three overlay branches reuse the same click path and do not revalidate availability before clicking.
+3. `crystal_set_tool` (:1607+): `status` is hardcoded to `"completed"`, and evidence is needed to confirm whether the return value of `TrySetCrystalSphereTool`
+   is really equivalent to "the tool has switched".
+4. `run_console_command` (:4924+): `consoleTimedOut` goes only into the message and not into `status`: after the command task times out,
+   as long as the screen is stable it reports `completed`.
 
-## 目标
+## Goals
 
-1. 三条等待规则改为"成功必须被**观察到**"：源节点消失只能让等待**停止**，不能让它**成功**。
-2. 规则以纯策略表达并离线测试（当前测试工程无法编译 `GameActionService.cs`）。
-3. 四个处理器：要么给出可观测的成功证据，要么显式报 `pending`/409/503，不允许静默乐观。
+1. The three wait rules change to "success must be **observed**": a vanished source node can only make the wait **stop**, not make it **succeed**.
+2. The rules are expressed as pure policy and tested offline (the current test project cannot compile `GameActionService.cs`).
+3. The four handlers: either give observable evidence of success, or explicitly report `pending`/409/503; silent optimism is not allowed.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] 三处危险写法消失，且替换逻辑在"目标状态未观察到"时返回 false/pending。
-- [x] 新增/扩展纯策略（`STS2AIAgent/Game/MenuTransitionPolicy.cs`，已编入测试工程）承载判定规则，
-      并有真值表测试（每种输入组合都断言；改坏即红）。
-- [x] `select_deck_card`：无法定位到任何可点击选项时抛 409 `invalid_action`（不得返回 `pending` 掩盖）。
-- [x] `confirm_timeline_overlay`：每次点击前重校验目标可用；点击后以等待确认，未确认即 `pending`。
-- [x] `crystal_set_tool`：若 `TrySetCrystalSphereTool` 的返回值不构成"工具已切换"的证据，
-      改为回读确认（读 `GameStateService` 暴露的当前工具），并保持成功时仍报 `completed`。
-- [x] `run_console_command`：命令任务超时时不得报 `completed`。
-- [x] 全量门禁通过（C# 单测、MCP 单测、`check_verification_gates.py`、`check_release_package.py`、preflight）。
+- [x] The three dangerous patterns are gone, and the replacement logic returns false/pending when "the target state was not observed".
+- [x] New/extended pure policy (`STS2AIAgent/Game/MenuTransitionPolicy.cs`, already compiled into the test project) carries the decision rules,
+      with truth table tests (every input combination asserted; breaking it turns it red).
+- [x] `select_deck_card`: when no clickable option can be located throw 409 `invalid_action` (must not return `pending` to cover it up).
+- [x] `confirm_timeline_overlay`: revalidate that the target is available before each click; confirm by waiting after the click, and `pending` if unconfirmed.
+- [x] `crystal_set_tool`: if the return value of `TrySetCrystalSphereTool` does not constitute evidence that "the tool has switched",
+      change to read-back confirmation (read the current tool exposed by `GameStateService`), and still report `completed` on success.
+- [x] `run_console_command`: must not report `completed` when the command task times out.
+- [x] Full gates pass (C# unit tests, MCP unit tests, `check_verification_gates.py`, `check_release_package.py`, preflight).
 
-## 范围外
+## Out of scope
 
-- 不新增错误码（沿用 `invalid_action` / `invalid_request` / `invalid_target` / `state_unavailable`）。
-- 不改 `open_character_select` 的 `GetSubmenuType<NCharacterSelectScreen>()`——反编译证实它是懒创建，
-  不会返回 null（见 research 文件），此前审计的 B8 是误报。
-- 不改 `docs/api.md` 的动作契约块。
+- Do not add error codes (keep using `invalid_action` / `invalid_request` / `invalid_target` / `state_unavailable`).
+- Do not change `GetSubmenuType<NCharacterSelectScreen>()` of `open_character_select`: decompilation confirms it is lazily created
+  and never returns null (see the research file), so B8 of the earlier audit was a false positive.
+- Do not change the action contract block of `docs/api.md`.

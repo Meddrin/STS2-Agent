@@ -8,7 +8,7 @@ Runner: main session. Date: 2026-09-10.
 CHARACTER_SELECT and GAME_OVER as not covered. All of them are implemented now
 (`GameStateService.BuildChestPayload`/`BuildEventPayload`/`BuildRestPayload`/`BuildShopPayload`/
 `BuildGameOverPayload` and the matching handlers in `GameActionService`), so the document's
-"待补齐" list read as a current backlog while describing the opposite of the source.
+"To be completed" list read as a current backlog while describing the opposite of the source.
 
 Dated validation records also had no signal that they are point-in-time snapshots.
 
@@ -21,7 +21,7 @@ Dated validation records also had no signal that they are point-in-time snapshot
   `docs/phase-4c-shop.md` and `docs/roadmap-current.md` already use.
 - `history/README.md` index row added.
 - `docs/mechanic-coverage-matrix.md` gained the same marker even though its filename carries no date: its release-candidate conclusion and its remaining-gap column belong to the v0.98.3 build it was written against, and it is a tracked file that preflight requires, so it stays at its path. `REQUIRED_SNAPSHOT_MARKERS` in the gate keeps that marker from being dropped later.
-- Five date-stamped records gained a "历史快照 / Historical snapshot" marker:
+- Five date-stamped records gained a "Historical snapshot" marker:
   `2026-08-31-event-option-localization.md`, `2026-08-31-pr53-review-follow-up.md`,
   `phase-6-validation-2026-03-11.md`, `phase-6-validation-2026-03-30-dynamic-card-values.md`,
   `phase-8-validation-2026-03-11.md`.

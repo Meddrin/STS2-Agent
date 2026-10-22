@@ -1,110 +1,110 @@
-# 设计：Jev 双层决策引擎
+# Design: the Jev two-layer decision engine
 
-## 架构总览
+## Architecture overview
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│ 规划层（LLM，低频）                                     │
-│  游戏内：StrategyPlanner（只读 ILlmClient）             │
-│  外部：  coding agent 经 MCP get_planner_briefing /     │
+│ Planning layer (LLM, low frequency)                    │
+│  In-game: StrategyPlanner (read-only ILlmClient)       │
+│  External: coding agent via MCP get_planner_briefing / │
 │          update_play_strategy                          │
-│  二者都写同一个 StrategyStore                           │
+│  Both write the same StrategyStore                     │
 └──────────────────────┬─────────────────────────────────┘
-                       │ PlayStrategy（posture/instructions/hints）
+                       │ PlayStrategy (posture/instructions/hints)
                        ▼
 ┌────────────────────────────────────────────────────────┐
-│ 执行层（Jev，每手）                                     │
-│  AgentLoop.PlayOnceAsync 分支：                         │
-│   GetActionSnapshotJsonAsync（同帧 state+actions）      │
-│   → JevOptionEnumerator 展开具体选项                    │
-│   → JevExecutionDecider.DecideAsync（IJevClient）       │
-│   → confidence≥阈值 ? ExecuteActAsync : 回退 LLM 路径   │
+│ Execution layer (Jev, every move)                      │
+│  AgentLoop.PlayOnceAsync branch:                       │
+│   GetActionSnapshotJsonAsync (same-frame state+actions)│
+│   -> JevOptionEnumerator expands concrete options      │
+│   -> JevExecutionDecider.DecideAsync (IJevClient)      │
+│   -> conf>=threshold ? ExecuteActAsync : LLM fallback  │
 └────────────────────────────────────────────────────────┘
 ```
 
-## 新增类型（全部新文件，遵守行数 ratchet）
+## New types (all new files, respecting the line count ratchet)
 
-### Llm 层
-- `Llm/JevTypes.cs`：DTO。请求 `{state, model, questions{id:{type,instructions,criteria}}}`；响应 `{model, answers{id:{type, choice|score|noul, probabilities, confidence}}, usage{input_tokens, output_tokens}}`。System.Text.Json 序列化，纯 DTO 可单测。
-- `Llm/IJevClient.cs`：`Task<JevResponse> SystemOneAsync(JevRequest, CancellationToken)` + `Task<string> PingAsync(CancellationToken)`（列模型 `/v1/models` 验证密钥）。
-- `Llm/JevClient.cs`：实现。自持 `HttpClient`（`DefaultLlmClientFactory.SharedHttp` 是 private static，不强行复用）；显式 `Timeout`；429 读 `retry-after` 退避重试（上限次数）；错误映射 `JevException{Kind}`（config/network），对齐 `ModelRoleProbe.FailureKind`。
+### Llm layer
+- `Llm/JevTypes.cs`: DTOs. Request `{state, model, questions{id:{type,instructions,criteria}}}`; response `{model, answers{id:{type, choice|score|noul, probabilities, confidence}}, usage{input_tokens, output_tokens}}`. System.Text.Json serialization, pure DTOs that can be unit tested.
+- `Llm/IJevClient.cs`: `Task<JevResponse> SystemOneAsync(JevRequest, CancellationToken)` + `Task<string> PingAsync(CancellationToken)` (lists models via `/v1/models` to verify the key).
+- `Llm/JevClient.cs`: the implementation. Owns its `HttpClient` (`DefaultLlmClientFactory.SharedHttp` is private static, so reuse is not forced); explicit `Timeout`; on 429 reads `retry-after` and backs off and retries (bounded count); errors map to `JevException{Kind}` (config/network), aligned with `ModelRoleProbe.FailureKind`.
 
-### Agent 层
-- `Agent/IActionDecider.cs`：`Task<ExecutionDecision> DecideAsync(string snapshotJson, PlayStrategy strategy, CancellationToken ct)`。
-- `Agent/ExecutionDecision.cs`：record `{Action, CardIndex, TargetIndex, OptionIndex, X, Y, Tool, Reason, Confidence, Probabilities, Usage, RequestsSpent, Error}`，字段对齐 `AgentTurnResult` 便于回填。
-- `Agent/JevOptionEnumerator.cs`：纯逻辑。解析 action snapshot JSON → `List<JevOption>{Id, Description, Action, CardIndex, TargetIndex, OptionIndex, X, Y, Tool}`。按屏展开：
-  - COMBAT：`play_card`×手牌×合法目标、`end_turn`、药水；
-  - MAP：`choose_map_node`×`map.options`；
-  - REWARD/CARD_SELECTION/SHOP/REST/CHEST/EVENT/CAPSTONE/BUNDLE 等：按 `available_actions` 的 `requires_index/requires_target` 与 state 中对应列表展开；
-  - 兜底：无参数动作各一项。超 255 项时按优先级截断（战斗出牌优先）。
-- `Agent/JevExecutionDecider.cs`：`IActionDecider` 默认实现。构造 Choice（criteria=选项Id→Description，instructions 分面：goal/当前屏 playbook `PlayPrompt.PlaybookGuidance(screen)`/策略 strategy/合法性提醒）+ 可选 Score(danger)。调 `IJevClient`，把 choice 映回 `ExecutionDecision`。
-- `Agent/PlayStrategy.cs`：record `{Posture, Instructions, OptionHints, UpdatedAt, Source}`；`PlayStrategy.Default` 内置。
-- `Agent/StrategyStore.cs`：线程安全持有当前策略（`Current`/`Update`）。
-- `Agent/StrategyPlanner.cs`：触发判断（屏/Act/Boss 变化、低置信连续≥N、每 M 手）+ 调只读 LLM 产出策略 JSON → 解析 → `StrategyStore.Update`。复用 `AgentLoop.ChatAsync` 只读模式（`ChatOptions{ReadOnly=true}`）。
+### Agent layer
+- `Agent/IActionDecider.cs`: `Task<ExecutionDecision> DecideAsync(string snapshotJson, PlayStrategy strategy, CancellationToken ct)`.
+- `Agent/ExecutionDecision.cs`: record `{Action, CardIndex, TargetIndex, OptionIndex, X, Y, Tool, Reason, Confidence, Probabilities, Usage, RequestsSpent, Error}`, with fields aligned to `AgentTurnResult` for easy backfill.
+- `Agent/JevOptionEnumerator.cs`: pure logic. Parse the action snapshot JSON -> `List<JevOption>{Id, Description, Action, CardIndex, TargetIndex, OptionIndex, X, Y, Tool}`. Expanded per screen:
+  - COMBAT: `play_card` x hand x legal targets, `end_turn`, potions;
+  - MAP: `choose_map_node` x `map.options`;
+  - REWARD/CARD_SELECTION/SHOP/REST/CHEST/EVENT/CAPSTONE/BUNDLE etc.: expanded by the `requires_index/requires_target` of `available_actions` and the matching list in state;
+  - Fallback: one item for each parameterless action. Beyond 255 items truncate by priority (combat card plays first).
+- `Agent/JevExecutionDecider.cs`: the default `IActionDecider` implementation. Builds a Choice (criteria = option Id -> Description, instructions in facets: goal / current screen playbook `PlayPrompt.PlaybookGuidance(screen)` / strategy / legality reminders) + an optional Score (danger). Calls `IJevClient` and maps the choice back to an `ExecutionDecision`.
+- `Agent/PlayStrategy.cs`: record `{Posture, Instructions, OptionHints, UpdatedAt, Source}`; `PlayStrategy.Default` is built in.
+- `Agent/StrategyStore.cs`: thread-safe holder of the current strategy (`Current`/`Update`).
+- `Agent/StrategyPlanner.cs`: trigger decision (screen/Act/Boss change, consecutive low confidence >= N, every M moves) + calls the read-only LLM to produce strategy JSON -> parse -> `StrategyStore.Update`. Reuses the `AgentLoop.ChatAsync` read-only mode (`ChatOptions{ReadOnly=true}`).
 
-## 接入点（AgentLoop.PlayOnceAsync 分支）
+## Integration point (AgentLoop.PlayOnceAsync branch)
 
-在 `AgentLoop.cs:120` 取到 `stateJson` 后、`:129` 组装 prompt 前：
+After `stateJson` is obtained at `AgentLoop.cs:120` and before the prompt is assembled at `:129`:
 
 ```csharp
 if (_decider is { } decider && _strategyStore is { } store)
 {
-    var snapshotJson = await _bridge.GetActionSnapshotJsonAsync(ct);   // 同帧 state+actions
+    var snapshotJson = await _bridge.GetActionSnapshotJsonAsync(ct);   // same-frame state+actions
     var decision = await decider.DecideAsync(snapshotJson, store.Current, ct);
     if (decision.Error == null && decision.Confidence >= threshold)
     {
         var actArgs = JsonSerializer.Serialize(decision.ToActArguments());
         var outcome = await ExecuteActAsync(actArgs, ct, checkState, onAccepted);
-        return new AgentTurnResult { Acted=..., ActResultJson=..., StateFingerprint=..., // 必须填
+        return new AgentTurnResult { Acted=..., ActResultJson=..., StateFingerprint=..., // must be filled
                                      Reasoning=decision.Reason, Usage=decision.Usage,
                                      RequestsSpent=decision.RequestsSpent, Confidence=decision.Confidence };
     }
-    // 低置信或失败：触发 StrategyPlanner 刷新，落入现有 LLM 路径
+    // Low confidence or failure: trigger a StrategyPlanner refresh and fall into the existing LLM path
 }
 ```
 
-- `AgentLoop` 构造函数加可选 `IActionDecider` + `StrategyStore` + threshold 提供者（现有已有 4 个可选 `Func<>`，风格一致）。
-- `AgentRuntime` 构造处注入；按 `AgentSettings` 的 `DualLayerSoloEnabled`/`DualLayerCoopEnabled` 与当前实例角色决定是否启用。
-- `AgentTurnResult` 加可空 `Confidence`（init-only，向后兼容）。
-- `AgentRuntime.RecordDecision` 透传 confidence；`DecisionLogEntry` 加可空 `confidence`。
+- The `AgentLoop` constructor gains an optional `IActionDecider` + `StrategyStore` + a threshold provider (there are already 4 optional `Func<>`s, so the style is consistent).
+- `AgentRuntime` injects them at construction; whether they are enabled is decided by `DualLayerSoloEnabled`/`DualLayerCoopEnabled` of `AgentSettings` and the current instance role.
+- `AgentTurnResult` gains a nullable `Confidence` (init-only, backward compatible).
+- `AgentRuntime.RecordDecision` passes confidence through; `DecisionLogEntry` gains a nullable `confidence`.
 
 ## MCP parity
 
-- HTTP：`GET /strategy`（当前策略+简报）、`POST /strategy`（写策略），均 `IsLocal`。
-- 原生面：`AgentTools.Mcp` 加两工具 schema；`NativeMcpServer.Tools.cs` 加 dispatch。
-- Python：`client.py` 加 `get_strategy`/`update_strategy`；`server.py` 在 guided 注册两工具。
-- `test_native_tool_alignment.py` 通过（豁免表为空）。
+- HTTP: `GET /strategy` (current strategy + briefing), `POST /strategy` (write strategy), both `IsLocal`.
+- Native surface: `AgentTools.Mcp` adds the schemas of two tools; `NativeMcpServer.Tools.cs` adds the dispatch.
+- Python: `client.py` adds `get_strategy`/`update_strategy`; `server.py` registers the two tools in guided.
+- `test_native_tool_alignment.py` passes (the exemption table is empty).
 
-## 错误与边界
+## Errors and boundaries
 
-- Jev 失败/超时/低置信 → 回退 LLM 路径，不抛停整局；连续失败由 `AutoPlayRecovery` 既有策略兜底。
-- 取消：全程传 `CancellationToken`；`AgentTurnCanceledException` 交回 receipt。
-- 预算：每次 Jev 调用 `RequestsSpent+=1`；usage 未知保持 null。
+- Jev failure/timeout/low confidence -> fall back to the LLM path, without stopping the whole run; consecutive failures are backstopped by the existing policy of `AutoPlayRecovery`.
+- Cancellation: pass `CancellationToken` throughout; `AgentTurnCanceledException` is handed back to the receipt.
+- Budget: every Jev call does `RequestsSpent+=1`; unknown usage stays null.
 
-## 已实测验证的 API 契约（2026-09-22，真实 key + 官方文档双重确认）
+## Verified API contract (2026-09-22, double-confirmed with a real key + the official docs)
 
-> 以下来自对 `https://api.typesafe.ai` 的真实调用 + `docs.typesafe.ai` 官方文档，二者一致。实现以此为准。
+> The following comes from real calls to `https://api.typesafe.ai` + the official `docs.typesafe.ai` documentation, and the two agree. The implementation follows this.
 
-- **请求** `POST /v1/systemone`，`Authorization: Bearer <key>`，body `{state, model, questions:{id:{type, instructions, criteria}}}`。
-  - `state` 可为字符串或对象（我们传对象：同帧 `{state, available_actions}` 的 state 部分）。
-  - `criteria`：choice = map（optionId→描述，≤255 项）；score = 有序 level 描述数组（2-10 级）；noul 无。
-  - `instructions` 与 `criteria` 均接受 JSON 结构（typesafe-mario 的分面 instructions 对象合法）。
-- **响应** `{model, answers, usage:{input_tokens, output_tokens}}`。`model` 是解析后的版本号（如 `jev-1.13.0`），不等于请求别名 `jev-latest`。
-- **choice 答案** `{type:"choice", choice, confidence, probabilities:{optionId→p}}`。
-- **score 答案** `{type:"score", score:<浮点>, confidence, legend:{index→level标签}, probabilities:{index→p}}`。注意 score 是 **float**（如 1.82），不是 int。
-- **noul 答案** `{type:"noul", noul:<0-1>}`，**无 confidence**。
-- **confidence** 由概率分布推导（越集中越高），Choice/Score 都有；官方推荐模式正是 **confidence-gated routing**（高置信执行、低置信升级）——与本设计一致。
-- **错误**：无效 key → HTTP 401（空 body）→ 映射 Config。429 → 读 `retry-after` 退避。
-- **`GET /v1/models`** → `{models:[{name, description, release_date}]}`，用于 PingAsync 验证 key。当前有 `jev-latest` 与 `jev-preview`。
-- no-progress：Jev 路径必须填 `StateFingerprint`。
+- **Request** `POST /v1/systemone`, `Authorization: Bearer <key>`, body `{state, model, questions:{id:{type, instructions, criteria}}}`.
+  - `state` can be a string or an object (we pass an object: the state part of the same-frame `{state, available_actions}`).
+  - `criteria`: choice = map (optionId -> description, <=255 items); score = an ordered array of level descriptions (2-10 levels); none for noul.
+  - Both `instructions` and `criteria` accept JSON structures (the faceted instructions object of typesafe-mario is legal).
+- **Response** `{model, answers, usage:{input_tokens, output_tokens}}`. `model` is the resolved version number (such as `jev-1.13.0`), not equal to the requested alias `jev-latest`.
+- **choice answer** `{type:"choice", choice, confidence, probabilities:{optionId->p}}`.
+- **score answer** `{type:"score", score:<float>, confidence, legend:{index->level label}, probabilities:{index->p}}`. Note that score is a **float** (such as 1.82), not an int.
+- **noul answer** `{type:"noul", noul:<0-1>}`, **no confidence**.
+- **confidence** is derived from the probability distribution (the more concentrated, the higher), present for both Choice/Score; the officially recommended pattern is exactly **confidence-gated routing** (execute on high confidence, escalate on low), consistent with this design.
+- **Errors**: an invalid key -> HTTP 401 (empty body) -> mapped to Config. 429 -> read `retry-after` and back off.
+- **`GET /v1/models`** -> `{models:[{name, description, release_date}]}`, used by PingAsync to verify the key. Currently `jev-latest` and `jev-preview` exist.
+- no-progress: the Jev path must fill `StateFingerprint`.
 
-## 测试
+## Tests
 
-- C#（`STS2AIAgent.Tests`，`dotnet run`）：JevTypes 序列化、JevClient（注入 fake HttpMessageHandler：URL/请求体/429 退避/取消/错误分类）、JevOptionEnumerator（各屏快照 fixture）、JevExecutionDecider（fake IJevClient）、置信度门控分支（fake bridge）、StrategyStore/PlayStrategy 解析、DecisionLog confidence 字段、SettingsClone 新字段。
-- Python（`mcp_server/tests`，`uv run --locked python -m unittest discover -s tests -v`）：新工具 DummyClient 测试 + `test_native_tool_alignment.py`。
+- C# (`STS2AIAgent.Tests`, `dotnet run`): JevTypes serialization, JevClient (injected fake HttpMessageHandler: URL/request body/429 backoff/cancellation/error classification), JevOptionEnumerator (snapshot fixtures per screen), JevExecutionDecider (fake IJevClient), the confidence gating branch (fake bridge), StrategyStore/PlayStrategy parsing, the DecisionLog confidence field, the new SettingsClone fields.
+- Python (`mcp_server/tests`, `uv run --locked python -m unittest discover -s tests -v`): DummyClient tests of the new tools + `test_native_tool_alignment.py`.
 
-## 兼容与回滚
+## Compatibility and rollback
 
-- 全部新增为可选路径；双层开关默认关，现有行为不变。
-- API 只增不删；`confidence` 可空。
-- 回滚 = revert；无持久化破坏性变更。
+- Everything new is an optional path; the two-layer switch is off by default and existing behavior is unchanged.
+- The API only adds and never deletes; `confidence` is nullable.
+- Rollback = revert; no destructive persistence change.

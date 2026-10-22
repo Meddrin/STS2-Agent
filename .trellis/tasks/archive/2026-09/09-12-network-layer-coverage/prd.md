@@ -1,43 +1,43 @@
-# 覆盖 network_server 配置与 8 个 layered 知识工具
+# Cover the network_server configuration and the 8 layered knowledge tools
 
-## 背景
+## Background
 
-`mcp_server/tests/` 目前 7 个文件（`test_action_replay_safety`、`test_agent_contract`、
-`test_crystal_sphere_tools`、`test_game_data_tools`、`test_legacy_action_coverage`、
-`test_native_tool_alignment`、`test_waits`），
-`rg -n 'network_server|handoff|knowledge' mcp_server/tests` **无命中**：
+`mcp_server/tests/` currently has 7 files (`test_action_replay_safety`, `test_agent_contract`,
+`test_crystal_sphere_tools`, `test_game_data_tools`, `test_legacy_action_coverage`,
+`test_native_tool_alignment`, `test_waits`),
+and `rg -n 'network_server|handoff|knowledge' mcp_server/tests` has **no hits**:
 
-- `network_server.py`（:21-235）：`NetworkServerConfig`、`_env_flag`、`_normalize_path`、
-  `_build_auth_provider`、`create_network_app`、`parse_args`、`run_network_server_async` 全无测试；
-- `server.py` 的 layered 8 个工具（:625-724）也无测试。
+- `network_server.py` (:21-235): `NetworkServerConfig`, `_env_flag`, `_normalize_path`,
+  `_build_auth_provider`, `create_network_app`, `parse_args`, `run_network_server_async` are all untested;
+- The 8 layered tools of `server.py` (:625-724) are also untested.
 
-这些代码决定"能不能连上、要不要鉴权、路径对不对"，是最容易被改坏又最不容易被发现的一层。
+This code decides "whether you can connect, whether auth is required, whether the path is right", the layer that is easiest to break and hardest to notice.
 
-## 目标
+## Goals
 
-1. 新增 `mcp_server/tests/test_network_server.py`：覆盖纯逻辑与参数解析（含互斥参数的报错路径）。
-2. 新增 `mcp_server/tests/test_layered_tools.py`：覆盖 8 个 layered 工具的报文结构，
-   并验证"不触碰 sts2 的两个工具"（`complete_combat_handoff`/`complete_event_handoff`）确实不调 `get_state`。
-3. 全程离线：不连真实 `127.0.0.1:8080`，不绑真实端口，不写仓库 `agent_knowledge/`。
+1. Add `mcp_server/tests/test_network_server.py`: cover the pure logic and argument parsing (including the error path of mutually exclusive arguments).
+2. Add `mcp_server/tests/test_layered_tools.py`: cover the message structure of the 8 layered tools,
+   and verify that the "two tools that do not touch sts2" (`complete_combat_handoff`/`complete_event_handoff`) really do not call `get_state`.
+3. Fully offline: do not connect to the real `127.0.0.1:8080`, do not bind real ports, do not write the repo's `agent_knowledge/`.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `NetworkServerConfig` 默认值（host/port/path/token）、`auth_enabled` 在空 token 时为 False（有断言）。
-- [x] `_env_flag` 的真值表（1/true/yes/空/未设置）用 `patch.dict(os.environ)` 覆盖。
-- [x] `_normalize_path` 的边界（带/不带前导斜杠、空串、重复斜杠）有断言。
-- [x] `parse_args`：默认值来自环境变量；`--transport sse` 与 `--stateless-http` 同时给时
-      `parser.error` → `SystemExit(2)`（断言退出码）。
-- [x] `create_network_app` 返回 `(server, client, app)` 且路由已注册（`/healthz` 等）；
-      healthz 成功/失败分支用 fake client 或本地 stub，**不依赖真实 mod**。
-- [x] 8 个 layered 工具逐个调用一次（`asyncio.run(server.get_tool(name)).fn(...)`，
-      参考 `test_crystal_sphere_tools.py:45-47`），断言关键键存在；
-      知识写入全部落在 `tempfile` 目录（`STS2_AGENT_KNOWLEDGE_DIR` 或
-      `patch("sts2_mcp.server.Sts2KnowledgeBase")`，必须在 `create_server` 之前设置）。
-- [x] 测试结束后仓库 `agent_knowledge/` 无新增文件（`git status` 证据）。
-- [x] `uv run --locked python -m unittest discover -s tests` 全绿。
+- [x] `NetworkServerConfig` defaults (host/port/path/token), and `auth_enabled` is False with an empty token (asserted).
+- [x] The truth table of `_env_flag` (1/true/yes/empty/unset) is covered with `patch.dict(os.environ)`.
+- [x] The boundaries of `_normalize_path` (with/without a leading slash, empty string, repeated slashes) are asserted.
+- [x] `parse_args`: defaults come from environment variables; when `--transport sse` and `--stateless-http` are both given,
+      `parser.error` -> `SystemExit(2)` (assert the exit code).
+- [x] `create_network_app` returns `(server, client, app)` and the routes are registered (`/healthz` etc.);
+      the healthz success/failure branches use a fake client or a local stub, **without depending on the real mod**.
+- [x] Each of the 8 layered tools is called once (`asyncio.run(server.get_tool(name)).fn(...)`,
+      see `test_crystal_sphere_tools.py:45-47`), asserting the key keys exist;
+      all knowledge writes land in a `tempfile` directory (`STS2_AGENT_KNOWLEDGE_DIR` or
+      `patch("sts2_mcp.server.Sts2KnowledgeBase")`, which must be set before `create_server`).
+- [x] After the tests the repo `agent_knowledge/` has no new files (`git status` evidence).
+- [x] `uv run --locked python -m unittest discover -s tests` all green.
 
-## 范围外
+## Out of scope
 
-- `run_network_server_async`（真实绑定端口、跑 uvicorn）不做单测，只在测试里断言其参数装配可被读取。
-- `network_server.py` 无 client 注入点这一点**不改生产代码**去加注入（如确有必要，改测试的 patch 方式）。
-- 不改任何工具的返回结构。
+- `run_network_server_async` (really binding a port, running uvicorn) is not unit tested; the tests only assert that its argument assembly can be read.
+- The fact that `network_server.py` has no client injection point is **not fixed by changing production code** (if really necessary, change the patching approach of the tests).
+- Do not change the return structure of any tool.

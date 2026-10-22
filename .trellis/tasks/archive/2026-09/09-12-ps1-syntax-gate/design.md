@@ -1,8 +1,8 @@
-# 设计
+# Design
 
-## gate 实现（`scripts/check_verification_gates.py`）
+## Gate implementation (`scripts/check_verification_gates.py`)
 
-新增函数 `check_ps1_syntax(repo_root: Path) -> list[str]`，签名与其它 gate 一致（返回 notes，失败抛 `GateError`）。
+Add the function `check_ps1_syntax(repo_root: Path) -> list[str]`, with the same signature as the other gates (returns notes, raises `GateError` on failure).
 
 ```python
 PS1_GLOB = "*.ps1"
@@ -15,52 +15,52 @@ def check_ps1_syntax(repo_root: Path) -> list[str]:
     interpreter = shutil.which("pwsh") or shutil.which("powershell")
     if interpreter is None:
         return ["no PowerShell interpreter on PATH; skipping the .ps1 syntax check"]
-    ...  # 一次子进程解析全部文件，收 JSON 结果，逐条报错
+    ...  # parse all files in one subprocess, collect the JSON result, report errors one by one
 ```
 
-要点：
+Key points:
 
-- **解释器选择**：优先 `pwsh`（CI 的 `windows-latest` 与本地都有），回落到 `powershell`（Windows PowerShell 5.1）。
-  两个都装了 `Microsoft.PowerShell.Utility` 的 `Parser` 类型；用哪个都能解析同一份语法。
-- **一次调用解析全部文件**（不要每个文件起一个进程）：把文件列表经 stdin 或参数传给一段
-  `-Command` 脚本，脚本对每个文件 `ParseFile`，把 `{file, errors:[{line, column, message}]}` 以 JSON 打到 stdout。
-  实现时用 `-NoProfile -NonInteractive`，避免污染与交互等待。
-- **不要执行**：只用 `[System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors)`。
-  `ParseFile` 是纯解析：有语法错的文件也不会被执行。
-- **子进程失败的处理**：解释器启动失败/非零退出而拿不到 JSON ⇒ 抛 `GateError`（这是 gate 自身坏了，
-  不能当成"脚本没问题"）。
-- **输出形态**：与其它 gate 一致，逐条 `notes.append(...)`；成功时给一行汇总（例如
-  `30 PowerShell scripts parse cleanly`）。gate 名注册进 `GATES` 字典，`--only` 自动带上
-  （`choices=sorted(GATES)`）。
+- **Interpreter choice**: prefer `pwsh` (available on CI's `windows-latest` and locally), falling back to `powershell` (Windows PowerShell 5.1).
+  Both ship the `Parser` type of `Microsoft.PowerShell.Utility`; either parses the same syntax.
+- **Parse all files in one call** (do not start one process per file): pass the file list via stdin or arguments to a
+  `-Command` script, which runs `ParseFile` on each file and prints `{file, errors:[{line, column, message}]}` as JSON to stdout.
+  At implementation time use `-NoProfile -NonInteractive` to avoid pollution and interactive waits.
+- **Do not execute**: use only `[System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors)`.
+  `ParseFile` is pure parsing: a file with a syntax error is not executed either.
+- **Handling subprocess failure**: if the interpreter fails to start / exits non-zero and no JSON is obtained => raise `GateError` (the gate itself is broken,
+  which must not be taken as "the scripts are fine").
+- **Output shape**: consistent with the other gates, `notes.append(...)` one by one; on success give a one-line summary (for example
+  `30 PowerShell scripts parse cleanly`). Register the gate name in the `GATES` dict, and `--only` picks it up automatically
+  (`choices=sorted(GATES)`).
 
-## 自测（`scripts/test-verification-gates.ps1`）
+## Self-test (`scripts/test-verification-gates.ps1`)
 
-现有 `Assert-Case` 会：建 fixture → 变异 → 用 `--only <gate>` 跑 → 断言非零退出。新增两个 case：
+The existing `Assert-Case` does: build a fixture -> mutate -> run with `--only <gate>` -> assert a non-zero exit. Add two cases:
 
-1. 坏语法：把 `if (` 这类不闭合的文本写进 `$fixture/scripts/broken-probe.ps1` ⇒ 期望 gate 拒绝
-   （`Assert-Case -Name "..." -Only "ps1-syntax" -Mutate { ... }`）。
-2. 好语法：写一个合法 `.ps1` ⇒ 用一个"期望通过"的断言形态（现有脚本里若有 `Assert-Accepts` 之类就用它，
-   没有就按同一模式加一个小 helper，或直接把 case 写成"gate 退出码为 0"）。
-   注意 fixture 的 `scripts/` 里本来就有 `check_verification_gates.py`（唯一的文件），
-   所以"无 `.ps1` ⇒ 跳过"这条路径也可以顺带钉住。
+1. Bad syntax: write unclosed text such as `if (` into `$fixture/scripts/broken-probe.ps1` => expect the gate to reject
+   (`Assert-Case -Name "..." -Only "ps1-syntax" -Mutate { ... }`).
+2. Good syntax: write a valid `.ps1` => use an "expect to pass" assertion shape (use something like `Assert-Accepts` if the existing script has one,
+   otherwise add a small helper in the same pattern, or write the case directly as "the gate exit code is 0").
+   Note that the fixture's `scripts/` already contains `check_verification_gates.py` (the only file),
+   so the "no `.ps1` => skip" path can be pinned along the way.
 
-fixture 结构见 `scripts/test-verification-gates.ps1:85-101`。**不要**改动既有的 case 语义。
+For the fixture structure see `scripts/test-verification-gates.ps1:85-101`. **Do not** change the semantics of existing cases.
 
-## 文档
+## Docs
 
-`.trellis/spec/operations/validation-and-release.md`：
-- "Six offline gates: ..." → seven，并把 `ps1-syntax` 加进括注；
-- "The six gates are:" 表加一行；
-- `--only` 候选串同步（当前写作 `--only api-doc|api-facts|doc-marks|docs-tracked|lockfile|script-encoding`）。
-若 `.trellis/spec/operations/index.md` 也提到 gate 数量，一并同步。
+`.trellis/spec/operations/validation-and-release.md`:
+- "Six offline gates: ..." -> seven, and add `ps1-syntax` to the parenthetical;
+- add a row to the "The six gates are:" table;
+- sync the `--only` candidate string (currently written as `--only api-doc|api-facts|doc-marks|docs-tracked|lockfile|script-encoding`).
+If `.trellis/spec/operations/index.md` also mentions the gate count, sync it as well.
 
-## 陷阱
+## Pitfalls
 
-- `check_verification_gates.py` 保持**只用标准库**且不联网；调用 `pwsh` 与它已有的
-  `subprocess.run(["git", ...])`（`docs-tracked`）是同一类做法，不违反约束。
-- gate 必须能在 **fixture** 上跑（自测用 `--repo-root <fixture>`）：fixture 的 `scripts/` 只有那个 `.py`，
-  所以"没有 `.ps1` ⇒ 跳过"这条分支必须真的存在，否则其它 case 会误红。
-- 路径要用 `repo_root` 推导，不要用 `Path.cwd()`（自测从别处调用）。
-- gate 输出不要打印整份脚本内容。
-- `.ps1` 数量会增长：不要写死 30，动态枚举。
+- `check_verification_gates.py` must stay **standard-library-only** and offline; calling `pwsh` is the same kind of practice as its existing
+  `subprocess.run(["git", ...])` (`docs-tracked`) and does not violate the constraint.
+- The gate must run on the **fixture** (self-tests use `--repo-root <fixture>`): the fixture's `scripts/` has only that `.py`,
+  so the "no `.ps1` => skip" branch must really exist, otherwise other cases would falsely go red.
+- Derive paths from `repo_root`, not `Path.cwd()` (self-tests are invoked from elsewhere).
+- The gate output must not print the full script contents.
+- The `.ps1` count will grow: do not hardcode 30, enumerate dynamically.
 

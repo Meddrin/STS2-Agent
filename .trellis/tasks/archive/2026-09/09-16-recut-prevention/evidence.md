@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 1 | `runningAction = RunManager.Instance.ActionExecutor?...` hoisted above the `if (combatState != null && CombatManager.Instance.IsInProgress)` guard -- i.e. the exact shape of the shipped regression | `FAIL CombatGate.QueueReadIsCombatOnly` |
 | 2 | A second, unguarded `RunManager.Instance.ActionQueueSet` read added elsewhere in `BuildStatePayload` | `FAIL CombatGate.QueueReadIsCombatOnly` |
-| 3 | `lethal_risks` row deleted from the `combat` field table in docs/api.md | gate names the missing field: "internal sealed class CombatPayload serializes fields the docs/api.md '#### `combat` 顶层字段' table does not list: lethal_risks" |
+| 3 | `lethal_risks` row deleted from the `combat` field table in docs/api.md | gate names the missing field: "internal sealed class CombatPayload serializes fields the docs/api.md '#### `combat` top-level fields' table does not list: lethal_risks" |
 | 4 | `ghost_field` row added to that table | gate names the stale field: "...lists fields internal sealed class CombatPayload no longer serializes: ghost_field" |
 | 5 | `snapshot_stabilizing` row deleted from the `reason` table | gate names the missing code: "EvaluateCombatActionGate can answer with reason codes the docs/api.md ... section never mentions: snapshot_stabilizing" |
 
@@ -65,7 +65,7 @@ fenced blocks:
 The api-facts gate now reports, in addition to its three existing facts:
 
 ```
-  - #### `combat` 顶层字段: 7 field(s) match internal sealed class CombatPayload
+  - #### `combat` top-level fields: 7 field(s) match internal sealed class CombatPayload
   - #### `combat.action_readiness`: 23 field(s) match internal sealed class CombatActionReadinessPayload
   - #### `combat.lethal_risks[]`: 10 field(s) match internal sealed class CombatLethalRiskPayload
   - 19 action_readiness reason code(s) from EvaluateCombatActionGate are documented

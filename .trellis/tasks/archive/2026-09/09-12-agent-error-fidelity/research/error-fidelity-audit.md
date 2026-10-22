@@ -1,31 +1,31 @@
-# 证据：游戏内错误的保真度落差
+# Evidence: the fidelity gap of in-game errors
 
-## HTTP 侧（保真）
+## HTTP side (faithful)
 
-`Router.WriteErrorAsync` 输出 `{ok:false, request_id, error:{code,message,details,retryable}}`，
-状态码来自 `ApiException.StatusCode`。MCP 客户端（`client.py`）与文档（`docs/api.md:46` 错误码表）
-都按这套字段消费。
+`Router.WriteErrorAsync` outputs `{ok:false, request_id, error:{code,message,details,retryable}}`,
+and the status code comes from `ApiException.StatusCode`. The MCP client (`client.py`) and the docs (the error code table at `docs/api.md:46`)
+both consume this set of fields.
 
-## 游戏内侧（失真）
+## In-game side (lossy)
 
-- `GameBridge.ActAsync`（`GameBridge.cs:73-99`）成功时序列化
-  `{action, status, stable, message, state}`；异常不在此处理。
-- `AgentLoop` 的 `RunActAsync`（`AgentLoop.cs` 约 :600-670）在 `catch (Exception ex)` 里
-  **只**序列化 `new { error = ex.Message }`（`:665-667`），返回的 error 文本同样是 `ex.Message`。
-- 因此 `ApiException` 的 `StatusCode`/`Code`/`Details`/`Retryable`（`ApiException.cs:5-20`）在
-  游戏内链路上被丢弃；模型看不到 `invalid_action` vs `state_unavailable` vs `invalid_target`，
-  也不知道 `retryable`。
+- On success `GameBridge.ActAsync` (`GameBridge.cs:73-99`) serializes
+  `{action, status, stable, message, state}`; exceptions are not handled here.
+- `RunActAsync` of `AgentLoop` (`AgentLoop.cs` about :600-670) in `catch (Exception ex)`
+  serializes **only** `new { error = ex.Message }` (`:665-667`), and the returned error text is likewise `ex.Message`.
+- So the `StatusCode`/`Code`/`Details`/`Retryable` of `ApiException` (`ApiException.cs:5-20`) are dropped on
+  the in-game path; the model cannot see `invalid_action` vs `state_unavailable` vs `invalid_target`,
+  and does not know `retryable`.
 
-## 为什么重要
+## Why it matters
 
-- 代码里大量位置显式标注 `retryable: true`（例如 `GameActionService.cs` 的多个 `503 state_unavailable`），
-  这个信号在游戏内链路上完全无效。
-- `skills/sts2-mcp-player/SKILL.md` 的决策规则依赖"动作是否合法/是否可重试"的区分；
-  只有一句 message 时模型只能靠猜。
-- 两条链路（HTTP 与 in-process）本应表达同一契约，这属于契约精度漂移。
+- Many places in the code explicitly mark `retryable: true` (for example the several `503 state_unavailable` in `GameActionService.cs`),
+  and this signal is completely ineffective on the in-game path.
+- The decision rules of `skills/sts2-mcp-player/SKILL.md` depend on distinguishing "whether the action is legal / whether it is retryable";
+  with only a message the model can only guess.
+- The two paths (HTTP and in-process) should express the same contract; this is contract precision drift.
 
-## 待实现时核实
+## To verify at implementation time
 
-- `error` 字段的消费点：需要在实现时用 `rg` 穷举（`STS2AIAgent/Agent`、`skills/`、`docs/api.md`），
-  确认把 `error` 从字符串改成对象是否会破坏任何读取方。
-- `AgentLoop` 返回的第三个值（错误文本）在 `AutoPlayRecovery` / UI 日志中的用法。
+- Consumers of the `error` field: exhaustively search with `rg` at implementation time (`STS2AIAgent/Agent`, `skills/`, `docs/api.md`),
+  and confirm whether changing `error` from a string to an object breaks any reader.
+- How the third value returned by `AgentLoop` (the error text) is used in `AutoPlayRecovery` / UI logs.

@@ -14,13 +14,13 @@ at the bottom of the file, and `preflight` requires the path to exist):
 
 - header: baseline = tag `v0.11.0` (commit `84631b9`) and the previous release;
 - §1 current baseline: keep the v0.11.0 localization release entry, move the
-  entries currently marked "主线未发布" that shipped in `v0.10.7`/`v0.11.0` into
+  entries currently marked "mainline unreleased" that shipped in `v0.10.7`/`v0.11.0` into
   released wording with their real evidence, then add a new
-  "标签后主线未发布变更" list covering this task tree;
+  "mainline unreleased changes after the tag" list covering this task tree;
 - §3 capability matrix: mark `#82`, the pets/orb payload, and the proactive-chat
   fixes as released with the tag they shipped in; keep the "only verified on an
   isolated copy" boundary language;
-- §4 待办: drop completed P-items, keep the genuinely deferred ones
+- §4 To-do: drop completed P-items, keep the genuinely deferred ones
   (real-upstream long-stall end-to-end, real-browser Origin, native-speaker
   review of the English table, `v0.10.7` tag backfill decision);
 - §5 maintenance rules: unchanged.
@@ -30,10 +30,10 @@ command run in this session.
 
 ## 2. AGENTS.md
 
-- §版本号管理: five files, in the order the preflight checks them, and
+- §Version management: five files, in the order the preflight checks them, and
   `internal const string ModVersion`.
-- §API 端点: add the four missing routes with their purpose.
-- §Release 流程 / CONTRIBUTING.md: state one rule. The repository's own history
+- §API endpoints: add the four missing routes with their purpose.
+- §Release process / CONTRIBUTING.md: state one rule. The repository's own history
   pushes release commits directly to `main`, and `AGENTS.md` documents that
   flow; `CONTRIBUTING.md:9` says the opposite. Follow the history: allow the
   maintainer's direct release push, and say so in both files.

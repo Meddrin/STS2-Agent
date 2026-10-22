@@ -1,8 +1,8 @@
 {
   "id": "overlay-two-tab-reorg",
   "name": "overlay-two-tab-reorg",
-  "title": "UI 重组：游玩/设置双 tab 与模式滑块",
-  "description": "游戏内覆盖层重组为 游玩+设置 两个 tab：游玩页内嵌模式滑块(单人/多人)、对话、决策日志、Jev 面板；接入(MCP)并入设置子页",
+  "title": "UI reorg: Play/Settings tabs and mode slider",
+  "description": "In-game overlay reorganized into two tabs, Play and Settings: the Play tab embeds the mode slider (single-player/co-op), chat, decision log, and Jev panel; connection (MCP) moves into a Settings subpage",
   "status": "completed",
   "dev_type": null,
   "scope": null,

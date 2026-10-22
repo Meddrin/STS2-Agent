@@ -1,33 +1,33 @@
-## 实机测试问题修复批次（fix/pr196-live-issues 合入）
+## Live-test fix batch (fix/pr196-live-issues merged)
 
-针对实机测试发现的问题，全部修复并合入本 PR。静态验证：C# 737 测试全绿、Python 416 测试全绿、preflight 全过、mod 已构建部署。
+All issues found in live testing are fixed and merged into this PR. Static verification: all 737 C# tests green, all 416 Python tests green, preflight fully passed, mod built and deployed.
 
-### 已确认并修复的根因
+### Confirmed and fixed root causes
 
-**双层决策未生效（严重）**
-- 根因：Jev decider 在 AgentRuntime 构造时一次性构建，启动后才填 API Key 则永远为 null → 双层分支永不进入。已改为按配置指纹逐回合惰性重建。
-- 「测试 Jev 连接」原为不发包的占位桩，现改为真实 GET /v1/models 验证。
-- 决策日志现在把 Jev 执行的动作记为 source=jev（带置信度），Jev 面板显示最近选择与概率分布（原为死 UI）。
-- StrategyPlanner 原为死代码（从未实例化），现已接线：换屏/换阶段或连续低置信度时后台刷新策略。
+**Two-layer decisions not taking effect (severe)**
+- Root cause: the Jev decider was built once when AgentRuntime was constructed, so entering the API Key after launch left it null forever and the two-layer branch was never entered. It is now rebuilt lazily every turn by configuration fingerprint.
+- "Test Jev connection" was a placeholder stub that sent no request; it now verifies with a real GET /v1/models.
+- The decision log now records actions executed by Jev as source=jev (with confidence), and the Jev panel shows the latest choices and probability distribution (previously dead UI).
+- StrategyPlanner was dead code (never instantiated); it is now wired in: it refreshes the strategy in the background on a screen/phase change or on consecutive low confidence.
 
-**战利品秒选第一张（严重）**
-- 根因：resolve_rewards / collect_rewards_and_proceed 不带 option_index 时游戏侧静默取第一张牌；playbook 还明示优先调用宏动作。现改为：未携带选择时流程停在选牌界面（pending_card_choice=true，返回 pending），由模型显式 choose_reward_card / skip_reward_cards 决策。Jev 枚举器同步把 resolve_rewards 展开为每卡一个选项+显式跳过。ActIndexValidator 对 resolve_rewards 的索引校验改为对照 reward.cards 并放行 -1 跳过哨兵。
+**Loot instantly picks the first card (severe)**
+- Root cause: when resolve_rewards / collect_rewards_and_proceed carried no option_index, the game side silently took the first card, and the playbook explicitly said to prefer the macro action. Now: when no choice is carried, the flow stops at the card choice screen (pending_card_choice=true, returns pending), and the model decides explicitly via choose_reward_card / skip_reward_cards. The Jev enumerator likewise expands resolve_rewards into one option per card plus an explicit skip. ActIndexValidator now validates resolve_rewards indices against reward.cards and lets the -1 skip sentinel through.
 
-**打几回合卡死无提示（严重）**
-- 根因 A：GameThread.InvokeAsync 无超时/取消——游戏线程不 pump 时回合永久挂起，暂停都打不断。已加超时/取消重载并接入状态读取与可操作等待。
-- 根因 B：LLM 请求默认 10 分钟硬超时且期间状态栏冻结。现状态栏显示当前阶段（读状态/等可操作/请求 Jev/请求模型）+ 已等待秒数；LLM/Jev 单次请求超时可在设置里调。
-- 根因 C：WaitingForGame 无限 1 秒自旋且 UI 称"这是正常等待"。现连续等待 120 次（约 2 分钟）停机并给出可见原因。
-- 异常不再只剩 message：保留异常类型。
+**Hangs after a few turns with no message (severe)**
+- Root cause A: GameThread.InvokeAsync had no timeout/cancellation, so when the game thread did not pump, the turn hung forever and even pausing could not interrupt it. Added a timeout/cancellation overload and wired it into state reads and actionable waits.
+- Root cause B: the LLM request had a default 10-minute hard timeout and the status bar froze in the meantime. The status bar now shows the current phase (reading state / waiting for actionable / requesting Jev / requesting model) + seconds waited; the per-request LLM/Jev timeout can be tuned in settings.
+- Root cause C: WaitingForGame spun endlessly at 1 second and the UI called it "normal waiting". It now halts after 120 consecutive waits (about 2 minutes) and gives a visible reason.
+- Exceptions no longer reduce to just a message: the exception type is kept.
 
-**UI 批次**
-- 思考内容（勾选「显示思考内容」）与每个动作决策以气泡进入对话流；原「思考」卡片删除。真实 reasoning_content 不再被 act 参数里的一句话覆盖。
-- 对话冻结修复：RefreshDynamic 全包 try/catch（此前任何一处异常都会让对话永久停更且异常被吞）、800ms tick 也刷对话、上限统一为 200 条并显示"已省略 N 条"、自动滚到底。
-- 「允许代打」选项已删（对话只读；说「帮我打」仍可单次代打；要连续打用自动游玩/单步）。
-- 模型设置：每张模型卡片有「测试」按钮（真实 ping + tool_choice=required 的工具调用探测），通过显示 ✅ 徽标；主模型合并为一个（对话与游玩共用），视觉模型移到高级选项；「工具调用」勾选删除（以探测结果为准）；思考强度与回复语言（中/英/跟随玩家）移到游玩页对话卡。
-- 首次配置引导按双 tab UI 重写（不再指向已删除的「AI 队友」tab）。
+**UI batch**
+- Thinking content (tick "show thinking content") and every action decision enter the chat flow as bubbles; the old "Thinking" card is removed. The real reasoning_content is no longer overwritten by the one-line sentence in the act parameters.
+- Chat freeze fix: RefreshDynamic is fully wrapped in try/catch (previously any exception made the chat stop updating forever with the exception swallowed), the 800ms tick also refreshes the chat, the cap is unified at 200 entries with an "N omitted" notice, and it auto-scrolls to the bottom.
+- The "allow auto-play" option is removed (chat is read-only; saying "play for me" still triggers a single-shot play; use auto-play/single step for continuous play).
+- Model settings: every model card has a "Test" button (real ping + a tool-calling probe with tool_choice=required), and a pass shows a check badge; the main model is merged into one (shared by chat and play), the vision model moves to advanced options; the "tool calling" checkbox is removed (the probe result decides); reasoning effort and reply language (Chinese/English/follow the player) move to the play page's chat card.
+- First-run setup guidance is rewritten for the two-tab UI (it no longer points to the removed "AI teammate" tab).
 
-### pi agent 评估结论
-pi 是 TypeScript/Node 工具包，无法嵌入游戏进程；作为 sidecar 引入违背玩家零依赖目标。本轮采纳其事件流设计要点（分阶段心跳、显式 error surfacing、所有等待可取消有 deadline），完整事件流重构另立任务。详见 .trellis/tasks/09-22-pr196-live-fixes/plan.md。
+### pi agent evaluation conclusion
+pi is a TypeScript/Node toolkit and cannot be embedded in the game process; introducing it as a sidecar violates the zero-player-dependency goal. This round adopts the key points of its event stream design (phased heartbeat, explicit error surfacing, every wait cancellable with a deadline), and the full event stream refactor is a separate task. See .trellis/tasks/09-22-pr196-live-fixes/plan.md for details.
 
-### 实机复测注意
-**必须用本分支重新构建的 DLL 并重启游戏**——v0.15.0 及更早的 release 构建里不含双层决策代码。复测清单见 plan.md 末尾。
+### Live retest note
+**You must use the DLL rebuilt from this branch and restart the game**: release builds of v0.15.0 and earlier do not contain the two-layer decision code. See the end of plan.md for the retest checklist.

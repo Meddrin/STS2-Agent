@@ -1,59 +1,59 @@
-# 让内嵌的游玩契约在游戏内可满足
+# Make the embedded play contract satisfiable in-game
 
-## 背景
+## Background
 
-`skills/sts2-mcp-player/SKILL.md` 第 48–141 行是共享契约块（`<!-- BEGIN SHARED PLAY CONTRACT -->` 到
-`<!-- END SHARED PLAY CONTRACT -->`，内嵌正文 50–139 行）。它被 `STS2AIAgent/STS2AIAgent.csproj:32-33`
-作为 EmbeddedResource 打进 mod，由 `PlayPrompt.cs:43-47` 提取、`PlayPrompt.BuildPlaySystem()`
-（`PlayPrompt.cs:57-71`）拼进**游戏内自动游玩**的系统提示（`AgentLoop.cs:115-119` 每步重建）。
+Lines 48-141 of `skills/sts2-mcp-player/SKILL.md` are the shared contract block (`<!-- BEGIN SHARED PLAY CONTRACT -->` to
+`<!-- END SHARED PLAY CONTRACT -->`, embedded body lines 50-139). It is packed into the mod as an EmbeddedResource by `STS2AIAgent/STS2AIAgent.csproj:32-33`,
+extracted by `PlayPrompt.cs:43-47`, and `PlayPrompt.BuildPlaySystem()`
+(`PlayPrompt.cs:57-71`) splices it into the system prompt of **in-game auto-play** (rebuilt every step at `AgentLoop.cs:115-119`).
 
-问题：契约里的第一条硬性要求**在游戏内无法满足**。
+The problem: the first hard requirement in the contract **cannot be satisfied in-game**.
 
 ```markdown
 SKILL.md:52  Call `health_check` once at session start.
 SKILL.md:53  ... with `health_check` only at session start ...
 ```
 
-而游戏内工具集是 `AgentTools.Play`（`STS2AIAgent/Agent/AgentTools.cs:70-78`）= `ReadOnly`（7 个）+ `act`，
-**不含 `health_check`**；`health_check` 只在 `AgentTools.Mcp`（`:80-83`，`:82` 定义），
-由原生 MCP 端点使用（`NativeMcpServer.cs:414/454`）。
+The in-game tool set is `AgentTools.Play` (`STS2AIAgent/Agent/AgentTools.cs:70-78`) = `ReadOnly` (7 tools) + `act`,
+**without `health_check`**; `health_check` exists only in `AgentTools.Mcp` (`:80-83`, defined at `:82`),
+used by the native MCP endpoint (`NativeMcpServer.cs:414/454`).
 
-后果（已核实）：模型发出该调用 → `AgentLoop` 的 switch 无匹配 → `AgentLoop.cs:547` 返回
-`{"error":"Unknown tool 'health_check'"}`。不崩溃，但每次会话白白消耗一轮；
-若 8 轮内始终没产出 `act`，以 `AgentLoop.cs:435-437` 的 round-limit 错误收场。
-更糟的是「自相矛盾」：同一段契约在 `PlayPrompt.cs:62` 明确列出了游戏内可用的工具清单，
-而它上面那条要求点名了一个不在清单里的工具。
+Consequences (verified): the model emits that call -> the switch in `AgentLoop` has no match -> `AgentLoop.cs:547` returns
+`{"error":"Unknown tool 'health_check'"}`. It does not crash, but every session wastes a round for nothing;
+if no `act` is produced within 8 rounds, it ends with the round-limit error at `AgentLoop.cs:435-437`.
+Worse is the self-contradiction: the same contract passage lists the tools available in-game at `PlayPrompt.cs:62`,
+while the requirement above it names a tool that is not on that list.
 
-第二处同类问题：`skills/sts2-mcp-player/references/screen-playbooks.md:93` 要求用 debug
-`fight THE_ARCHITECT_EVENT_ENCOUNTER` 进场——游戏内既没有 console 工具，
-`act` 也没有 `command` 参数位（`AgentTools.cs:7-26`、`AgentLoop.cs:605-610`），
-`run_console_command` 不在 `available_actions` 里（`GameStateService.cs:2528-2810`），
-`act` 会在 `AgentLoop.cs:593-603` 直接判非法。该 playbook 也被内嵌（`csproj:33`）。
+A second issue of the same kind: `skills/sts2-mcp-player/references/screen-playbooks.md:93` requires entering the fight with debug
+`fight THE_ARCHITECT_EVENT_ENCOUNTER`: in-game there is no console tool,
+`act` has no `command` parameter slot (`AgentTools.cs:7-26`, `AgentLoop.cs:605-610`),
+`run_console_command` is not in `available_actions` (`GameStateService.cs:2528-2810`),
+and `act` is judged illegal directly at `AgentLoop.cs:593-603`. That playbook is also embedded (`csproj:33`).
 
-## 目标
+## Goals
 
-让内嵌给游戏内模型的文本**只说它能做到的事**，同时不削弱外部 MCP 客户端的契约
-（`mcp_server` 侧的 guided 工具集**确实**有 `health_check`，`server.py:619`）。
+Make the text embedded for the in-game model **say only what it can do**, without weakening the contract for external MCP clients
+(the guided tool set on the `mcp_server` side **does** have `health_check`, `server.py:619`).
 
-## 验收标准
+## Acceptance criteria
 
-- [x] 游戏内系统提示不再要求调用游戏内不存在的工具：`health_check` 的措辞从"必须调用"
-      改为对 in-game 循环成立的说法（例如说明该检查由外部 MCP 客户端/orchestrator 负责），
-      且**不删除** `health_check` 在 MCP 侧的存在与文档。
-- [x] 内嵌文本里的工具名集合 ⊆ `AgentTools.Play` 的设备名集合（新增一条可否证的测试）。
-- [x] playbooks 里的 debug-only 指令明确标注"仅外部 MCP / 需 `STS2_ENABLE_DEBUG_ACTIONS=1`"，
-      不再以游戏内可达的语气出现。
-- [x] `McpPlayerSkillTests`（`STS2AIAgent.Tests/McpPlayerSkillTests.cs:7-36`，断言 SKILL.md 与
-      `PlayPrompt.PlayContract` 一致）保持绿，或按其真实约束更新。
-- [x] `skills/sts2-mcp-player/SKILL.md:25`（MCP 侧工具列表）与 README 的相应表述（若也不实）
-      一并核对；`README.md:183`/`README.zh-CN.md:183` 声称"内置工具与游戏内自动游玩一致并含 health_check"
-      与 `AgentTools.cs:70-78` 不符，需修正或说明。
-- [x] 两个 marker 行保持存在且成对（`PlayPrompt.ExtractSharedContract` 依赖它们）。
-- [x] C# / MCP 全量测试、gates、preflight 通过。
+- [x] The in-game system prompt no longer requires calling a tool that does not exist in-game: the wording of `health_check` changes from "must call"
+      to a statement that holds for the in-game loop (for example, saying that the check is the responsibility of the external MCP client/orchestrator),
+      and does **not delete** the existence and documentation of `health_check` on the MCP side.
+- [x] The set of tool names in the embedded text ⊆ the tool name set of `AgentTools.Play` (add a falsifiable test).
+- [x] The debug-only instruction in the playbooks is explicitly marked "external MCP only / needs `STS2_ENABLE_DEBUG_ACTIONS=1`",
+      and no longer appears in a tone that is reachable in-game.
+- [x] `McpPlayerSkillTests` (`STS2AIAgent.Tests/McpPlayerSkillTests.cs:7-36`, asserting SKILL.md matches
+      `PlayPrompt.PlayContract`) stays green, or is updated per its real constraints.
+- [x] Check `skills/sts2-mcp-player/SKILL.md:25` (the MCP-side tool list) and the corresponding statements in the README (if also untrue)
+      together; `README.md:183`/`README.zh-CN.md:183` claim "built-in tools match in-game auto-play and include health_check",
+      which does not match `AgentTools.cs:70-78` and must be fixed or explained.
+- [x] Both marker lines stay present and paired (`PlayPrompt.ExtractSharedContract` depends on them).
+- [x] Full C# / MCP tests, gates, and preflight pass.
 
-## 范围外
+## Out of scope
 
-- 不给 `AgentTools.Play` 增加 `health_check`（in-game 循环本身就是进程内的，
-  "检查 mod 连接"语义不成立；这是设计判断，已在 design 中说明）。
-- 不改契约里其它已验证可满足的要求（探子逐条核对过：contract 点名的动作名全部存在于
-  `BuildAvailableActionNames`，compact 字段也都在）。
+- Do not add `health_check` to `AgentTools.Play` (the in-game loop is itself in-process,
+  and the "check the mod connection" semantics do not hold; this is a design judgment, explained in the design).
+- Do not change the other requirements in the contract that were verified satisfiable (the probes checked item by item: all action names the contract mentions exist in
+  `BuildAvailableActionNames`, and the compact fields are all there too).

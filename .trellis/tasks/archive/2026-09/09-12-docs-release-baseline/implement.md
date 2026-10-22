@@ -2,7 +2,7 @@
 
 1. Read the four sibling tasks' final state (their `prd.md` acceptance boxes and
    the actual code) before writing a single claim.
-2. `PRODUCT_PLAN_CURRENT.md`: baseline, §1 unreleased list, §3 matrix, §4 待办.
+2. `PRODUCT_PLAN_CURRENT.md`: baseline, §1 unreleased list, §3 matrix, §4 to-do.
 3. `AGENTS.md`: version files, endpoint table, constant declaration,
    main-push rule.
 4. `docs/api.md`: status table, `mod_version`, `/mcp`, new descriptor fields,

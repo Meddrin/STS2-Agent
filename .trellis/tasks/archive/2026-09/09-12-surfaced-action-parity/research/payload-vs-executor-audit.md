@@ -1,35 +1,35 @@
-# 证据：payload 与执行口径的差异
+# Evidence: differences between the payload and the execution criterion
 
-## 探子穷举结论
+## Probes' exhaustive conclusion
 
-动作级"暴露 vs 可执行"已同源：`BuildAvailableActionNames`（`GameStateService.cs:2528-2810`）与
-`BuildAvailableActionsPayload`（`~330-560`）都调同一组 `CanX`；`GameActionService` 的
-`ExecuteAsync` 分支各自复检同一 `CanX`。残留差异在 payload 的**派生值**。
+Action-level "exposed vs executable" already share a source: `BuildAvailableActionNames` (`GameStateService.cs:2528-2810`) and
+`BuildAvailableActionsPayload` (`~330-560`) both call the same group of `CanX`; each branch of `ExecuteAsync` in `GameActionService`
+rechecks the same `CanX`. The remaining differences are in the payload's **derived values**.
 
-## 逐条 file:line
+## file:line item by item
 
-| # | 位置 | 读到的代码 |
+| # | Location | Code read |
 |---|---|---|
-| ① | `GameStateService.cs:943-954` | `CanConfirmSelection`：combat 分支要求 `RequiresConfirmation && CanConfirm`；grid 分支要求 `CanConfirm && (RequiresConfirmation \|\| MinSelect < MaxSelect)` |
+| (1) | `GameStateService.cs:943-954` | `CanConfirmSelection`: the combat branch requires `RequiresConfirmation && CanConfirm`; the grid branch requires `CanConfirm && (RequiresConfirmation \|\| MinSelect < MaxSelect)` |
 | ① | `GameStateService.cs:4439-4441` | `can_confirm = hasCombatHandSelection ? combatHandSelection.CanConfirm : hasCardGridSelection && cardGridSelection.CanConfirm` |
 | ② | `GameStateService.cs:1563-1567` | `CanConfirmModal` → `FtueModalPolicy.ExposeConfirm(GetOpenModal()?.GetType().Name, hasButton)` |
 | ② | `GameStateService.cs:4946` | `can_confirm = confirmButton != null` |
 | ② | `FtueModalPolicy.cs` | `ExposeConfirm = hasUsableConfirmButton \|\| IsFtueType(modalTypeName)` |
 | ③ | `GameStateService.cs:395-397` | `resolve_rewards` descriptor `requires_index = true` |
-| ③ | `GameStateService.cs:402-404` | `collect_rewards_and_proceed` descriptor `requires_index = false`（对照） |
+| (3) | `GameStateService.cs:402-404` | `collect_rewards_and_proceed` descriptor `requires_index = false` (control) |
 | ④ | `GameStateService.cs:902-905` | `CanClaimReward` = `GetRewardButtons(...).Any(button => button.IsEnabled)` |
 | ④ | `GameStateService.cs:907-910` | `CanChooseRewardCard` = `GetCardRewardOptions(currentScreen).Count > 0` |
 | ④ | `GameStateService.cs:912-915` | `CanSkipRewardCards` = `GetCardRewardAlternativeButtons(currentScreen).Count > 0` |
 | ⑤ | `GameStateService.cs:1091-1095` | `CanPlayCrystalSphere` = `GetCrystalSphereMinigame(...) is { IsFinished: false }` |
-| ⑤ | `GameStateService.cs:1049-1053` | `GetCrystalSphereMinigame` 首行即 `currentScreen is not NCrystalSphereScreen → null` |
+| (5) | `GameStateService.cs:1049-1053` | The first line of `GetCrystalSphereMinigame` is `currentScreen is not NCrystalSphereScreen -> null` |
 
-## 影响
+## Impact
 
-模型按 `selection.can_confirm`/`modal.can_confirm` 决策时，可能遇到"信号说可以、`act` 说不行"
-（① ② 的反向不一致会诱发多余或缺失的确认动作）。descriptor（③）的 `requires_index` 被 MCP
-guided 工具当作参数校验依据，谎报会让调用方多传一个被忽略的 index。
+When the model decides by `selection.can_confirm`/`modal.can_confirm`, it may meet "the signal says yes, `act` says no"
+(the reverse inconsistency of (1) (2) induces redundant or missing confirm actions). The `requires_index` of the descriptor (3) is used by the MCP
+guided tool as the basis for parameter validation, and a false report makes the caller pass an extra, ignored index.
 
-## 未经实机确证
+## Not confirmed live
 
-修好后的运行期行为（模型是否因此少犯错）只能在实机上观察；离线只能钉住"两处判定同源"。
+The runtime behavior after the fix (whether the model makes fewer mistakes as a result) can only be observed live; offline can only pin "the two decisions share a source".
 

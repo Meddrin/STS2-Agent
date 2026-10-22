@@ -1,28 +1,28 @@
-# 把 native 工具对齐测试从"比名字"加深到"比参数与分支覆盖"
+# Deepen the native tool alignment test from "comparing names" to "comparing parameters and branch coverage"
 
-## 背景
+## Background
 
-`mcp_server/tests/test_native_tool_alignment.py` 目前只比较**工具名**：
+`mcp_server/tests/test_native_tool_alignment.py` currently compares only **tool names**:
 
-- 不比较参数 schema（同名工具的 `option_index`/`card_index`/`target_index` 漂移不会被发现）；
-- 不校验 C# `NativeMcpServer.ExecuteToolAsync` 的 `switch` 是否覆盖 Python 暴露的每个动作，
-  反过来也不校验 Python 是否暴露了 C# 根本没有的动作（孤儿工具会在运行时才炸）。
+- it does not compare the parameter schema (drift of `option_index`/`card_index`/`target_index` on same-named tools would not be found);
+- it does not check whether the `switch` of C# `NativeMcpServer.ExecuteToolAsync` covers every action the Python side exposes,
+  and conversely does not check whether Python exposes actions C# does not have at all (an orphan tool would blow up only at runtime).
 
-## 目标
+## Goals
 
-1. 在现有测试文件里加深断言（不新建重复文件）：工具名集合 + **参数名集合** + **动作分支覆盖**。
-2. 冲突/孤儿必须有显式豁免清单，且每条豁免带理由注释（不允许静默放过）。
+1. Deepen the assertions inside the existing test file (no new duplicate file): tool name set + **parameter name set** + **action branch coverage**.
+2. Conflicts/orphans must have an explicit exemption list, and each exemption carries a reason comment (nothing is allowed through silently).
 
-## 验收标准
+## Acceptance criteria
 
-- [x] 动作集合双向断言：Python 可调用动作 ⊆ C# `ExecuteAsync` switch 分支（无孤儿），
-      反向差异必须落在带注释的豁免名单里。
-- [x] 参数名断言：对同名动作，Python 侧（`client.py` 方法签名 / 注册的 inputSchema）
-      与 C# 侧（`NativeMcpServer` 的解析或 `docs/api.md` 动作契约表的参数列）一致。
-- [x] 断言可否证：临时在 C# switch 里删一个分支或改一个参数名，测试必须变红（记录实际输出）。
-- [x] 现有 gate（`python scripts/check_verification_gates.py`）与 MCP 全量测试通过。
+- [x] Two-way action set assertion: Python-callable actions ⊆ the C# `ExecuteAsync` switch branches (no orphans),
+      and reverse differences must fall into the commented exemption list.
+- [x] Parameter name assertion: for same-named actions, the Python side (`client.py` method signatures / the registered inputSchema)
+      agrees with the C# side (the parsing of `NativeMcpServer` or the parameter column of the `docs/api.md` action contract table).
+- [x] Assertions are falsifiable: temporarily deleting a branch or changing a parameter name in the C# switch must turn the test red (record the actual output).
+- [x] The existing gate (`python scripts/check_verification_gates.py`) and the full MCP tests pass.
 
-## 范围外
+## Out of scope
 
-- 不改 `docs/api.md` 的动作契约块（55 个动作名由 gate 校验）。
-- 不改 C# 或 Python 的生产代码；本任务只加深测试（若测试暴露真缺陷，先报告再决定是否开新任务）。
+- Do not change the action contract block of `docs/api.md` (the 55 action names are checked by a gate).
+- Do not change C# or Python production code; this task only deepens tests (if a test exposes a real defect, report first and then decide whether to open a new task).

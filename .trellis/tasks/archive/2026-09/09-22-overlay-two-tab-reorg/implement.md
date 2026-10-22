@@ -1,73 +1,73 @@
-# 实施计划：UI 重组（游玩/设置双 tab 与模式滑块）
+# Implementation plan: UI reorg (Play/Settings tabs and mode slider)
 
-## 前置
+## Prerequisites
 
-- 分支：从 `dev` 切功能分支 `feature/overlay-two-tab-reorg`。
-- 读 `.trellis/spec/mod/agent-and-ui.md` 与 `architecture.md` 的 UI/设置段（已读）。
-- 构建前关闭游戏（DLL 锁）。
+- Branch: cut the feature branch `feature/overlay-two-tab-reorg` from `dev`.
+- Read the UI/settings sections of `.trellis/spec/mod/agent-and-ui.md` and `architecture.md` (done).
+- Close the game before building (DLL lock).
 
-## 步骤
+## Steps
 
-### 1. 设置项与持久化（Config 层，先行）
-- [x] `AgentSettings.cs` 加 8 个字段（OverlayPlayMode/ShowThinkingInChat/DualLayerSoloEnabled/DualLayerCoopEnabled/JevBaseUrl/JevApiKey/JevModel/JevConfidenceThreshold）。
-- [x] `SettingsClone.cs` 拷贝清单同步。
-- [x] `AgentSettings.EnsureValidShape` 归一化新字段。
-- [x] 单测：新字段 round-trip、clone 覆盖、threshold 钳制（`Settings.DualLayerFieldsNormalized` + 扩展 `SettingsClone.CarriesEditableFields`）。
+### 1. Settings and persistence (Config layer, first)
+- [x] `AgentSettings.cs` adds 8 fields (OverlayPlayMode/ShowThinkingInChat/DualLayerSoloEnabled/DualLayerCoopEnabled/JevBaseUrl/JevApiKey/JevModel/JevConfidenceThreshold).
+- [x] `SettingsClone.cs` copy list synced.
+- [x] `AgentSettings.EnsureValidShape` normalizes the new fields.
+- [x] Unit tests: new field round-trip, clone coverage, threshold clamping (`Settings.DualLayerFieldsNormalized` + extended `SettingsClone.CarriesEditableFields`).
 
-### 2. Tab 目录收缩
-- [x] `OverlayTabCatalog.cs`：删 dual/chat/connect/decisions，留 play(游玩,RefreshOnShow=true)/settings(设置)。
-- [x] `AgentOverlayHost.Tabs.cs`：`BuildPageForTab` 收缩为两条 arm；移除 `_chatFooter.Visible` 控制。
-- [x] `AgentOverlayHost.cs`：默认 tab 逻辑改为 首运行→settings 否则→play；`ShowTab` 调用点保留在基文件；tick 合并到 Play 可见性下。
+### 2. Tab catalog shrink
+- [x] `OverlayTabCatalog.cs`: delete dual/chat/connect/decisions, keep play (Play, RefreshOnShow=true)/settings (Settings).
+- [x] `AgentOverlayHost.Tabs.cs`: `BuildPageForTab` shrinks to two arms; remove the `_chatFooter.Visible` control.
+- [x] `AgentOverlayHost.cs`: default tab logic changed to first run -> settings, otherwise -> play; the `ShowTab` call sites stay in the base file; the tick is merged under Play visibility.
 
-### 3. UiFactory 新控件
-- [x] `SegmentedSwitch`（模式滑块，`Ui/SegmentedSwitch.cs`）：互斥 pill，选中实心，回调 onSelect(index)，`SetSelected` 供刷新重绘。
-- [x] 确认 `RepaintForPalette` 覆盖新控件类型（段按钮复用 TabButton=Button，走现有 Button arm；容器自身无样式）。
+### 3. New UiFactory control
+- [x] `SegmentedSwitch` (mode slider, `Ui/SegmentedSwitch.cs`): mutually exclusive pills, the selected one solid, callback onSelect(index), `SetSelected` for refresh repaint.
+- [x] Confirm `RepaintForPalette` covers the new control type (segment buttons reuse TabButton=Button and go through the existing Button arm; the container itself has no style).
 
-### 4. 游玩页重写（BuildPlayPage）
-- [x] 顶部模式滑块 + 内容区容器（`_soloSection`/`_coopSection` 互斥可见）。
-- [x] 单人区：迁移现 play 页控制条 + metric；并入对话 card（chat log + 输入 + 勾选 + 发送/清空）+「显示思考内容」勾选。
-- [x] 多人区：迁移现 dual 页全部内容（`BuildCoopSection`，不再自带 scroll）。
-- [x] Jev 面板 card：容器 + 空态（数据挂点留给子任务2）。
-- [x] 决策日志 card：迁移 decisions 页内容（`BuildDecisionCard`），RefreshDecisionPage 逻辑留在 RefreshDynamic。
-- [x] 双层开关：单人区绑 `DualLayerSoloEnabled`、多人区绑 `DualLayerCoopEnabled`。
-- [x] 页面 builder 留在 Pages.cs（移动 BuildConnectSection 到 Settings.cs 后回落到 861 行，预算内）。
+### 4. Play page rewrite (BuildPlayPage)
+- [x] Mode slider on top + content area containers (`_soloSection`/`_coopSection` mutually exclusive visibility).
+- [x] Single-player area: migrate the current play page control bar + metrics; merge in the chat card (chat log + input + checkboxes + send/clear) + the "show thinking content" checkbox.
+- [x] Multiplayer area: migrate the entire current dual page content (`BuildCoopSection`, no longer carrying its own scroll).
+- [x] Jev panel card: container + empty state (the data hook is left to subtask 2).
+- [x] Decision log card: migrate the decisions page content (`BuildDecisionCard`), with the RefreshDecisionPage logic staying in RefreshDynamic.
+- [x] Two-layer switches: the single-player area binds `DualLayerSoloEnabled`, the multiplayer area binds `DualLayerCoopEnabled`.
+- [x] The page builder stays in Pages.cs (after moving BuildConnectSection to Settings.cs it drops back to 861 lines, within budget).
 
-### 5. 设置页扩展
-- [x] 跳转栏加 Jev、接入锚点。
-- [x] Jev 分区表单（BaseUrl/ApiKey/Model/阈值/测试按钮 → `AgentRuntime.TestJevConnectionAsync` 配置校验桩，真实 ping 留给子任务2）。
-- [x] 接入子页：迁移 connect 页内容（`BuildConnectSection` 移入 Settings.cs）。
-- [x] harvest 链路回写新字段（Jev 四字段；模式/思考/双层开关走各自 Toggled 即时保存）。
+### 5. Settings page extension
+- [x] Add Jev and Connection anchors to the jump bar.
+- [x] Jev section form (BaseUrl/ApiKey/Model/threshold/test button -> `AgentRuntime.TestJevConnectionAsync` configuration validation stub, with the real ping left to subtask 2).
+- [x] Connection subpage: migrate the connect page content (`BuildConnectSection` moved into Settings.cs).
+- [x] The harvest chain writes back the new fields (the four Jev fields; mode/thinking/two-layer switches are saved immediately through their own Toggled handlers).
 
-### 6. 本地化
-- [x] 所有新中文文案加 `Loc.T` + 英文条目（UI 串入 `Loc.Strings.Ui.cs`，AgentRuntime 串入 `Loc.Strings.Runtime.cs`）。
+### 6. Localization
+- [x] All new Chinese text gets `Loc.T` + English entries (UI strings go into `Loc.Strings.Ui.cs`, AgentRuntime strings into `Loc.Strings.Runtime.cs`).
 
-### 7. 契约/测试更新
-- [x] `OverlayTabContractTests` 改写（tab 数=2、顺序、归属、RefreshOnShow、决策日志 tick 改 Play）。
-- [x] `CoopRouteTests.cs:168` 的 tick 断言同步（Dual→Play）。
-- [x] `CatalogLabelsResolveToEnglish` 核对（两 tab 标签均有英文）。
-- [x] `OverlayLayoutContractTests` 同步（BuildDualPage→BuildCoopSection、BuildChatFooter→BuildChatCard、BuildDecisionPage→BuildDecisionCard、_mcpStatus 归属 Pages→Settings、CoopChatBox 改为「不再自带 scroll」）。
-- [x] 设置相关测试补新字段（见步骤1）。
-- [x] `Router.cs`/`NativeMcpServer.cs` 的 "Connect tab" 错误文案改为指向设置页 Connect 分区。
+### 7. Contract/test updates
+- [x] `OverlayTabContractTests` rewritten (tab count = 2, order, ownership, RefreshOnShow, the decision log tick changed to Play).
+- [x] The tick assertion of `CoopRouteTests.cs:168` synced (Dual->Play).
+- [x] `CatalogLabelsResolveToEnglish` checked (both tab labels have English entries).
+- [x] `OverlayLayoutContractTests` synced (BuildDualPage->BuildCoopSection, BuildChatFooter->BuildChatCard, BuildDecisionPage->BuildDecisionCard, _mcpStatus ownership Pages->Settings, CoopChatBox changed to "no longer carries its own scroll").
+- [x] Settings-related tests cover the new fields (see step 1).
+- [x] The "Connect tab" error text in `Router.cs`/`NativeMcpServer.cs` changed to point to the Connect section of the settings page.
 
-## 验证
+## Verification
 
 ```powershell
-dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj   # C# 契约/单测
-powershell -ExecutionPolicy Bypass -File "scripts/build-mod.ps1" -Configuration Release   # 构建（先关游戏）
+dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj   # C# contract/unit tests
+powershell -ExecutionPolicy Bypass -File "scripts/build-mod.ps1" -Configuration Release   # build (close the game first)
 ```
 
-- [x] C# 测试全绿（0 失败）。
-- [x] `dotnet build STS2AIAgent.csproj` 0 警告 0 错误。
-- [x] MCP Python 测试全绿（416 通过）。
-- [ ] Release 构建 + DLL/PCK 部署（需先关游戏）。
-- [ ] 实机：overlay 只有两 tab；模式滑块切换；单人/多人功能不回归；设置页 Jev 分区与接入子页可用。
+- [x] C# tests all green (0 failures).
+- [x] `dotnet build STS2AIAgent.csproj` 0 warnings 0 errors.
+- [x] MCP Python tests all green (416 passed).
+- [ ] Release build + DLL/PCK deployment (the game must be closed first).
+- [ ] Live: the overlay has only two tabs; the mode slider switches; single-player/multiplayer features do not regress; the Jev section and Connection subpage of the settings page work.
 
-## 回滚点
+## Rollback points
 
-- 步骤 1 独立可回滚（纯设置字段，向后兼容）。
-- 步骤 2-7 为一个整体 UI 变更，回滚 = revert 对应提交。
+- Step 1 is independently revertible (pure settings fields, backward compatible).
+- Steps 2-7 are one whole UI change, and rollback = revert the matching commits.
 
-## 评审闸
+## Review gates
 
-- 步骤 1 后：设置层自测通过再继续。
-- 步骤 7 后：trellis-check 全量。
+- After step 1: continue only after the settings layer self-test passes.
+- After step 7: trellis-check full.

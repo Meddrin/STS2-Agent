@@ -1,42 +1,42 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` | 新增 ItemGroup：`Microsoft.CodeAnalysis` / `Microsoft.CodeAnalysis.CSharp` 两条 `<Reference>`，HintPath 指向 `$(MSBuildSDKsPath)/../Roslyn/bincore/*.dll`（**零 NuGet**；diff `12 0`） |
-| `STS2AIAgent.Tests/AgentSourceFixture.cs` | `SourceFiles()` 过滤 `obj/`、`bin/`（新增 `IsBuildOutputPath`，按相对 mod 根的路径段判断） |
-| `STS2AIAgent.Tests/SourceCoverageTests.cs` | 新增。`EveryModSourceParsesWithoutSyntaxErrors`（每个源文件 `CSharpSyntaxTree.ParseText`，收集 error diagnostics 并断言为空，失败消息带 `file:line`）+ `UncompiledSourcesMatchTheDeclaredWhitelist`（csproj 编译集展开通配符后与 tracked 源求差集，须等于 16 条显式白名单；双向断言 unexpected 与 missing） |
-| `STS2AIAgent.Tests/TestRunner.cs` | 追加 2 行 `SourceCoverage.*` 注册 |
+| `STS2AIAgent.Tests/STS2AIAgent.Tests.csproj` | New ItemGroup: two `<Reference>` entries for `Microsoft.CodeAnalysis` / `Microsoft.CodeAnalysis.CSharp`, with HintPath pointing to `$(MSBuildSDKsPath)/../Roslyn/bincore/*.dll` (**zero NuGet**; diff `12 0`) |
+| `STS2AIAgent.Tests/AgentSourceFixture.cs` | `SourceFiles()` filters `obj/` and `bin/` (new `IsBuildOutputPath`, judged by path segments relative to the mod root) |
+| `STS2AIAgent.Tests/SourceCoverageTests.cs` | New. `EveryModSourceParsesWithoutSyntaxErrors` (`CSharpSyntaxTree.ParseText` on every source file, collecting error diagnostics and asserting empty, with `file:line` in the failure message) + `UncompiledSourcesMatchTheDeclaredWhitelist` (after expanding wildcards in the csproj compile set, take the set difference against tracked sources, which must equal the 16 explicit whitelist entries; asserts both unexpected and missing) |
+| `STS2AIAgent.Tests/TestRunner.cs` | Appended 2 `SourceCoverage.*` registration lines |
 
-生产代码零残留改动（可否证期间临时改过 `ScreenshotService.cs`，已按原始 SHA256 还原）。
+Zero residual changes to production code (during falsifiability checks `ScreenshotService.cs` was temporarily modified and restored by its original SHA256).
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| Roslyn 引用可用、零 NuGet | `$(MSBuildSDKsPath)/../Roslyn/bincore` 实存 `Microsoft.CodeAnalysis.dll`、`Microsoft.CodeAnalysis.CSharp.dll`；未新增包或 lock 变更；构建 0 warning。开工前主代理已 spike（`ROSLYN_SPIKE_OK` + 335 测试照常通过，改动回滚） |
-| 语法测试可否证 | 在 `STS2AIAgent/Vision/ScreenshotService.cs` 末尾注入非法语法 → `FAIL SourceCoverage.ModSourcesParse ... ScreenshotService.cs:59 CS1026: 应输入 )`，exit 1；还原（SHA256 校验回原始字节）后 PASS |
-| `obj/`/`bin/` 过滤 | fixture diff 见上；本机含 `obj/bin` 时测试仍绿 |
-| 覆盖面断言可否证 | ① 从白名单移除 `ScreenshotService.cs` → `Unexpected uncompiled source(s)` 红；② 往白名单加 `STS2AIAgent/DoesNotExist.cs` → `no longer uncompiled tracked sources` 红；均还原后绿 |
-| 全量门禁 | C# **347 PASS / 0 FAIL**（`SourceCoverage.ModSourcesParse`、`SourceCoverage.UncompiledWhitelist` 在内）；6 道 gate 全绿；preflight exit 0 |
+| Roslyn reference usable, zero NuGet | `Microsoft.CodeAnalysis.dll` and `Microsoft.CodeAnalysis.CSharp.dll` really exist under `$(MSBuildSDKsPath)/../Roslyn/bincore`; no packages added or lock changes; build 0 warnings. The main agent ran a spike before starting (`ROSLYN_SPIKE_OK` + 335 tests passing as usual, change rolled back) |
+| Syntax test is falsifiable | Injecting invalid syntax at the end of `STS2AIAgent/Vision/ScreenshotService.cs` -> `FAIL SourceCoverage.ModSourcesParse ... ScreenshotService.cs:59 CS1026: ) expected`, exit 1; after restoring (SHA256 verified back to the original bytes) PASS |
+| `obj/`/`bin/` filtering | See the fixture diff above; the tests stay green on this machine even with `obj/bin` present |
+| Coverage assertion is falsifiable | (1) remove `ScreenshotService.cs` from the whitelist -> `Unexpected uncompiled source(s)` red; (2) add `STS2AIAgent/DoesNotExist.cs` to the whitelist -> `no longer uncompiled tracked sources` red; both green after restoring |
+| Full gates | C# **347 PASS / 0 FAIL** (including `SourceCoverage.ModSourcesParse` and `SourceCoverage.UncompiledWhitelist`); all 6 gates green; preflight exit 0 |
 
-**关于 implement.md 里"临时删掉 csproj 某条 `<Compile Include>`"的替代**：该路线不可用（已实测）——
-删掉任一条后 `dotnet run` 直接 exit 1 且**没有任何测试输出**（编译先失败：每条显式 include 都被 ≥2 处测试引用）。
-改用直接撼动白名单数据（上面 ①②），命中与"新增未注册文件"完全相同的两个分支。
+**Replacement for "temporarily delete a `<Compile Include>` in the csproj" in implement.md**: that route is unusable (measured):
+after deleting any entry `dotnet run` exits 1 right away with **no test output at all** (compilation fails first: every explicit include is referenced by at least 2 tests).
+Instead the whitelist data was disturbed directly ((1)(2) above), hitting exactly the same two branches as "adding an unregistered file".
 
-## 设计边界（必须知悉）
+## Design boundaries (must know)
 
-- 覆盖面断言按 design **只比对 tracked 源**（`git ls-files -z -- STS2AIAgent`），取不到 git 时回退为文件系统扫描集。
-  这条限制在起作用：本机存在 gitignored 的 `STS2AIAgent/_scratch/Class1.cs`（80 个磁盘 `.cs` vs 79 tracked），
-  过滤后仍绿，否则本地会误红。
-- 直接后果：**未 `git add` 的新文件不会立刻让覆盖面断言变红**（CI/PR checkout 里它是 tracked → 会红）。
-  语法测试走文件系统扫描，未跟踪文件也照样被解析。这是 design 明示的取舍。
-- 语法测试是**单文件解析**，不解析引用/类型；跨文件的语义错误仍要靠编译（需游戏 DLL）。
+- Per the design the coverage assertion **compares only tracked sources** (`git ls-files -z -- STS2AIAgent`), falling back to the filesystem scan set when git is unavailable.
+  This restriction is in effect: this machine has a gitignored `STS2AIAgent/_scratch/Class1.cs` (80 `.cs` on disk vs 79 tracked),
+  and it stays green after filtering; otherwise it would falsely go red locally.
+- Direct consequence: **a new file not yet `git add`ed does not immediately turn the coverage assertion red** (in a CI/PR checkout it is tracked -> it goes red).
+  The syntax test uses the filesystem scan, so untracked files are parsed as well. This is the trade-off stated explicitly in the design.
+- The syntax test is **single-file parsing**; it does not resolve references/types; cross-file semantic errors still rely on compilation (which needs the game DLLs).
 
-## 只能 CI 验证
+## CI-only verification
 
-1. `windows-latest` + `setup-dotnet@v4 9.0.x` 上 `$(MSBuildSDKsPath)/../Roslyn/bincore/*.dll` 的可解析性（本地只证到 SDK 9.0.311）。
-2. CI 容器内 `git ls-files` 可用性（`actions/checkout@v4` 留 `.git`，预期可用；不可用时走回退分支，干净 checkout 下等价）。
-3. 本轮无 push，GitHub Actions 未实际触发。
+1. Resolvability of `$(MSBuildSDKsPath)/../Roslyn/bincore/*.dll` on `windows-latest` + `setup-dotnet@v4 9.0.x` (locally proven only on SDK 9.0.311).
+2. Availability of `git ls-files` in the CI container (`actions/checkout@v4` leaves `.git`, expected to be available; when unavailable it takes the fallback branch, equivalent on a clean checkout).
+3. This round has no push, so GitHub Actions was not actually triggered.
 

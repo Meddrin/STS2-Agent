@@ -1,37 +1,37 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `docs/api.md:1034` | 契约块里 `crystal_clear_cell` 行补上可选参数：`（\`x\`、\`y\`，可选 \`tool\`：\`big\` / \`small\`）`；行首仍是反引号动作名（api-doc 正则不受影响） |
-| `mcp_server/tests/test_native_tool_alignment.py:285-291` | `_DOC_ARGUMENT_EXEMPTIONS` 清空为 `{}`，注释改为"两侧现已一致；陈旧豁免仍会失败" |
-| `STS2AIAgent/Game/GameStateService.cs:1711-1725` | 删除 `GetDeckSelectionOptions` 的通用兜底分支（`currentScreen is Node rootNode` → 子树扫描），保留三段判据与末尾空返回，并写明"为什么故意不做子树扫描" |
-| `STS2AIAgent.Tests/DeckSelectionAvailabilityTests.cs`（新） | 2 条源码契约断言（`AvailabilityMatchesTheExecutableSet` / `ExecutorKeepsItsGuard`） |
+| `docs/api.md:1034` | The `crystal_clear_cell` row in the contract block gains the optional parameter: `(\`x\`, \`y\`, optional \`tool\`: \`big\` / \`small\`)`; the row still starts with a backtick action name (the api-doc regex is unaffected) |
+| `mcp_server/tests/test_native_tool_alignment.py:285-291` | `_DOC_ARGUMENT_EXEMPTIONS` emptied to `{}`, the comment changed to "both sides are now consistent; a stale exemption still fails" |
+| `STS2AIAgent/Game/GameStateService.cs:1711-1725` | Deleted the generic fallback branch of `GetDeckSelectionOptions` (`currentScreen is Node rootNode` -> subtree scan), kept the three-part criteria and the trailing empty return, and wrote down "why the subtree scan is deliberately not done" |
+| `STS2AIAgent.Tests/DeckSelectionAvailabilityTests.cs` (new) | 2 source contract assertions (`AvailabilityMatchesTheExecutableSet` / `ExecutorKeepsItsGuard`) |
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 契约行含 `tool` 且形态未破 | 解析结果 `crystal_clear_cell docs args = ['tool','x','y']`；gate 仍报 `55 actions match` |
-| 豁免已删、MCP 全绿 | `_DOC_ARGUMENT_EXEMPTIONS = {}`；`uv run --locked python -m unittest discover -s tests` → 159 OK（当时快照） |
-| 兜底分支消失、前三段保留 | `git diff` 为 -7/+6（删分支 + 加说明注释）；三段判据仍在 `:1690-1715` |
-| 新增回归测试可跑 | 主代理注册后：`PASS DeckSelectionAvailability.MatchesExecutableSet` / `PASS DeckSelectionAvailability.ExecutorKeepsGuard` |
-| 不变式前提不触发 | `CanSelectDeckCard` 与 `BuildSelectionPayload`（`:4323-4329`）同源调用；返回 0 张时 `selection` 为 null，故"selection 非空 ⇒ available_actions 含该动作"的前件不成立 |
-| 可否证 | 删文档里的 `tool` → `test_documented_action_arguments_match_registered_legacy_tools` 红；把豁免加回 → "stale exemption" 红；把兜底加回 → `AvailabilityMatchesTheExecutableSet` 红；删 409 守卫 → `ExecutorKeepsItsGuard` 红 |
+| The contract row contains `tool` and its shape is not broken | Parse result `crystal_clear_cell docs args = ['tool','x','y']`; the gate still reports `55 actions match` |
+| Exemption deleted, MCP all green | `_DOC_ARGUMENT_EXEMPTIONS = {}`; `uv run --locked python -m unittest discover -s tests` -> 159 OK (snapshot at the time) |
+| Fallback branch gone, first three parts kept | `git diff` is -7/+6 (delete the branch + add an explanatory comment); the three-part criteria are still at `:1690-1715` |
+| New regression tests runnable | After registration by the main agent: `PASS DeckSelectionAvailability.MatchesExecutableSet` / `PASS DeckSelectionAvailability.ExecutorKeepsGuard` |
+| The invariant's precondition does not fire | `CanSelectDeckCard` and `BuildSelectionPayload` (`:4323-4329`) call the same source; when 0 cards are returned `selection` is null, so the antecedent of "selection non-null => available_actions contains this action" does not hold |
+| Falsifiable | Deleting `tool` from the doc -> `test_documented_action_arguments_match_registered_legacy_tools` red; adding the exemption back -> "stale exemption" red; adding the fallback back -> `AvailabilityMatchesTheExecutableSet` red; deleting the 409 guard -> `ExecutorKeepsItsGuard` red |
 
-## 门禁
+## Gates
 
-C# 全量 335 PASS / 0 FAIL；`dotnet build` 0 警告 0 错误；MCP 167 OK；
-`check_verification_gates.py`（5 个 gate）`check_release_package.py` preflight 全绿。
+C# full 335 PASS / 0 FAIL; `dotnet build` 0 warnings 0 errors; MCP 167 OK;
+`check_verification_gates.py` (5 gates), `check_release_package.py`, and preflight all green.
 
-## 只能实机验证
+## Live-only verification
 
-- 三类屏幕（`NCardRewardSelectionScreen` / `NCardPileScreen` / `NCardLibrary`）上 `select_deck_card`
-  确实不再出现在 `available_actions`、`/state.selection` 不再出现（需 `state-invariants`）。
-- 奖励选牌仍可经 `choose_reward_card` 完成。
+- On the three kinds of screens (`NCardRewardSelectionScreen` / `NCardPileScreen` / `NCardLibrary`) `select_deck_card`
+  really no longer appears in `available_actions`, and `/state.selection` no longer appears (needs `state-invariants`).
+- Reward card choice can still be completed via `choose_reward_card`.
 
-## 范围外（已记录）
+## Out of scope (recorded)
 
-`ResolveNonModalScreen` 的通用分支仍会让奖励选牌浮层报 `CARD_SELECTION`（遮蔽
-`NCardRewardSelectionScreen => "REWARD"`）。改它会改变 `/state.screen` 的对外语义，需单独评估。
+The generic branch of `ResolveNonModalScreen` still makes the reward card choice overlay report `CARD_SELECTION` (shadowing
+`NCardRewardSelectionScreen => "REWARD"`). Changing it would change the external semantics of `/state.screen` and needs separate evaluation.

@@ -1,47 +1,47 @@
-# 设计：compact 视图的增补
+# Design: additions to the compact view
 
-## 落点一：战斗（`BuildAgentCombatPayload`，`GameStateService.cs:3110-3168`）
+## Landing point 1: combat (`BuildAgentCombatPayload`, `GameStateService.cs:3110-3168`)
 
-- `player` 增加 `powers`：把 raw `combat.player.powers` 压成简短行（复用既有的 power 行格式化，
-  没有现成函数就取 `power_id` + `amount` 两个字段）。
-- 每个 `enemies[]` 增加：
-  - `powers`：同上；
-  - `intents`：`intent_type` / `label` / `damage` / `hits` / `total_damage` / `status_card_count`。
-- 数据来源就是 raw 的 `combat` 变量（`BuildAgentCombatPayload` 已持有），**不需要新的反射或游戏 API**。
-- 以实现时的真实字段名为准；若 raw 形状与本文件的示例不同，在 evidence 里给出原文字段名。
+- `player` gains `powers`: squash raw `combat.player.powers` into short lines (reuse the existing power line formatting;
+  if there is no ready-made function, take the two fields `power_id` + `amount`).
+- Each `enemies[]` gains:
+  - `powers`: same as above;
+  - `intents`: `intent_type` / `label` / `damage` / `hits` / `total_damage` / `status_card_count`.
+- The data source is the raw `combat` variable (already held by `BuildAgentCombatPayload`); **no new reflection or game API is needed**.
+- Go by the real field names at implementation time; if the raw shape differs from the examples in this file, give the original field names in the evidence.
 
-## 落点二：id 回归
+## Landing point 2: id regression
 
-| 位置 | 增加 |
+| Location | Addition |
 |---|---|
-| `BuildAgentHandCardPayload`（`:3544-3559`） | `card_id` |
-| `BuildAgentChoiceCardPayload`（`:3577-3584`） | `card_id`（选择屏 / 奖励卡） |
-| `BuildAgentPricedCardPayload`（`:3635-3642`） | `card_id`（商店） |
-| `BuildAgentCardStacks`（`:3663-3682`） | 每个合并组暴露 `card_id` 与 `count`；若一个组可能合并不同 id，则暴露 `card_ids` 数组 |
-| 遗物（`:3205-3207`） | `relic_id` |
-| 宝箱遗物选项（`:3487-3491`） | `relic_id` |
-| 卡包（bundle）选项 | 与 raw 的 `card_id` / `relic_id` 对齐 |
+| `BuildAgentHandCardPayload` (`:3544-3559`) | `card_id` |
+| `BuildAgentChoiceCardPayload` (`:3577-3584`) | `card_id` (choice screen / reward card) |
+| `BuildAgentPricedCardPayload` (`:3635-3642`) | `card_id` (shop) |
+| `BuildAgentCardStacks` (`:3663-3682`) | Each merged group exposes `card_id` and `count`; if a group may merge different ids, expose a `card_ids` array |
+| Relics (`:3205-3207`) | `relic_id` |
+| Chest relic options (`:3487-3491`) | `relic_id` |
+| Card pack (bundle) options | Aligned with the raw `card_id` / `relic_id` |
 
-## 落点三：覆盖层与队友
+## Landing point 3: overlays and teammates
 
-- `BuildAgentModalPayload`（`:3502-3509`）加 `underlying_screen`（raw `modal.underlying_screen`）。
-- compact 顶层（`:3003-3038`）加 `unlock`（复用 `BuildUnlockPayload`，`:4722-4736`）。
-- `BuildAgentCombatPayload` 加 `players`（raw `:7607-7634`）；`BuildAgentRunPayload` 加 `players`（`:7636-7657`）。
+- `BuildAgentModalPayload` (`:3502-3509`) gains `underlying_screen` (raw `modal.underlying_screen`).
+- The compact top level (`:3003-3038`) gains `unlock` (reusing `BuildUnlockPayload`, `:4722-4736`).
+- `BuildAgentCombatPayload` gains `players` (raw `:7607-7634`); `BuildAgentRunPayload` gains `players` (`:7636-7657`).
 
-## 测试策略（GameStateService.cs 不进测试工程，只能源码契约 + 反向对照）
+## Test strategy (GameStateService.cs is not in the test project, so only source contracts + reverse cross-checks)
 
-新增 `STS2AIAgent.Tests/CompactViewFidelityTests.cs`（由主代理注册），每条形如：
+Add `STS2AIAgent.Tests/CompactViewFidelityTests.cs` (registered by the main agent), each shaped like:
 
-1. 用 `AgentSourceFixture.MethodBody(Read("STS2AIAgent/Game/GameStateService.cs"), "BuildAgentCombatPayload")`
-   断言出现 `powers`、`intents`、`total_damage`、`players`；
-2. 对每个新增字段名，断言它在 raw 的对应类型定义处**也**出现（例如 `CombatEnemyIntentPayload` 段里出现
-   `total_damage`），把"发明字段"变成红色；
-3. 断言 compact 没有被整体倾倒成 raw（例如 `BuildAgentCombatPayload` 里不出现 `valid_target_indices`
-   这类 raw 专用字段）。
+1. Use `AgentSourceFixture.MethodBody(Read("STS2AIAgent/Game/GameStateService.cs"), "BuildAgentCombatPayload")`
+   to assert that `powers`, `intents`, `total_damage`, `players` appear;
+2. For each added field name, assert it **also** appears at the corresponding type definition in raw (for example `total_damage` appears in the
+   `CombatEnemyIntentPayload` section), turning "invented fields" red;
+3. Assert that compact has not been dumped wholesale from raw (for example raw-only fields like `valid_target_indices` do not appear in
+   `BuildAgentCombatPayload`).
 
-写断言后必须自检可否证：临时删掉一个新增字段 → 对应测试变红 → 还原。
+After writing the assertions, self-check falsifiability: temporarily delete one added field -> the matching test turns red -> restore.
 
-## 兼容与回滚
+## Compatibility and rollback
 
-- 纯增量字段，旧消费者不会因为多出键而失败。
-- 回滚 = 单个方法级 diff，可整体 revert。
+- Purely additive fields; old consumers will not fail because of extra keys.
+- Rollback = a single method-level diff, which can be reverted as a whole.

@@ -1,50 +1,50 @@
-# 设计：动态遍历 + 单次调用守卫
+# Design: dynamic traversal + single-call guard
 
-## 1. 死代码删除
+## 1. Dead code removal
 
-`client.py:391-392` 保留 `invite_ai_teammate` 的 `return`，删除 :393-400 整块
-（含其后的空行），确保 `choose_timeline_epoch` 方法定义仍然紧跟其后。
+Keep the `return` of `invite_ai_teammate` at `client.py:391-392` and delete the whole block at :393-400
+(including the blank lines after it), making sure the definition of the `choose_timeline_epoch` method still follows right after.
 
 ## 2. `mcp_server/tests/test_client_actions.py`
 
-数据驱动，避免手写 55 条：
+Data-driven, to avoid hand-writing 55 entries:
 
 ```python
 SENTINELS = {"option_index": 11, "card_index": 12, "target_index": 13, "x": 14, "y": 15,
              "tool": "small", "command": "cmd"}
 
-def _per_action_methods(cls):    # 用 inspect.getmembers + AST 判定：方法体内出现 execute_action
+def _per_action_methods(cls):    # use inspect.getmembers + AST to decide: execute_action appears in the method body
     ...
 ```
 
-对每个方法：
+For each method:
 
-1. `inspect.signature` 绑定哨兵值（`self` 除外）→ 调用；
-2. `patch.object(client, "_request", return_value={"ok": True})`，断言
-   `mock.assert_called_once_with("POST", "/action", payload=..., is_action=True)`；
-3. 断言 `payload["action"] == 方法名`、`payload["client_context"] == {"source":"mcp","tool_name":方法名}`；
-4. 断言传入的索引哨兵值出现在**正确**的 payload 键上（`card_index` 不能落到 `option_index`）。
+1. `inspect.signature` binds sentinel values (except `self`) -> call;
+2. `patch.object(client, "_request", return_value={"ok": True})`, and assert
+   `mock.assert_called_once_with("POST", "/action", payload=..., is_action=True)`;
+3. assert `payload["action"] == method name`, `payload["client_context"] == {"source":"mcp","tool_name":method name}`;
+4. assert the index sentinel values passed in appear on the **correct** payload keys (`card_index` must not land on `option_index`).
 
-现有范式参考 `tests/test_crystal_sphere_tools.py:79-106`；`DummyClient`/`RecordingClient`
-在 `test_waits.py:23`、`test_crystal_sphere_tools.py:11-21`。
+For the existing pattern see `tests/test_crystal_sphere_tools.py:79-106`; `DummyClient`/`RecordingClient`
+are at `test_waits.py:23` and `test_crystal_sphere_tools.py:11-21`.
 
-## 3. AST 守卫
+## 3. AST guard
 
-用 `ast` 解析 `client.py` 源码，对每个类方法统计 `self.execute_action(...)` 调用数：
+Parse the `client.py` source with `ast` and count `self.execute_action(...)` calls in each class method:
 
-- 恰为 1 → 通过；
-- 0 → 报"方法没有发送动作"；
-- ≥2 → 报"方法体有重复/死代码（疑似残留块）"。
+- exactly 1 -> pass;
+- 0 -> report "the method does not send an action";
+- >= 2 -> report "the method body has duplicates/dead code (a suspected leftover block)".
 
-该守卫独立于运行时行为，能直接钉住本轮删掉的那类残留。同时断言方法名集合与
-`_legacy_action_tools` / `server.py` 的动作名单不冲突（若现有测试已覆盖则复用，不重复）。
+This guard is independent of runtime behavior and can directly pin the kind of leftover deleted this round. Also assert that the set of method names does not conflict with
+the action list of `_legacy_action_tools` / `server.py` (reuse if existing tests already cover it, do not repeat).
 
-## 4. 运行约定
+## 4. Running conventions
 
 ```bash
 cd mcp_server
 uv run --locked python -m unittest discover -s tests -v
 ```
 
-仓库路径解析照 `test_legacy_action_coverage.py:20-25`（`Path(__file__).resolve().parents[N]` + marker），
-不要依赖 CWD。只用 stdlib。
+Resolve the repo path following `test_legacy_action_coverage.py:20-25` (`Path(__file__).resolve().parents[N]` + marker),
+and do not depend on CWD. Use only stdlib.

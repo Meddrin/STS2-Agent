@@ -1,38 +1,38 @@
-# 证据：两份场景字段表的漂移
+# Evidence: drift between the two scene field tables
 
-## 两侧位置
+## Locations on both sides
 
-- C#：`STS2AIAgent/Agent/GameDataFilter.cs:12-33` `SceneFieldSets`，
-  消费于 `GameBridge.GetRelevantGameDataJsonAsync`（`GameBridge.cs:130-142`）→
-  `AgentLoop`（游戏内）与 `NativeMcpServer`（原生 MCP，默认关闭）。
-- Python：`mcp_server/src/sts2_mcp/server.py:150` `_SCENE_FIELD_SETS`，
-  消费于 `get_relevant_game_data`（`:758-785`）→ `get_game_data_items_fields`（`:342-369`）→
-  `client.get_game_data_collection` → `GET /data/{collection}`。
+- C#: `SceneFieldSets` at `STS2AIAgent/Agent/GameDataFilter.cs:12-33`,
+  consumed in `GameBridge.GetRelevantGameDataJsonAsync` (`GameBridge.cs:130-142`) ->
+  `AgentLoop` (in-game) and `NativeMcpServer` (native MCP, off by default).
+- Python: `_SCENE_FIELD_SETS` at `mcp_server/src/sts2_mcp/server.py:150`,
+  consumed in `get_relevant_game_data` (`:758-785`) -> `get_game_data_items_fields` (`:342-369`) ->
+  `client.get_game_data_collection` -> `GET /data/{collection}`.
 
-## 实测差集（调研所得）
+## Measured differences (from the investigation)
 
-| (scene, collection) | C# | Python | 缺口 |
+| (scene, collection) | C# | Python | Gap |
 |---|---|---|---|
-| `combat.powers` | 6 项（含 `allow_negative`） | 5 项 | C# 多 `allow_negative` |
-| `shop.cards` | 11 项 | 6 项 | C# 多 `target`/`is_x_cost`/`star_cost`/`is_x_star_cost`/`keywords` |
-| `shop.relics` | 含 `is_melted` | 无 | C# 多 `is_melted` |
-| `combat.potions` | 有（上一轮新增） | 无该键 | Python 缺整个组合 |
+| `combat.powers` | 6 items (including `allow_negative`) | 5 items | C# has an extra `allow_negative` |
+| `shop.cards` | 11 items | 6 items | C# has extra `target`/`is_x_cost`/`star_cost`/`is_x_star_cost`/`keywords` |
+| `shop.relics` | includes `is_melted` | none | C# has an extra `is_melted` |
+| `combat.potions` | present (added last round) | no such key | Python lacks the whole combination |
 
-（其余组合以实现时的实测差集为准；上表来自本轮只读调研。）
+(For the other combinations, go by the measured difference at implementation time; the table above comes from this round's read-only investigation.)
 
-## 为什么测试没抓到
+## Why the tests did not catch it
 
-- Python 侧 `test_game_data_tools.py:114-172` 的期望值取自 `",".join(_SCENE_FIELD_SETS[...])`，
-  **自引用**；`:200-224` 那条唯一的"real schema"断言只覆盖 `events`。
-- C# 侧上一轮新增的 `GameDataExportSchemaTests` 只约束 C# 表 ↔ 导出代码，不涉及 Python。
-- 全仓没有任何测试同时读两侧（`SceneFieldSetView` 只出现在 C# 与 `AgentLoopTests`）。
+- The expected values at `test_game_data_tools.py:114-172` on the Python side come from `",".join(_SCENE_FIELD_SETS[...])`,
+  **self-referencing**; the only "real schema" assertion at `:200-224` covers only `events`.
+- The `GameDataExportSchemaTests` newly added on the C# side last round constrain only the C# table <-> export code, and do not involve Python.
+- No test in the whole repo reads both sides at once (`SceneFieldSetView` appears only in C# and `AgentLoopTests`).
 
-## `mcp_server/data/eng/` 的现状（用于 README 说真话）
+## Current state of `mcp_server/data/eng/` (for making the README tell the truth)
 
-- 20 个 JSON + README，约 1.2 MiB，`git ls-files mcp_server/data` = 21 个文件（已跟踪）。
-- 打包路径：`mcp_server/pyproject.toml:23,26`（wheel/sdist force-include）、
-  `scripts/package-release.ps1:148`、`scripts/check_release_package.py:57`（只校验目录存在）。
-- **无任何代码读取**（多轮 `rg` 检索未见读取点）；运行时的唯一数据源是 mod 的 HTTP 导出。
-- 与导出 schema 的差异举例：`potions.json` 无 `usage`/`target_type`；`relics.json` 无 `is_melted`；
-  `cards.json` 多出 `image_url`/`beta_image_url` 等。
-- 现有 README 声称它"用于 MCP 服务器的数据查询和 AI 决策支持"——**与代码不符**。
+- 20 JSON files + README, about 1.2 MiB, `git ls-files mcp_server/data` = 21 files (tracked).
+- Packaging paths: `mcp_server/pyproject.toml:23,26` (wheel/sdist force-include),
+  `scripts/package-release.ps1:148`, `scripts/check_release_package.py:57` (only checks that the directory exists).
+- **No code reads it** (multiple `rg` searches found no read point); the only runtime data source is the mod's HTTP export.
+- Examples of differences from the export schema: `potions.json` has no `usage`/`target_type`; `relics.json` has no `is_melted`;
+  `cards.json` has extra `image_url`/`beta_image_url`, etc.
+- The existing README claims it is "used for MCP server data queries and AI decision support": **inconsistent with the code**.

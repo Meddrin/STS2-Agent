@@ -1,12 +1,12 @@
-# 让游戏内动作失败保留错误码与可重试信号
+# Make in-game action failures keep the error code and the retryable signal
 
-## 背景
+## Background
 
-游戏内 Agent 走的是进程内桥接，不经过 HTTP：
+The in-game Agent goes through an in-process bridge, not HTTP:
 
-`STS2AIAgent/Agent/GameBridge.cs:73-99` 的 `ActAsync` 调 `GameActionService.ExecuteAsync`，
-只序列化 `{action, status, stable, message, state}`。
-异常在 `STS2AIAgent/Agent/AgentLoop.cs:665-667` 被压成 `{ error = ex.Message }`：
+`ActAsync` at `STS2AIAgent/Agent/GameBridge.cs:73-99` calls `GameActionService.ExecuteAsync`
+and serializes only `{action, status, stable, message, state}`.
+Exceptions are squashed into `{ error = ex.Message }` at `STS2AIAgent/Agent/AgentLoop.cs:665-667`:
 
 ```csharp
 catch (Exception ex)
@@ -15,41 +15,41 @@ catch (Exception ex)
 }
 ```
 
-于是 `ApiException` 的 `StatusCode` / `Code` / `Details` / `Retryable`
-（`STS2AIAgent/Server/ApiException.cs:5-20`）**全部丢失**：
+So the `StatusCode` / `Code` / `Details` / `Retryable` of `ApiException`
+(`STS2AIAgent/Server/ApiException.cs:5-20`) are **all lost**:
 
-- 走 HTTP 的 MCP 客户端能拿到 `error.code = invalid_action / invalid_target / state_unavailable`
-  与 `retryable`（`STS2AIAgent/Server/Router.cs:259-263` 的信封）；
-- 游戏内模型只拿到一句人话，**无法区分 400 / 403 / 409 / 503**，也不知道某个 503 是否
-  `retryable: true`（代码里大量位置显式标注了 retryable）。
+- An MCP client going over HTTP gets `error.code = invalid_action / invalid_target / state_unavailable`
+  and `retryable` (the envelope at `STS2AIAgent/Server/Router.cs:259-263`);
+- The in-game model gets only a human sentence, **cannot tell 400 / 403 / 409 / 503 apart**, and does not know whether a given 503 is
+  `retryable: true` (many places in the code explicitly mark retryable).
 
-同一份状态、同一套动作，两条链路的错误信息保真度不同——这是"同一契约两种精度"的典型漂移。
+With the same state and the same actions, the two paths differ in error fidelity: a typical case of "one contract at two precisions" drift.
 
-## 目标
+## Goals
 
-1. 游戏内动作失败的错误对象带上与 HTTP 信封**同名同义**的字段：
-   `code` / `message` / `details` / `retryable`（`status_code` 可选，供模型参考）。
-2. 非 `ApiException` 的意外异常也要归类（例如 `code = "internal_error"`、`retryable = false`），
-   不允许退化成只有一句 message。
-3. `skills/sts2-mcp-player/SKILL.md` 的共享契约块里补上"按 code 判断是否重试"的指引
-   （marker 边界不动，该文件被 mod 构建期内嵌）。
+1. In-game action failure error objects carry fields with the **same names and meanings** as the HTTP envelope:
+   `code` / `message` / `details` / `retryable` (`status_code` optional, for the model's reference).
+2. Unexpected exceptions that are not `ApiException` must also be classified (for example `code = "internal_error"`, `retryable = false`),
+   and must not degrade into just a message.
+3. Add guidance on "decide whether to retry by code" to the shared contract block of `skills/sts2-mcp-player/SKILL.md`
+   (marker boundaries untouched; that file is embedded at mod build time).
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `AgentLoop` 的失败分支产出的 JSON 含 `error.code`、`error.message`、`error.retryable`，
-      `ApiException` 时还含 `error.details` 与 `error` 顶层的 `status_code`。
-- [x] 既有键 `error`（字符串）**不再**作为唯一形态；若为兼容保留，必须与结构化字段并存
-      （由实现决定，但要在 evidence 里写明兼容取舍）。
-- [x] 纯策略：把"异常 → 错误对象"的映射抽到可离线编译的类型里（无 Godot / 无 MegaCrit 引用），
-      并附真值表测试（`ApiException` 四要素、普通异常、取消异常的分类）。
-- [x] 源码契约测试：`GameBridge.ActAsync` 的序列化对象包含 `status_code`/`code`/`retryable`
-      或与之等价的字段名（以实现为准），且 `AgentLoop` 的 catch 不再只序列化 `ex.Message`。
-- [x] 与 HTTP 侧的信封字段名一致（测试断言两边用同一组字段名，防止再次分叉）。
-- [x] C# / MCP 全量测试、`check_verification_gates.py`、preflight 通过。
+- [x] The JSON produced by the failure branch of `AgentLoop` contains `error.code`, `error.message`, `error.retryable`,
+      and for `ApiException` also `error.details` and a top-level `status_code` next to `error`.
+- [x] The existing key `error` (string) is **no longer** the only form; if kept for compatibility, it must coexist with the structured fields
+      (up to the implementation, but the compatibility trade-off must be written in the evidence).
+- [x] Pure policy: extract the "exception -> error object" mapping into a type that compiles offline (no Godot / no MegaCrit references),
+      with truth table tests (the four elements of `ApiException`, an ordinary exception, classification of a cancellation exception).
+- [x] Source contract test: the serialized object of `GameBridge.ActAsync` contains `status_code`/`code`/`retryable`
+      or equivalent field names (per the implementation), and the catch of `AgentLoop` no longer serializes only `ex.Message`.
+- [x] Field names match the HTTP side's envelope (a test asserts both sides use the same set of field names, preventing another fork).
+- [x] Full C# / MCP tests, `check_verification_gates.py`, and preflight pass.
 
-## 范围外
+## Out of scope
 
-- 不改 HTTP 信封（`Router.WriteErrorAsync`）的既有形态。
-- 不改 `docs/api.md` 的动作契约块。
-- 不新增错误码（沿用 `invalid_action` / `invalid_request` / `invalid_target` /
-  `state_unavailable` / `invite_failed`，新增的只有"非 ApiException 兜底"这一个分类）。
+- Do not change the existing shape of the HTTP envelope (`Router.WriteErrorAsync`).
+- Do not change the action contract block of `docs/api.md`.
+- Do not add error codes (keep using `invalid_action` / `invalid_request` / `invalid_target` /
+  `state_unavailable` / `invite_failed`; the only addition is the "non-ApiException fallback" classification).

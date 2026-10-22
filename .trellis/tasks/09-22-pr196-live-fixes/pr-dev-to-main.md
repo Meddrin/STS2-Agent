@@ -1,20 +1,20 @@
-## 双模式 overlay + Jev 双层决策 + 会话持久化 + 实机修复批次
+## Two-mode overlay + Jev two-layer decisions + session persistence + live fix batch
 
-本 PR 把 dev 上已验证的一批工作合入 main，核心是 PR #196（已合入 dev）及其后的实机测试修复批次。
+This PR merges a batch of work verified on dev into main; the core is PR #196 (already merged into dev) and the live-test fix batch after it.
 
-### 新功能
-- **双 tab overlay 重组**：游玩/设置两个 tab，单人/多人模式滑块，设置页分区跳转。
-- **Jev 双层决策引擎**：TypeSafe Jev（System One）逐步执行动作，LLM 只做低频战略规划；置信度门控，低置信/失败回退 LLM 逐手决策；`GET`/`POST /strategy` + MCP `get_planner_briefing`/`update_play_strategy` 双面 parity。
-- **对局会话持久化**：每局的对话历史、决策记忆、游玩策略按 run 持久化，"继续游戏"后恢复。
+### New features
+- **Two-tab overlay reorg**: Play/Settings tabs, a single-player/multiplayer mode slider, and section jumps on the settings page.
+- **Jev two-layer decision engine**: TypeSafe Jev (System One) executes actions step by step while the LLM only does low-frequency strategic planning; confidence gating, falling back to LLM per-move decisions on low confidence/failure; `GET`/`POST /strategy` + MCP `get_planner_briefing`/`update_play_strategy` with parity across both surfaces.
+- **Run session persistence**: each run's chat history, decision memory, and play strategy are persisted per run and restored after "continue game".
 
-### 实机测试修复批次（本批重点）
-- **双层决策真正生效**：Jev decider 原为构造期一次性构建（启动后填 Key 永不生效），改为按配置指纹逐回合惰性重建；「测试 Jev 连接」从占位桩改为真实 ping；决策日志记 `source="jev"`；Jev 面板接通实值；StrategyPlanner 接线（原为死代码）。
-- **战利品不再秒选第一张**：`resolve_rewards`/`collect_rewards_and_proceed` 未携带选择时停在选牌界面等待显式决策，不再静默取第一张；Jev 枚举器展开为每卡一选项+显式跳过。
-- **自动游玩卡死可见且有界**：游戏线程调用全部可取消有 deadline（此前可永久挂起且暂停无效）；状态栏显示当前阶段+已等待秒数；连续等待 2 分钟停机并给出可见原因；LLM/Jev 单次请求超时可配置；异常保留类型。
-- **对话即决策流**：思考内容（可开关）与每个动作决策以气泡进入对话；修复对话冻结（RefreshDynamic 异常被吞）；上限 200 条+省略提示+自动滚底；移除多余的「允许代打」。
-- **模型设置重构**：每张模型卡「测试」按钮（真实 ping + 工具调用探测）+ ✅ 徽标；主/游玩模型合并为单一主模型；视觉模型入高级选项；删除「工具调用」勾选（以探测为准）；思考强度与回复语言（中/英）移到游玩页对话卡；首次配置引导按双 tab UI 重写。
+### Live-test fix batch (the focus of this batch)
+- **Two-layer decisions really take effect**: the Jev decider used to be built once at construction (entering the Key after launch never took effect) and is now rebuilt lazily every turn by configuration fingerprint; "Test Jev connection" changed from a placeholder stub to a real ping; the decision log records `source="jev"`; the Jev panel is wired to real values; StrategyPlanner is wired in (it was dead code).
+- **Loot no longer instantly picks the first card**: when `resolve_rewards`/`collect_rewards_and_proceed` carry no choice they stop at the card choice screen and wait for an explicit decision instead of silently taking the first card; the Jev enumerator expands into one option per card + an explicit skip.
+- **Auto-play hangs are visible and bounded**: all game thread calls are cancellable with a deadline (previously they could hang forever and pause had no effect); the status bar shows the current phase + seconds waited; waiting 2 minutes in a row halts and gives a visible reason; the LLM/Jev per-request timeout is configurable; exceptions keep their type.
+- **Chat is the decision stream**: thinking content (toggleable) and every action decision enter the chat as bubbles; fixed the chat freeze (RefreshDynamic exceptions were swallowed); cap of 200 entries + omitted hint + auto-scroll to bottom; removed the redundant "allow auto-play".
+- **Model settings refactor**: a "Test" button on every model card (real ping + tool-calling probe) + a check badge; main/play models merged into a single main model; vision model moved into advanced options; the "tool calling" checkbox removed (the probe decides); reasoning effort and reply language (Chinese/English) moved to the play page's chat card; first-run setup guidance rewritten for the two-tab UI.
 
-### 验证
-- C# 核心测试 737 全绿；Python MCP 测试 416 全绿；preflight-release 全过。
-- mod 已构建部署；实机复测清单见 `.trellis/tasks/09-22-pr196-live-fixes/plan.md`。
-- 注意：v0.15.0 及更早的 release 构建不含双层决策代码，复测必须用本分支构建的 DLL。
+### Verification
+- All 737 C# core tests green; all 416 Python MCP tests green; preflight-release fully passed.
+- The mod is built and deployed; see `.trellis/tasks/09-22-pr196-live-fixes/plan.md` for the live retest checklist.
+- Note: release builds of v0.15.0 and earlier contain no two-layer decision code, so the retest must use the DLL built from this branch.

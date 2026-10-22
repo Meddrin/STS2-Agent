@@ -1,40 +1,40 @@
-# 游玩对话 session 持久化（按 run 保存/恢复上下文）
+# Play chat session persistence (save/restore context per run)
 
 ## Goal
 
-让一个游戏 run 存档对应一次对话 session：玩家可中途保存退出，下次「继续游戏」时恢复该 run 的对话与决策上下文；切换模型时上下文不丢。这里的「存档」指游戏内「继续游戏」的 run 存档，而非整个游戏存档。
+Make one game run save correspond to one chat session: the player can save and exit midway, and the next "continue game" restores that run's chat and decision context; switching models does not lose context. The "save" here means the in-game "continue game" run save, not the whole game save.
 
 ## Requirements
 
-### 现状（来自代码勘察）
-- 游玩循环 `AgentLoop.PlayOnceAsync` 是**逐手无状态**的：每轮重建 system+playbook+策略+队伍上下文+vision+压缩记忆+最新 state。所谓「记忆」来自 `ContextCompaction.Format` 对 `DecisionLog` 的摘要（`_recentDecisions` 提供者），不是对话 transcript。
-- 对话（`ChatAsync`）是另一条独立会话，历史只在 overlay 内存里。
-- `DecisionLog` 已 best-effort 落盘（200 条内存 + 2MB 文件轮转），但**不按 run 恢复进循环记忆**。
+### Current state (from code survey)
+- The play loop `AgentLoop.PlayOnceAsync` is **stateless per move**: every turn it rebuilds system+playbook+strategy+team context+vision+compacted memory+latest state. The so-called "memory" comes from the summary of `DecisionLog` made by `ContextCompaction.Format` (the `_recentDecisions` provider), not from a chat transcript.
+- Chat (`ChatAsync`) is another independent session, and its history lives only in overlay memory.
+- `DecisionLog` is already persisted best-effort (200 in memory + 2MB file rotation), but it is **not restored into the loop memory per run**.
 
-### 需求
-- 以 `run_id` 为键持久化一个 run 的 session：
-  - 对话历史（用户消息 + 模型回复 + 决策/工具调用条目）。
-  - 决策上下文（供 `ContextCompaction` 的近期决策序列）。
-  - 双层模式下的当前 `PlayStrategy`。
-- 「继续游戏」进入同一 run 时，恢复上述上下文：对话区重现历史、决策记忆接续、策略接续。
-- 切换模型（conversation/play model）时保留并复用该 run 的上下文（上下文是与 run 绑定、与模型无关的）。
-- 中途退出（关 overlay/关游戏）不丢：持久化是即时的或退出时 flush。
-- 新 run（新存档）开启新 session，不串上下文。
+### Requirements
+- Persist a run's session keyed by `run_id`:
+  - Chat history (user messages + model replies + decision/tool call entries).
+  - Decision context (the recent decision sequence for `ContextCompaction`).
+  - The current `PlayStrategy` in two-layer mode.
+- When "continue game" enters the same run, restore the above context: the chat area reproduces the history, decision memory continues, and strategy continues.
+- When switching models (conversation/play model), keep and reuse that run's context (context is bound to the run and independent of the model).
+- Exiting midway (closing the overlay/closing the game) loses nothing: persistence is immediate or flushed on exit.
+- A new run (a new save) starts a new session and does not mix contexts.
 
 ## Acceptance Criteria
 
-- [ ] 每个 run 的对话历史按 `run_id` 持久化到磁盘，重新进入该 run 时对话区恢复显示。
-- [ ] 决策上下文（近期决策序列）按 run 恢复，`ContextCompaction` 在继续游玩时能基于历史决策工作。
-- [ ] 双层模式下 `PlayStrategy` 按 run 保存与恢复。
-- [ ] 切换模型后继续同一 run，上下文保留。
-- [ ] 中途退出后再进入，上下文不丢。
-- [ ] 新 run 开启全新 session。
-- [ ] 持久化失败不影响游玩（best-effort，对齐 DecisionLog 的「诊断绝不阻断游玩」原则）。
-- [ ] 敏感信息（API key）不写入 session 文件；沿用 `DiagnosticExport.Redact` 脱敏。
-- [ ] 单测覆盖：session 序列化/反序列化、按 run 键恢复、模型切换场景、损坏文件恢复。
+- [ ] Each run's chat history is persisted to disk by `run_id`, and when re-entering that run the chat area shows it again.
+- [ ] Decision context (the recent decision sequence) is restored per run, and `ContextCompaction` can work from historical decisions when play continues.
+- [ ] `PlayStrategy` is saved and restored per run in two-layer mode.
+- [ ] After switching models and continuing the same run, the context is kept.
+- [ ] After exiting midway and re-entering, the context is not lost.
+- [ ] A new run starts a fresh session.
+- [ ] Persistence failure does not affect play (best-effort, aligned with the DecisionLog principle that "diagnostics must never block play").
+- [ ] Sensitive information (API key) is not written into session files; redaction via `DiagnosticExport.Redact` is reused.
+- [ ] Unit tests cover: session serialization/deserialization, restore by run key, the model switch scenario, corrupted file recovery.
 
 ## Notes
 
-- 依赖子任务1（对话并入游玩页的形态）落地后再做。
-- 存储位置建议与 `SettingsStore` 同级目录下的 `sessions/` 子目录，每 run 一个文件（`{run_id}.json`），原子写 + .bak。
-- 注意 `run_unknown` 占位 run 不落盘（对齐 DecisionLog 对 `run_unknown` 的归一）。
+- Depends on subtask 1 (the shape of chat merged into the play page) landing first.
+- The storage location is suggested to be a `sessions/` subdirectory next to `SettingsStore`, one file per run (`{run_id}.json`), with atomic write + .bak.
+- Note that the `run_unknown` placeholder run is not written to disk (aligned with how DecisionLog normalizes `run_unknown`).

@@ -18,9 +18,9 @@ All five agree. The preflight validates all five
 ## Stale claims
 
 ```text
-PRODUCT_PLAN_CURRENT.md:3-5    "发布代码基准：v0.10.6 @ 2f75e4a"; page has no v0.11.0
-PRODUCT_PLAN_CURRENT.md:11-13  "2026-09-10 主线未发布变更"
-PRODUCT_PLAN_CURRENT.md:26-32  "2026-09-11 标签后主线未发布变更" (d77982a, 7b02168, proactive-chat fixes, api.md additions)
+PRODUCT_PLAN_CURRENT.md:3-5    "Release code baseline: v0.10.6 @ 2f75e4a"; page has no v0.11.0
+PRODUCT_PLAN_CURRENT.md:11-13  "2026-09-10 mainline unreleased changes"
+PRODUCT_PLAN_CURRENT.md:26-32  "2026-09-11 mainline unreleased changes after the tag" (d77982a, 7b02168, proactive-chat fixes, api.md additions)
 PRODUCT_PLAN_CURRENT.md:65-68  matrix rows still say #82 / pets / chat-volume fixes are unreleased
 docs/api.md:112                "mod_version": "0.10.6" in the /health example
 steam-workshop/workshop.json:4 "changeNote": "v0.10.4 timeline unlocks, ..."

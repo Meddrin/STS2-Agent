@@ -1,31 +1,31 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent.Tests/ApiExceptionTests.cs`（新） | 3 条行为测试 |
-| `STS2AIAgent.Tests/JsonHelperTests.cs`（新） | 2 条行为测试 |
-| `STS2AIAgent.Tests/HttpServerPortPolicyTests.cs`（新） | 3 条源码契约测试 |
-| `docs/api.md` | 屏幕枚举表补 6 行：`MULTIPLAYER_LOBBY`、`BUNDLE_SELECTION`、`CAPSTONE_SELECTION`、`CARDS_VIEW`、`UNLOCK`、`TIMELINE`（实测缺失数多于审计报告列的 3 个） |
-| csproj + TestRunner | 已由主代理注册（编译项 + 8 条测试名） |
+| `STS2AIAgent.Tests/ApiExceptionTests.cs` (new) | 3 behavioral tests |
+| `STS2AIAgent.Tests/JsonHelperTests.cs` (new) | 2 behavioral tests |
+| `STS2AIAgent.Tests/HttpServerPortPolicyTests.cs` (new) | 3 source contract tests |
+| `docs/api.md` | The screen enum table gains 6 rows: `MULTIPLAYER_LOBBY`, `BUNDLE_SELECTION`, `CAPSTONE_SELECTION`, `CARDS_VIEW`, `UNLOCK`, `TIMELINE` (measured to be more missing than the 3 listed in the audit report) |
+| csproj + TestRunner | Registered by the main agent (compile entries + 8 test names) |
 
-生产代码零改动。
+Zero production code changes.
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 8 条测试按注册名通过 | `PASS ApiException.CarriesStatusAndCode / RetryableDefaultsToFalse / DetailsAreOptional`、`PASS JsonHelper.PascalCaseIndented / CaseInsensitiveRead`、`PASS HttpServerPort.ExplicitNeverDrifts / AutoIncrementFlagged / FallbackGate` |
-| 可否证 | 把 `JsonHelper` 的 `WriteIndented` 改 false → `JsonHelper.PascalCaseIndented` 红；对 `HttpServer.cs` 的**副本**做三处变异（`PortWasAutoIncremented=false`、`allowIncrement=true`、环境变量名改错）→ 对应契约测试各自变红；仓库生产文件零残留 |
-| 文档 | `git diff -- docs/api.md` 仅屏幕表 6 行新增；`<!-- BEGIN ACTION CONTRACT -->` 块零 diff，gate 报 `55 actions match` |
+| The 8 tests pass by registered name | `PASS ApiException.CarriesStatusAndCode / RetryableDefaultsToFalse / DetailsAreOptional`, `PASS JsonHelper.PascalCaseIndented / CaseInsensitiveRead`, `PASS HttpServerPort.ExplicitNeverDrifts / AutoIncrementFlagged / FallbackGate` |
+| Falsifiable | Changing `WriteIndented` of `JsonHelper` to false -> `JsonHelper.PascalCaseIndented` red; three mutations on a **copy** of `HttpServer.cs` (`PortWasAutoIncremented=false`, `allowIncrement=true`, a wrong environment variable name) -> the matching contract tests each turn red; zero residue in the repo production files |
+| Docs | `git diff -- docs/api.md` shows only 6 new screen table rows; the `<!-- BEGIN ACTION CONTRACT -->` block has zero diff, and the gate reports `55 actions match` |
 
-## 门禁
+## Gates
 
-C# **PASS=311 FAIL=0**；`check_verification_gates.py` 通过；`check_release_package.py --source-root .` 通过；preflight 通过。
+C# **PASS=311 FAIL=0**; `check_verification_gates.py` passed; `check_release_package.py --source-root .` passed; preflight passed.
 
-## 覆盖边界（明确写清，避免下轮重复评估）
+## Coverage boundaries (written down explicitly to avoid re-evaluating next round)
 
-- `HttpServer` 的三条测试是**源码文本契约**，不是运行时行为：`HttpServer.Start()` 依赖 `MegaCrit…Log` 与 `Router`，离线不可编译。运行时保障仍来自 `LoopbackListenerTests`（7 条）的间接覆盖。
-- 屏幕名来自 `GameStateService.ResolveNonModalScreen` 的静态映射，未在真实游戏里逐个触发核对。
-- 屏幕清单不是 gate 校验项，未来仍可能漂移（动作契约才是硬校验）。
+- The three `HttpServer` tests are **source text contracts**, not runtime behavior: `HttpServer.Start()` depends on `MegaCrit...Log` and `Router` and cannot compile offline. Runtime assurance still comes from the indirect coverage of `LoopbackListenerTests` (7 tests).
+- Screen names come from the static mapping of `GameStateService.ResolveNonModalScreen` and were not triggered one by one in the real game to check.
+- The screen list is not a gate-checked item, so it may still drift in the future (the action contract is the hard check).

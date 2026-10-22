@@ -1,59 +1,59 @@
-# 设计
+# Design
 
 ## ① `selection.can_confirm`
 
-现状：
+Current state:
 
-- payload（`:4439-4441`）：`can_confirm = hasCombatHandSelection ? combatHandSelection.CanConfirm : hasCardGridSelection && cardGridSelection.CanConfirm`
-- 动作（`CanConfirmSelection`:942-954）：额外要求 `(RequiresConfirmation || MinSelect < MaxSelect)`。
+- payload (`:4439-4441`): `can_confirm = hasCombatHandSelection ? combatHandSelection.CanConfirm : hasCardGridSelection && cardGridSelection.CanConfirm`
+- action (`CanConfirmSelection`:942-954): additionally requires `(RequiresConfirmation || MinSelect < MaxSelect)`.
 
-修法（实现时取破坏面小者，并写进 evidence）：
+The fix (pick the one with the smaller breakage surface at implementation time, and write it into the evidence):
 
-- **A**：payload 的 `can_confirm` 改为复用 `CanConfirmSelection(currentScreen)`；
-- **B**：把 `CanConfirmSelection` 里"是否值得确认"的附加条件去掉，两边同为 `CanConfirm`。
+- **A**: change the payload's `can_confirm` to reuse `CanConfirmSelection(currentScreen)`;
+- **B**: remove the extra "is it worth confirming" condition in `CanConfirmSelection`, so both sides are simply `CanConfirm`.
 
-判定边界：若走 A，单选且无需确认的网格会从 `can_confirm=true` 变为 `false`——这是语义收敛
-（"现在有 confirm 动作吗"）；若走 B，模型可能被引导去点一个不需要确认的屏。先读
+Boundary of judgment: if A, a single-select grid that needs no confirmation changes from `can_confirm=true` to `false`: a semantic convergence
+("does a confirm action exist now"); if B, the model may be guided to click a screen that needs no confirmation. First read the existing assertions in
 `DeckSelectionAvailabilityTests` / `RewardFlowContractTests` / `CombatDiagnosticsContractTests`
-里的既有断言，再决定。无论走哪条，payload 与动作必须来自同一处判定。
+before deciding. Whichever is chosen, the payload and the action must come from one and the same decision.
 
 ## ② `modal.can_confirm`
 
-payload `:4946` `can_confirm = confirmButton != null` → 改为 `CanConfirmModal(currentScreen)`。
-先读 `FtueModalPolicyTests`：`ExposeConfirm = hasUsableConfirmButton || IsFtueType` 意味着 FTUE
-弹窗在**没有**可用确认按钮时也放行 `confirm_modal`（`confirm_modal` 会走 `CloseFtueDirectly` 等路径）。
-payload 与它对齐后，"FTUE 无按钮 + can_confirm=true + confirm_modal 可用"三者一致。
+Payload `:4946` `can_confirm = confirmButton != null` -> change to `CanConfirmModal(currentScreen)`.
+First read `FtueModalPolicyTests`: `ExposeConfirm = hasUsableConfirmButton || IsFtueType` means an FTUE
+popup lets `confirm_modal` through even when there is **no** usable confirm button (`confirm_modal` goes through paths like `CloseFtueDirectly`).
+After the payload aligns with it, the three agree: "FTUE with no button + can_confirm=true + confirm_modal available".
 
 ## ③ descriptor
 
-`:397` `requires_index = true` → `false`（`resolve_rewards` 不消费 index）。
+`:397` `requires_index = true` -> `false` (`resolve_rewards` does not consume an index).
 
-## ④ reward 按钮过滤
+## (4) Reward button filtering
 
-`CanChooseRewardCard` / `CanSkipRewardCards` 增加 `IsEnabled`（与 `CanClaimReward` 一致），
-必要时 `IsVisibleInTree`。先确认 `GetCardRewardOptions` / `GetCardRewardAlternativeButtons` 的节点类型
-是否有这两个成员；没有的就不加，并把结论写进 evidence。
+Add `IsEnabled` to `CanChooseRewardCard` / `CanSkipRewardCards` (consistent with `CanClaimReward`),
+and `IsVisibleInTree` if necessary. First confirm whether the node types of `GetCardRewardOptions` / `GetCardRewardAlternativeButtons`
+have these two members; if not, do not add them, and write the conclusion into the evidence.
 
-## ⑤ 水晶球
+## (5) Crystal sphere
 
-`GetCrystalSphereMinigame` 已要求 `currentScreen is NCrystalSphereScreen`，因此"屏幕存在但不可见"
-的可达性存疑。评估后给结论：若可达性不成立则**不改**（写进 evidence）；若有反例则补可见性过滤。
+`GetCrystalSphereMinigame` already requires `currentScreen is NCrystalSphereScreen`, so the reachability of "the screen exists but is not visible"
+is doubtful. After evaluating, give a conclusion: if reachability does not hold, **do not change** (write it into the evidence); if there is a counterexample, add a visibility filter.
 
-## 测试（`SurfacedActionParityTests.cs`，源码契约）
+## Tests (`SurfacedActionParityTests.cs`, source contracts)
 
-- payload `can_confirm` 与 `CanConfirmSelection(` 同源（按 ① 选定的形态断言）；
-- modal payload 的 `can_confirm` 引用 `CanConfirmModal(`；
-- `resolve_rewards` descriptor 片段含 `requires_index = false`；
-- `CanChooseRewardCard`/`CanSkipRewardCards` 方法体含 `IsEnabled`；
-- 每条断言可否证（把对应改动还原 → 红 → 恢复）。
+- the payload `can_confirm` shares a source with `CanConfirmSelection(` (assert in the shape chosen under (1));
+- the `can_confirm` of the modal payload references `CanConfirmModal(`;
+- the `resolve_rewards` descriptor fragment contains `requires_index = false`;
+- the bodies of `CanChooseRewardCard`/`CanSkipRewardCards` contain `IsEnabled`;
+- every assertion is falsifiable (revert the matching change -> red -> restore).
 
-## 陷阱
+## Pitfalls
 
-- `GameStateService.cs` 不在测试工程编译集内：改完必须
-  `dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-incremental` 做类型检查。
-- **并行编辑**：`09-12-reward-screen-truth` 的 worker 同时改同一文件的 `ResolveNonModalScreen`
-  （6802-6866）。本任务只改 390-400 / 900-960 / 1563-1567 / 1595-1610 / 4420-4445 / 4930-4950，
-  绝不触碰 6802-6866；用精确上下文的 apply_patch，不要整文件覆写。
-- 既有测试（`CompactViewFidelityTests`、`FtueModalPolicyTests`、`RewardFlowContractTests`、
-  `DeckSelectionAvailabilityTests`）可能覆盖这些分支，先读再改。
+- `GameStateService.cs` is not in the test project's compile set: after changing it you must run
+  `dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-incremental` for type checking.
+- **Parallel editing**: the worker of `09-12-reward-screen-truth` is changing `ResolveNonModalScreen` of the same file at the same time
+  (6802-6866). This task changes only 390-400 / 900-960 / 1563-1567 / 1595-1610 / 4420-4445 / 4930-4950,
+  and must never touch 6802-6866; use apply_patch with exact context, and do not overwrite whole files.
+- Existing tests (`CompactViewFidelityTests`, `FtueModalPolicyTests`, `RewardFlowContractTests`,
+  `DeckSelectionAvailabilityTests`) may cover these branches; read before changing.
 

@@ -11,9 +11,9 @@ The user is asking "how did we (or I) solve this before". Past dialogue holds th
 - "How did we solve this last time?"
 - "What did we end up doing about X?"
 - "We dealt with this once already, didn't we?"
-- "上次怎么解的?"
-- "之前是怎么搞定 X 的?"
-- "我记得以前修过类似的"
+- "How did we solve it last time?"
+- "How did we get X working before?"
+- "I remember fixing something similar before"
 
 Reach: `trellis mem search "<symptom keyword>" --global --limit 10`, then `context` into the hit that looks closest.
 
@@ -24,9 +24,9 @@ The user is referencing a decision that lives in old dialogue, not in any commit
 - "What was the decision on X?"
 - "Did we decide to use Postgres or SQLite?"
 - "The rationale for choosing X over Y was…?"
-- "我们当时为啥选了 X 而不是 Y?"
-- "关于 X 我们之前是怎么定的?"
-- "之前讨论过 X 的方案吗?"
+- "Why did we pick X over Y back then?"
+- "What did we decide about X before?"
+- "Did we discuss a plan for X before?"
 
 Reach: `trellis mem search "<decision keyword>"` to find the session, then `extract <id> --phase brainstorm` to recover the discussion.
 
@@ -37,9 +37,9 @@ The user resumed work after a gap and the context is implicit.
 - "Where were we?"
 - "Continue from last time."
 - "Pick up where we left off."
-- "继续上次的"
-- "我们上次做到哪了"
-- "接着昨天那个任务"
+- "Continue from last time"
+- "Where did we leave off last time?"
+- "Pick up that task from yesterday"
 
 Reach: `trellis mem list --task <current-task-dir>` to find the most recent sessions tied to the active task, then `extract` the last one.
 
@@ -50,9 +50,9 @@ The current bug feels like one already seen. Past sessions probably hold the res
 - "I feel like I've hit this before."
 - "Doesn't this look like that bug from last month?"
 - "Same kind of timeout I had in X."
-- "这个错好像之前见过"
-- "这个 bug 是不是上次那个?"
-- "怎么又是这个 error?"
+- "I think I've seen this error before"
+- "Is this bug the same one as last time?"
+- "Why is this error again?"
 
 Reach: `trellis mem search "<error message fragment>" --global`. Anchor on a short, distinctive token from the actual error string.
 
@@ -63,9 +63,9 @@ The user is asking whether they keep repeating the same kind of mistake or decis
 - "Do I always make this mistake?"
 - "How often have I run into X?"
 - "Is this a recurring thing for me?"
-- "我每次都踩这个坑吗?"
-- "我老犯这个错?"
-- "这类问题之前出现过几次?"
+- "Do I fall into this trap every time?"
+- "Do I keep making this mistake?"
+- "How many times has this kind of problem come up before?"
 
 Reach: `trellis mem search "<topic>" --global --limit 50` and scan the dates / projects in the listing. Optionally `extract` two or three for comparison.
 
@@ -76,9 +76,9 @@ The user explicitly wants to look back at this task — not as a forced step, on
 - "Summarize what we did in this task."
 - "What were the key decisions / surprises?"
 - "Write up the lessons from this round."
-- "总结一下这次的经验"
-- "记一下这次踩的坑"
-- "复盘下这个任务"
+- "Summarize what we learned this time"
+- "Note down the trap we hit this time"
+- "Do a retrospective on this task"
 
 Reach: identify the current task's session id (from `.trellis/.runtime/sessions/*.json` or `mem list --task <task-dir>`), then `extract <id> --phase brainstorm` and `--phase implement`. Present a summary — surface concrete file:line citations where possible. Whether to also write the summary somewhere (PRD, spec, notes file) is the user's call; offer, don't auto-write.
 

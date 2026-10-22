@@ -12,7 +12,7 @@ release, tag, or Workshop upload is part of this task.
 
 ## Source requirement set
 
-- User request (2026-09-12): "全面理解当前项目，并自由探索5个最重要的目标，并依重要性逐个全部完成，不需要再经过我的审批。子代理全部以 deepseek/deepseek-flash 模型、xhigh 推理强度进行派发。"
+- User request (2026-09-12): "Fully understand the current project, freely explore the 5 most important goals, and complete them all one by one in order of importance, without needing my approval again. Dispatch all sub-agents with the deepseek/deepseek-flash model at xhigh reasoning effort."
 - Audit input: six scout reports (screens/actions, action robustness, MCP
   audit, test/CI health, doc/release consistency, game data/skill).
 - Repo rules: `AGENTS.md`, `.trellis/spec/**`, `.trellis/workflow.md`.

@@ -52,12 +52,12 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Summary
 
-收尾核对 v0.10.5 发布、P3 支持范围与 Workshop 默认公开修复；工作区干净，无活动任务需归档。
+Closed out the v0.10.5 release, the P3 support scope, and the Workshop default-public fix checks; the workspace is clean and no active task needs archiving.
 
 ### Main Changes
 
-- 此前已完成 v0.10.5 GitHub 发布、Steam 安装、P3.1-P3.4 核查与 Workshop 内容上传；相关证据见工作提交和 PRODUCT_PLAN_CURRENT.md 的 P2/P3 条目。
-- 96bd410 将 workshop.json 默认设为 public；打包脚本更新已有 PublishedFileId 时默认 public，首次 ID=0 仍 private，显式 Visibility 参数优先。
+- The v0.10.5 GitHub release, Steam install, P3.1-P3.4 checks, and Workshop content upload were completed earlier; evidence is in the work commits and the P2/P3 entries of PRODUCT_PLAN_CURRENT.md.
+- 96bd410 sets workshop.json to public by default; the packaging script defaults to public when updating an existing PublishedFileId, a first-time ID=0 stays private, and an explicit Visibility parameter takes precedence.
 
 ### Git Commits
 
@@ -71,9 +71,9 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Testing
 
-- [OK] 本次直接查询 Steam GetPublishedFileDetails：物品 3796486050，result=1，visibility=0，title=STS2 AI Agent。
-- [OK] 本次读取 Steam Workshop 本地订阅目录 STS2AIAgent.json，version=0.10.5；git diff --check 通过，收尾前工作树干净。
-- [OK] 此前验收记录：C# 核心测试 180 PASS；preflight-release 和发布产物检查通过；双开 GAME_OVER 短路径 save_verified=true；P1.3 超限 UI 与 P3.3 外部 MCP 客户端通过。本次未重跑这些测试。
+- [OK] Queried Steam GetPublishedFileDetails directly this time: item 3796486050, result=1, visibility=0, title=STS2 AI Agent.
+- [OK] Read STS2AIAgent.json from the local Steam Workshop subscription directory this time, version=0.10.5; git diff --check passed and the working tree was clean before wrap-up.
+- [OK] Earlier acceptance record: C# core tests 180 PASS; preflight-release and release artifact checks passed; two-instance GAME_OVER short path save_verified=true; P1.3 over-limit UI and P3.3 external MCP client passed. These tests were not rerun this time.
 
 ### Status
 
@@ -81,7 +81,7 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Next Steps
 
-- PRODUCT_PLAN_CURRENT.md 尚存过时基线和 P2.5 部分完成描述，需要后续文档同步；当前已确认 Workshop 公开及本地订阅版本，但本次未从订阅目录启动游戏验证加载。
+- PRODUCT_PLAN_CURRENT.md still has an outdated baseline and a partially-done P2.5 description that need a later docs sync; Workshop public visibility and the local subscribed version are confirmed, but this time the game was not launched from the subscription directory to verify loading.
 
 
 ## Session 3: Documentation archive and Workshop loading acceptance
@@ -92,11 +92,11 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Summary
 
-归档五份过时文档并保留兼容入口，对齐当前状态、中英文 README、CHANGELOG 与 Workshop 发布说明，记录用户启用重启后的订阅加载验收。
+Archived five outdated documents while keeping compatibility entry points, aligned the current status page, the Chinese and English READMEs, CHANGELOG, and the Workshop release notes, and recorded the acceptance of loading from the subscription after the user enabled it and restarted.
 
 ### Main Changes
 
-- P2.5 按订阅加载冒烟范围标为完成：用户截图与重启说明，本次日志从 Workshop 3796486050 加载 DLL/PCK，PID 40664，health 0.10.5 ready，state/actions MAIN_MENU。
+- P2.5 marked complete within the scope of a subscription-load smoke test: user screenshot and restart notes; this run's log shows the DLL/PCK loaded from Workshop 3796486050, PID 40664, health 0.10.5 ready, state/actions MAIN_MENU.
 
 ### Git Commits
 
@@ -106,7 +106,7 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Testing
 
-- [OK] 18 份变更文档中 59 个本地链接有效；check_release_package.py --source-root . 通过；git diff --cached --check 通过。纯文档提交未重跑构建或游戏测试。
+- [OK] 59 local links in 18 changed documents are valid; check_release_package.py --source-root . passed; git diff --cached --check passed. The docs-only commit did not rerun the build or game tests.
 
 ### Status
 
@@ -114,7 +114,7 @@ Fixed GAME_OVER continue so native summary save runs before Return; merged that 
 
 ### Next Steps
 
-- 完整对局、第二轮重启和升级回退不在本次订阅加载验收范围；文档及日志提交尚未推送。
+- A full run, a second restart round, and upgrade rollback are outside the scope of this subscription-load acceptance; the docs and log commits have not been pushed yet.
 
 
 ## Session 4: Repo hardening: dep security, proactive chat, doc contract, verification gates
@@ -385,23 +385,23 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 - Live-only: compact field values, invite outcome, package-rollout paths
 
 
-## Session 12: 五个新目标：屏幕名遮蔽、内嵌契约、实机资产、编译覆盖、暴露口径
+## Session 12: Five new goals: screen-name shadowing, embedded contract, live assets, compile coverage, exposure scope
 
 **Date**: 2026-09-12
-**Task**: 五个新目标：屏幕名遮蔽、内嵌契约、实机资产、编译覆盖、暴露口径
+**Task**: Five new goals: screen-name shadowing, embedded contract, live assets, compile coverage, exposure scope
 **Branch**: `main`
 
 ### Summary
 
-把探子给出的 5 个发现逐个立项、派 worker 实现、按任务拆提交，并在临时 worktree 里逐个提交验证树可构建；全部归档。
+Opened a task for each of the 5 findings from the probes, dispatched workers to implement them, split the commits per task, verified in a temporary worktree after each commit that the tree builds, and archived everything.
 
 ### Main Changes
 
-- ResolveNonModalScreen：奖励选牌浮层改报 REWARD（此前被通用网格分支遮蔽成 CARD_SELECTION）
-- 内嵌游玩契约不再要求游戏内调用 health_check，debug 指令标注为外部 MCP 专用，README 两语对齐
-- 新增 Roslyn 语法覆盖：16 个未编译源文件（18k 行）进入 CI 保护，未编译集合由白名单断言钉住
-- 三个实机脚本与当前契约对齐（open_timeline 断言、timeline 索引、lobby flow 屏幕分支）
-- payload 派生值与执行口径同源；skip_reward_cards 两端都改为只认 enabled 的替代按钮
+- ResolveNonModalScreen: the reward card-pick overlay now reports REWARD (previously shadowed by the generic grid branch as CARD_SELECTION)
+- The embedded play contract no longer requires calling health_check inside the game, debug commands are marked external-MCP-only, and both README languages are aligned
+- Added Roslyn syntax coverage: 16 uncompiled source files (18k lines) are now protected by CI, and the uncompiled set is pinned by an allowlist assertion
+- Three live scripts aligned with the current contract (open_timeline assertion, timeline index, lobby flow screen branch)
+- Payload-derived values share a source with the execution scope; skip_reward_cards on both ends now only recognizes an enabled alternative button
 
 ### Git Commits
 
@@ -415,8 +415,8 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 5 个提交各在临时 worktree 验证：336/339/341/341/348 PASS，0 FAIL；6 gate 全绿
-- [OK] 最终态：C# 348 PASS/0 FAIL、MCP 167 OK、gates 6 道、check_release_package 通过、preflight exit 0
+- [OK] Each of the 5 commits verified in a temporary worktree: 336/339/341/341/348 PASS, 0 FAIL; all 6 gates green
+- [OK] Final state: C# 348 PASS/0 FAIL, MCP 167 OK, 6 gates, check_release_package passed, preflight exit 0
 
 ### Status
 
@@ -424,25 +424,25 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 用户拍板：累积提交是否 push、mcp_server/data/eng 快照去留、准孤儿脚本、NCardPileScreen/NCardLibrary 是否新增屏幕名
+- User decides: whether to push the accumulated commits, whether to keep the mcp_server/data/eng snapshot, the quasi-orphan scripts, and whether to add screen names for NCardPileScreen/NCardLibrary
 
 
-## Session 13: 移除随包游戏数据快照（v0.5.0 遗留、v0.6.1 已被 Mod 导出取代）
+## Session 13: Remove the bundled game data snapshot (a v0.5.0 leftover, superseded by the Mod export in v0.6.1)
 
 **Date**: 2026-09-12
-**Task**: 移除随包游戏数据快照（v0.5.0 遗留、v0.6.1 已被 Mod 导出取代）
+**Task**: Remove the bundled game data snapshot (a v0.5.0 leftover, superseded by the Mod export in v0.6.1)
 **Branch**: `main`
 
 ### Summary
 
-考证 mcp_server/data/ 的设计意图后按用户决定移除：删目录与唯一校验它的测试，拆掉四处打包挂钩，README 与 AGENTS.md 的陈旧表述同步修正；用解包 wheel/sdist 断言产物里确实没有它。
+After tracing the design intent of mcp_server/data/, removed it per the user's decision: deleted the directory and the only test that validated it, took out four packaging hooks, corrected stale statements in README and AGENTS.md, and used an unpacked wheel/sdist to assert it is really absent from the artifacts.
 
 ### Main Changes
 
-- 删除 mcp_server/data/（21 个文件）与 tests/test_packaged_game_data.py
-- pyproject.toml 去掉两个 hatch force-include；package-release.ps1 去掉复制 data 的行
-- check_release_package.py 删除 ARTIFACT_DIRECTORIES 与其遍历循环（has_directory 保留）
-- README 两语目录树、mcp_server/README.md 数据来源说明、AGENTS.md 本地指引同步
+- Deleted mcp_server/data/ (21 files) and tests/test_packaged_game_data.py
+- pyproject.toml drops the two hatch force-includes; package-release.ps1 drops the line that copied data
+- check_release_package.py deletes ARTIFACT_DIRECTORIES and its traversal loop (has_directory is kept)
+- README directory trees in both languages, the data-source note in mcp_server/README.md, and the local guidance in AGENTS.md updated in sync
 
 ### Git Commits
 
@@ -452,8 +452,8 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 构建产物解包断言：wheel 11 项 / sdist 29 项，零 data/ 路径
-- [OK] 干净 worktree 验证：C# 0 FAIL、6 gate 绿、package source 契约通过、MCP 165 OK
+- [OK] Build artifact unpack assertion: wheel 11 entries / sdist 29 entries, zero data/ paths
+- [OK] Clean worktree verification: C# 0 FAIL, 6 gates green, package source contract passed, MCP 165 OK
 
 ### Status
 
@@ -461,23 +461,23 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 用户拍板：累积提交是否 push（本地 main 已领先 origin/main）
+- User decides: whether to push the accumulated commits (local main is ahead of origin/main)
 
 
-## Session 14: 首次推送与 CI 暴露的两个环境耦合问题（.NET SDK 选择、8.3 短路径）
+## Session 14: First push and two environment couplings exposed by CI (.NET SDK selection, 8.3 short paths)
 
 **Date**: 2026-09-12
-**Task**: 首次推送与 CI 暴露的两个环境耦合问题（.NET SDK 选择、8.3 短路径）
+**Task**: First push and two environment couplings exposed by CI (.NET SDK selection, 8.3 short paths)
 **Branch**: `main`
 
 ### Summary
 
-推送 64 个提交后 CI 连红两次：Roslyn 覆盖测试被 .NET 10 SDK 的 CS1705 打断、knowledge 路径测试撞上 Windows 8.3 短名。两者都只在真实 CI 暴露，均已修复并可否证验证，最终 CI 全绿 13/13。
+After pushing 64 commits, CI went red twice in a row: the Roslyn coverage test was broken by CS1705 from the .NET 10 SDK, and the knowledge path test ran into Windows 8.3 short names. Both were exposed only on real CI, both were fixed with falsifiable verification, and CI finally went fully green at 13/13.
 
 ### Main Changes
 
-- 新增 global.json：把 SDK feature band 钉到工作流声明的 9.0.x，避免 pick 到 .NET 10 的 Roslyn
-- knowledge 参考文件路径测试改为两侧统一 realpath+normcase 比较（真实 8.3 别名下复现并验证）
+- Added global.json: pins the SDK feature band to the 9.0.x declared by the workflow so Roslyn from .NET 10 is not picked
+- The knowledge reference file path test now compares after applying realpath+normcase on both sides (reproduced and verified with a real 8.3 alias)
 
 ### Git Commits
 
@@ -489,8 +489,8 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] CI 746f154c 全绿：13 步全过（含此前从未在 CI 运行的 11 步）
-- [OK] local：C# 348/0 FAIL、MCP 165 OK、6 gate、mod build、package source 契约全绿
+- [OK] CI 746f154c all green: all 13 steps passed (including 11 steps that had never run in CI before)
+- [OK] local: C# 348/0 FAIL, MCP 165 OK, 6 gates, mod build, package source contract all green
 
 ### Status
 
@@ -498,25 +498,25 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 可选：是否为本轮补 tag / 是否把分支保护改成允许直推
+- Optional: whether to add a tag for this round / whether to change branch protection to allow direct pushes
 
 
-## Session 15: 牌库/牌堆查看屏正名与逃逸 + PowerShell 语法 gate
+## Session 15: Rename and escape for the deck/pile viewer screens + PowerShell syntax gate
 
 **Date**: 2026-09-12
-**Task**: 牌库/牌堆查看屏正名与逃逸 + PowerShell 语法 gate
+**Task**: Rename and escape for the deck/pile viewer screens + PowerShell syntax gate
 **Branch**: `main`
 
 ### Summary
 
-两屏不再冒充 CARD_SELECTION，并各自获得真实可用的关闭动作；新增 ps1-syntax gate 覆盖全部 30 个 .ps1，它首次运行就抓到 serve-sts2-network-mcp.ps1 一个自提交起就存在的真实语法错误。
+The two screens no longer masquerade as CARD_SELECTION and each gets a genuinely usable close action; added a ps1-syntax gate covering all 30 .ps1 files, which on its first run caught a real syntax error in serve-sts2-network-mcp.ps1 that had existed since the commit that introduced it.
 
 ### Main Changes
 
-- NCardLibrary/NCardPileScreen 早退报 CARD_LIBRARY/CARD_PILE，不再被通用网格分支遮蔽
-- submenu 栈查找上移到基类 NSubmenuStack，局内图鉴因此可关闭
-- 可关闭看牌屏收敛为单一判定，探针/执行端/等待条件同源，牌堆屏经 close_cards_view 可退
-- 新增 ps1-syntax gate（只解析不执行，无 .ps1 或无解释器时跳过说明）并修复它抓到的真实故障脚本
+- NCardLibrary/NCardPileScreen early-return CARD_LIBRARY/CARD_PILE instead of being shadowed by the generic grid branch
+- The submenu stack lookup moved up to the base class NSubmenuStack, so the in-run card library can now be closed
+- Closable card-view screens collapsed into a single predicate, shared by the probe/executor/wait condition, and the pile screen can exit via close_cards_view
+- Added the ps1-syntax gate (parse only, never execute; skipped with an explanation when there is no .ps1 or no interpreter) and fixed the genuinely faulty script it caught
 
 ### Git Commits
 
@@ -527,8 +527,8 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 5 组改坏-红-还原-绿；C# 351 PASS/0 FAIL；MCP 165 OK；7 gate 全绿；preflight 372 PASS/0 FAIL
-- [OK] 两个提交各在临时 worktree 验证树可构建
+- [OK] 5 groups of break-red-restore-green; C# 351 PASS/0 FAIL; MCP 165 OK; all 7 gates green; preflight 372 PASS/0 FAIL
+- [OK] Each of the two commits verified in a temporary worktree that the tree builds
 
 ### Status
 
@@ -536,24 +536,24 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 推送两个提交；实机确认牌堆屏 BackButton 与局内图鉴 Pop 的行为，以及顺带修好的其它局内 submenu
+- Push the two commits; confirm on live the BackButton behavior of the pile screen and the Pop of the in-run card library, as well as the other in-run submenus that were fixed along the way
 
 
-## Session 16: 第一次真机实机会话：清单整理 + 两个只有实机能暴露的发现
+## Session 16: First real-machine live session: checklist cleanup + two findings only live runs could expose
 
 **Date**: 2026-09-12
-**Task**: 第一次真机实机会话：清单整理 + 两个只有实机能暴露的发现
+**Task**: First real-machine live session: checklist cleanup + two findings only live runs could expose
 **Branch**: `main`
 
 ### Summary
 
-汇总实机清单成文档，并真跑一次实机会话：验证了奖励屏 REWARD 正名、timeline 全路径与索引契约、7 个数据集合；顺带发现并修复 /data/powers 整集合 500 与两处错误的 timeline 注释。
+Consolidated the live checklist into a document and ran a real live session: verified the REWARD rename on the reward screen, the full timeline path and index contract, and 7 data collections; along the way found and fixed the /data/powers whole-collection 500 and two incorrect timeline comments.
 
 ### Main Changes
 
-- 修 /data/powers 500（本地化键缺失打断整集合导出）
-- 修正脚本里错误的 timeline 按钮规则注释
-- 新增 docs/live-validation-checklist.md 汇总实机项
+- Fixed /data/powers 500 (a missing localization key broke the export of the whole collection)
+- Fixed the incorrect timeline button rule comment in the script
+- Added docs/live-validation-checklist.md to consolidate the live items
 
 ### Git Commits
 
@@ -565,8 +565,8 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 实机：奖励屏 REWARD 正名、timeline 全路径与索引契约负例、7 集合可达、两个脚本通过
-- [OK] 离线：C# 351/0、MCP 165 OK、7 gate 绿、preflight 372/0；CI 4554c8d 全绿
+- [OK] Live: REWARD rename on the reward screen, full timeline path and index contract negative cases, 7 collections reachable, two scripts passed
+- [OK] Offline: C# 351/0, MCP 165 OK, 7 gates green, preflight 372/0; CI 4554c8d all green
 
 ### Status
 
@@ -574,26 +574,26 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- card-viewer-screens 的实机项（牌堆屏/图鉴）需玩家点击或新增 mod 动作；存档待选一张奖励卡
+- The live items for card-viewer-screens (pile screen/library) need a player click or a new mod action; the save still needs a reward card picked
 
 
-## Session 17: 实机遗留三处收尾：分页 FTUE、场景派生元数据 id、联机基础血量
+## Session 17: Three live leftovers wrapped up: paged FTUE, scene-derived metadata ids, co-op base HP
 
 **Date**: 2026-09-13
-**Task**: 实机遗留三处收尾：分页 FTUE、场景派生元数据 id、联机基础血量
+**Task**: Three live leftovers wrapped up: paged FTUE, scene-derived metadata ids, co-op base HP
 **Branch**: `main`
 
 ### Summary
 
-收尾 v0.12.1 实机验收留下的三处发现：分页 FTUE 本是正确行为（改为自解释契约）、get_relevant_game_data 的 item_ids 可省略、新增 base_max_hp 分离基础掷血与联机缩放。核对派生路径时又抓出两个缺陷（场景载荷为 null 时踩空崩溃、两份镜像对空串 id 的分歧），一并修掉并实机复验。
+Wrapped up three findings left over from the v0.12.1 live acceptance: the paged FTUE was correct behavior all along (changed into a self-explanatory contract), item_ids of get_relevant_game_data can now be omitted, and a new base_max_hp separates the base HP roll from co-op scaling. Checking the derivation path also caught two defects (a crash on a null scene payload and a disagreement between the two mirrors on empty-string ids), which were fixed together and re-verified live.
 
 ### Main Changes
 
-- NCombatRulesFtue 非末页返回 pending 时改为自解释文案（三页是游戏设计，三次点击本来就是对的行为）
-- get_relevant_game_data 的 item_ids 可省略：按当前屏幕从实况派生，场景无内容时回落角色级 id，C# 与 MCP 两份表由对齐测试钉死相等
-- combat.enemies[].base_max_hp 新增：联机缩放前的基础掷血，与 monsters.min_hp/max_hp 同量纲
-- 修掉派生路径踩 JSON null（FAKE_MERCHANT 归为商店却无 shop 载荷）与 C#/Python 对空串 id 的处理分歧
-- 证据与契约写进 docs/live-validation-checklist.md 与 docs/api.md，状态页补 PR #101/#102
+- When NCombatRulesFtue returns pending on a non-final page it now gives a self-explanatory message (three pages are game design, so three clicks were the correct behavior all along)
+- item_ids of get_relevant_game_data can be omitted: derived from live state for the current screen, falling back to character-level ids when the scene has no content; the C# and MCP tables are pinned equal by an alignment test
+- Added combat.enemies[].base_max_hp: the base HP roll before co-op scaling, on the same scale as monsters.min_hp/max_hp
+- Fixed the derivation path stepping on JSON null (FAKE_MERCHANT classified as shop but with no shop payload) and the C#/Python disagreement on empty-string ids
+- Evidence and contract written into docs/live-validation-checklist.md and docs/api.md; the status page now lists PR #101/#102
 
 ### Git Commits
 
@@ -604,11 +604,11 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 实机（隔离档 clientId 2026091001）：FTUE 三击 pending/pending/completed 后 modal 清空、回到 COMBAT
-- [OK] 实机：MCP 工具面省略 item_ids 返回手牌/敌人/遗物，显式 id 与空集合行为不变
-- [OK] 实机双人局：base_max_hp 9/33/13 对实况 19/72/28（base×人数×act0 系数），两个实例数字一致
-- [OK] 离线：C# 382 PASS/0 FAIL、Python 167 OK、七道 gate 全绿、mod 构建 0 警告；玩家真档 183 文件哈希前后一致
-- [OK] CI：#101 与 #102 的 contracts + Sourcery 全绿
+- [OK] Live (isolated save, clientId 2026091001): after the FTUE three clicks pending/pending/completed the modal cleared and returned to COMBAT
+- [OK] Live: the MCP tool surface with item_ids omitted returns hand/enemies/relics; explicit ids and the empty set behave unchanged
+- [OK] Live two-player run: base_max_hp 9/33/13 vs live 19/72/28 (base x player count x act0 factor), the numbers match across both instances
+- [OK] Offline: C# 382 PASS/0 FAIL, Python 167 OK, all seven gates green, mod build 0 warnings; the player's real save, 183 files, hashed identically before and after
+- [OK] CI: contracts + Sourcery all green for #101 and #102
 
 ### Status
 
@@ -616,28 +616,28 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- FAKE_MERCHANT 的回落目前只有离线单测，未实机走到该屏
-- 分页 FTUE 只在单人档复现（联机档该教学已完成）
-- 三处修复尚未随任何 tag 发布（晚于 v0.12.1），下次发版时随包验证
+- The FAKE_MERCHANT fallback currently has only an offline unit test; that screen was not reached live
+- The paged FTUE reproduces only on a single-player save (the tutorial is already completed on a co-op save)
+- The three fixes have not shipped with any tag yet (later than v0.12.1); verify them with the package at the next release
 
 
-## Session 18: 发布 v0.12.2：联机接力（外部接管路线）+ 工坊上传
+## Session 18: Release v0.12.2: co-op relay (external takeover route) + Workshop upload
 
 **Date**: 2026-09-13
-**Task**: 发布 v0.12.2：联机接力（外部接管路线）+ 工坊上传
+**Task**: Release v0.12.2: co-op relay (external takeover route) + Workshop upload
 **Branch**: `main`
 
 ### Summary
 
-把主线积压的三批改动（#85 外部接管路线、#99 共享模型门禁、#101 三处实机收尾）发成 v0.12.2，并把工坊更新到同一版。打包时被产物检查拦下一个真实缺陷：README 里新增的相对链接没进打包改写表，于是补了链接修复与第八道离线 gate（packaged-links）。工坊上传因 Steam 客户端与 UGC 后端失联失败六次，重启 Steam 后一次成功。
+Shipped the three batches of backlog on main (#85 external takeover route, #99 shared model gate, #101 three live wrap-ups) as v0.12.2 and brought the Workshop to the same version. While packaging, the artifact check blocked a real defect: the new relative links in README were not in the packaging rewrite table, so link fixing was added along with the eighth offline gate (packaged-links). The Workshop upload failed six times because the Steam client lost contact with the UGC backend, and succeeded on the first try after restarting Steam.
 
 ### Main Changes
 
-- 五个版本号文件升到 0.12.2，CHANGELOG 的 Unreleased 定为 v0.12.2 并补齐 #99 / #101 的条目
-- 修 README 里没被打包改写的相对链接（#97 引入），不改改写表以免掩盖同类问题
-- 新增 packaged-links gate：解析打包改写表 + import 产物清单与链接规则，在源文档上重放改写后校验本地链接是否都在产物里
-- history/release-v0.12.2_2026-09-13.md 记录发布、上传与那次 Steam 失联故障的处置
-- 状态页基线切到 v0.12.2
+- Bumped the five version files to 0.12.2; the CHANGELOG Unreleased section was finalized as v0.12.2 and entries for #99 / #101 were filled in
+- Fixed the README relative links not rewritten by packaging (introduced by #97), without changing the rewrite table so that similar problems are not masked
+- Added the packaged-links gate: parses the packaging rewrite table + the imported artifact manifest and link rules, replays the rewrite on the source docs, and checks that all local links are in the artifact
+- history/release-v0.12.2_2026-09-13.md records the release, the upload, and how the Steam disconnect incident was handled
+- The status page baseline switched to v0.12.2
 
 ### Git Commits
 
@@ -649,10 +649,10 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] preflight 全部步骤通过；八道 gate 全绿；gate 自测通过；打包产物检查（目录与 zip）通过
-- [OK] gate 破坏性验证：README 写回裸 docs/api.md 时以退出码 1 报出该目标，逐字节还原后恢复通过
-- [OK] CI：#104 与 #105 的 contracts 全绿（#105 首次失败是 runner 未能获取，重跑即绿）
-- [OK] 工坊复核：file_size 1225733 与本地内容字节和相等、visibility=0、time_updated 2026-09-13 16:51:04、标签不变、英文说明未被覆盖
+- [OK] All preflight steps passed; all eight gates green; gate self-tests passed; packaged artifact checks (directory and zip) passed
+- [OK] Gate destructive verification: when README was written back with a bare docs/api.md the gate reported that target with exit code 1; after a byte-for-byte restore it passed again
+- [OK] CI: contracts green for #104 and #105 (the first failure of #105 was the runner not being acquired; it was green on rerun)
+- [OK] Workshop recheck: file_size 1225733 equals the byte sum of the local content, visibility=0, time_updated 2026-09-13 16:51:04, tags unchanged, English description not overwritten
 
 ### Status
 
@@ -660,27 +660,27 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 工坊简体中文列表仍未更新（自 v0.11.0 起），需在工坊网页端手工粘贴 steam-workshop/description.zh-CN.txt
-- 外部接管路线仍未在 Steam 双开路径复跑；FAKE_MERCHANT 的回落只有离线单测
-- 工坊上传若再报 No Connection，先重启 Steam 客户端（已记进发布记录）
+- The Workshop Simplified Chinese listing has still not been updated (since v0.11.0); steam-workshop/description.zh-CN.txt needs to be pasted manually on the Workshop web page
+- The external takeover route has still not been rerun on the Steam two-instance path; the FAKE_MERCHANT fallback has only an offline unit test
+- If the Workshop upload reports No Connection again, restart the Steam client first (recorded in the release notes)
 
 
-## Session 19: 合并 sachi4clover 的 overlay 邀请路线修复（PR #106）+ 记录
+## Session 19: Merge sachi4clover's overlay invite route fix (PR #106) + records
 
 **Date**: 2026-09-13
-**Task**: 合并 sachi4clover 的 overlay 邀请路线修复（PR #106）+ 记录
+**Task**: Merge sachi4clover's overlay invite route fix (PR #106) + records
 **Branch**: `main`
 
 ### Summary
 
-把社区 PR #106 补的小修推到作者分支后合并：overlay 的邀请按钮此前没跟上 #85 的路线拆分，模型未验证时点它会走旧门禁，而同一个请求走 API 却能拉起队友。顺带修了错位的注释并新建 Unreleased 段。
+Pushed the community PR #106 small fix to the author's branch and merged it: the overlay's invite button had not kept up with the route split in #85, so when the model was unverified clicking it went through the old gate, while the same request through the API could bring up the teammate. Also fixed a misplaced comment and created a new Unreleased section.
 
 ### Main Changes
 
-- PR #106：F8 窗口的「邀请 AI 队友」按钮改为按 FirstRunSetup.Evaluate(settings).ReadyToInvite 选路，两条说明随路线切换
-- 把作者插错位置的 <summary> 移回 EveryStartEntryPointSharesTheModelGate（原实现让该测试失去注释、新测试挂了两段）
-- v0.12.2 用掉了上一段 Unreleased，新建一段并把这次改动写进去
-- 状态页：把误标的「v0.12.1 标签后未发布变更」标题改正，并补上 #105 / #106 两笔标签后变更
+- PR #106: the F8 window's "Invite AI teammate" button now chooses its route by FirstRunSetup.Evaluate(settings).ReadyToInvite, and the two descriptions switch with the route
+- Moved the <summary> that the author had placed in the wrong spot back to EveryStartEntryPointSharesTheModelGate (the original implementation left that test without its comment and the new test with two)
+- v0.12.2 used up the previous Unreleased section, so a new one was created and this change was written into it
+- Status page: corrected the mislabeled "unreleased changes after the v0.12.1 tag" heading and added the two post-tag changes #105 / #106
 
 ### Git Commits
 
@@ -691,9 +691,9 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] 在作者提交上开一次性 worktree：383 PASS / 0 FAIL、八道 gate 全绿
-- [OK] 守卫有效性：还原 bug 后 CoopRoute.OverlayInviteRoute 立刻转红，文件逐字节还原后恢复绿
-- [OK] CI：#106 与 #107 的 contracts 全绿
+- [OK] Disposable worktree on the author's commit: 383 PASS / 0 FAIL, all eight gates green
+- [OK] Guard effectiveness: after reverting the bug CoopRoute.OverlayInviteRoute turned red immediately, and after a byte-for-byte restore of the file it went green again
+- [OK] CI: contracts green for #106 and #107
 
 ### Status
 
@@ -701,27 +701,27 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- 工坊上的 v0.12.2 产物不含 #106 的 overlay 修复，需下次发版带上
-- sachi4clover 提到的后续 PR（Continue 按钮 + 选角勾选框）叠在 #106 之上，CHANGELOG 往新建的 Unreleased 段续写
-- 工坊简体中文列表仍未更新；工坊英文列表首屏「测试连接通过后再邀请」的措辞也待随下次上传调整
+- The v0.12.2 artifact on the Workshop does not include the #106 overlay fix; it needs to be carried by the next release
+- The follow-up PR mentioned by sachi4clover (Continue button + character-select checkbox) stacks on top of #106; continue writing the CHANGELOG into the newly created Unreleased section
+- The Workshop Simplified Chinese listing is still not updated; the wording "invite after the connection test passes" on the first screen of the Workshop English listing also needs adjusting with the next upload
 
 
-## Session 20: 工坊更新到 v0.12.3（只发工坊，不打 tag）
+## Session 20: Workshop update to v0.12.3 (Workshop only, no tag)
 
 **Date**: 2026-09-13
-**Task**: 工坊更新到 v0.12.3（只发工坊，不打 tag）
+**Task**: Workshop update to v0.12.3 (Workshop only, no tag)
 **Branch**: `main`
 
 ### Summary
 
-把 #106 的 overlay 邀请路线修复发到工坊。因为 #106 改了 mod 代码，沿用 v0.10.7 先例升补丁号后只更新工坊、不打 tag、不建 Release；一次上传成功并用 Steam Web API 复核。
+Shipped the #106 overlay invite route fix to the Workshop. Because #106 changed mod code, followed the v0.10.7 precedent: bump the patch number, update only the Workshop, no tag, no Release; the upload succeeded on the first try and was rechecked with the Steam Web API.
 
 ### Main Changes
 
-- 五个版本号文件升到 0.12.3，CHANGELOG 的 Unreleased 定版为 v0.12.3 并写明「只发工坊、无 tag」
-- workshop.json 的 changeNote 更新为 v0.12.3
-- history/release-v0.12.3_2026-09-13.md 记录上传与复核
-- 状态页：基线改为「GitHub 在 v0.12.2、工坊在 0.12.3」，并修正 #106 那条「尚未发布」的过期说法
+- Bumped the five version files to 0.12.3; the CHANGELOG Unreleased section was finalized as v0.12.3 and states "Workshop only, no tag"
+- changeNote in workshop.json updated to v0.12.3
+- history/release-v0.12.3_2026-09-13.md records the upload and recheck
+- Status page: baseline changed to "GitHub at v0.12.2, Workshop at 0.12.3", and the outdated claim that #106 was "not yet released" corrected
 
 ### Git Commits
 
@@ -732,9 +732,9 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Testing
 
-- [OK] preflight 全部步骤通过；八道 gate 全绿；check_release_metadata 报 0.12.3
-- [OK] 工坊复核：file_size 1227269 与本地内容字节和相等、visibility=0、time_updated 22:31:22、标签与英文说明未变
-- [OK] 上传一次成功（前置 HTTP_PROXY/HTTPS_PROXY），未复现 v0.12.2 的 No Connection
+- [OK] All preflight steps passed; all eight gates green; check_release_metadata reports 0.12.3
+- [OK] Workshop recheck: file_size 1227269 equals the byte sum of the local content, visibility=0, time_updated 22:31:22, tags and English description unchanged
+- [OK] Upload succeeded on the first try (with HTTP_PROXY/HTTPS_PROXY set beforehand); the v0.12.2 No Connection did not recur
 
 ### Status
 
@@ -742,26 +742,26 @@ Four residuals closed: docs/ became a controlled directory with a docs-tracked g
 
 ### Next Steps
 
-- sachi4clover 的后续 PR（游戏内 Continue 按钮 + 选角勾选框）到位后，把 #106 与它攒一起做 GitHub 发布，或单独回填 v0.12.3 tag
-- 工坊简体中文列表仍未更新，需在工坊网页端粘贴 steam-workshop/description.zh-CN.txt
+- Once sachi4clover's follow-up PR (in-game Continue button + character-select checkbox) lands, bundle #106 with it for a GitHub release, or backfill the v0.12.3 tag on its own
+- The Workshop Simplified Chinese listing is still not updated; steam-workshop/description.zh-CN.txt needs to be pasted on the Workshop web page
 
 
-## Session 21: 补发 v0.12.3 的 GitHub Release（工坊先行的完整化）
+## Session 21: Backfill the GitHub Release for v0.12.3 (completing the Workshop-first release)
 
 **Date**: 2026-09-13
-**Task**: 补发 v0.12.3 的 GitHub Release（工坊先行的完整化）
+**Task**: Backfill the GitHub Release for v0.12.3 (completing the Workshop-first release)
 **Branch**: `main`
 
 ### Summary
 
-v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊先行」变成一次完整发布。发布产物的 DLL 与工坊那份大小相同、PCK 字节一致，仅 70 字节构建元数据不同（PE 时间戳 / MVID / 调试目录），已记进发布记录以免后续把两渠道哈希差异误读成不同构建。
+v0.12.3 was first shipped to the Workshop only; this round adds the tag and the GitHub Release, turning "Workshop first" into one complete release. The release DLL is the same size as the Workshop one and the PCK is byte-identical; only 70 bytes of build metadata differ (PE timestamp / MVID / debug directory), recorded in the release notes so that the hash difference between the two channels is not later misread as different builds.
 
 ### Main Changes
 
-- git tag -a v0.12.3 b0217b0 并推送；package-release 打包（目录与 zip 产物检查均通过）；gh release create 带 zip 与中文发布说明，GitHub 标记为 Latest
-- history/workshop-upload-v0.12.3 合并重写为 history/release-v0.12.3，同时覆盖工坊与 GitHub 两次发布，并记录两渠道产物的 70 字节差异成因
-- CHANGELOG 的 v0.12.3 段不再写「尚无 GitHub tag」，改为指向发布记录
-- 状态页：v0.12.3 成为双渠道基线、v0.12.2 降为上一版，原「标签后未发布」小节改题为「v0.12.3 的内容」并补一行真正的标签后变更
+- git tag -a v0.12.3 b0217b0 and pushed; package-release packaging (directory and zip artifact checks both passed); gh release create with the zip and Chinese release notes, marked Latest on GitHub
+- history/workshop-upload-v0.12.3 merged and rewritten as history/release-v0.12.3, covering both the Workshop and GitHub releases, and recording why the two channels' artifacts differ by 70 bytes
+- The v0.12.3 section of the CHANGELOG no longer says "no GitHub tag yet" and now points to the release notes
+- Status page: v0.12.3 became the two-channel baseline, v0.12.2 was demoted to the previous version, the original "unreleased after the tag" subsection was retitled "Contents of v0.12.3", and a line for the genuine post-tag changes was added
 
 ### Git Commits
 
@@ -772,9 +772,9 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Testing
 
-- [OK] Release 资产 digest 与本地 zip 一致（549933 字节，sha256 b9dc1a07…），asset 已上传、release 标记 Latest
-- [OK] 八道离线 gate 全绿、check_release_metadata 报 0.12.3；#108 与 #110 的 CI 均 success
-- [OK] DLL 逐字节比对：1187840 字节中仅 70 字节不同、7 段连续区间，PCK 完全一致
+- [OK] Release asset digest matches the local zip (549933 bytes, sha256 b9dc1a07…), asset uploaded, release marked Latest
+- [OK] All eight offline gates green, check_release_metadata reports 0.12.3; CI succeeded for both #108 and #110
+- [OK] DLL byte-for-byte comparison: only 70 of 1187840 bytes differ, in 7 contiguous ranges, PCK fully identical
 
 ### Status
 
@@ -782,27 +782,27 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Next Steps
 
-- 工坊简体中文列表仍未更新，需在工坊网页端手工粘贴 steam-workshop/description.zh-CN.txt
-- sachi4clover 叠在 #106 之上的后续 PR（游戏内 Continue 按钮 + 选角勾选框）尚未合并，将是下一版内容
-- 若希望两渠道 DLL 哈希完全一致，可给 STS2AIAgent.csproj 开确定性构建后验证
+- The Workshop Simplified Chinese listing is still not updated; steam-workshop/description.zh-CN.txt needs to be pasted manually on the Workshop web page
+- The follow-up PR by sachi4clover stacked on #106 (in-game Continue button + character-select checkbox) is not merged yet and will be the content of the next version
+- If the DLL hashes of the two channels should match exactly, enable deterministic builds in STS2AIAgent.csproj and verify
 
 
-## Session 22: 审阅并合并 sachi4clover 的联机界面 PR #111（续档按钮 + 自动选角开关）
+## Session 22: Review and merge sachi4clover's co-op UI PR #111 (resume button + auto character-select switch)
 
 **Date**: 2026-09-13
-**Task**: 审阅并合并 sachi4clover 的联机界面 PR #111（续档按钮 + 自动选角开关）
+**Task**: Review and merge sachi4clover's co-op UI PR #111 (resume button + auto character-select switch)
 **Branch**: `main`
 
 ### Summary
 
-审阅 #111：两个 overlay 入口接在同一条 runtime 路由与同一份存档保护上；Sourcery 的 blocking finding 判为误报并逐条回帖；head 上 384 PASS / 0 FAIL、八道 gate 全绿、破坏性验证三次都转红，squash 合入 6a327d3，随后 PR #112 把状态页与实机清单补上。
+Reviewed #111: the two overlay entry points hook into the same runtime route and the same save protection; Sourcery's blocking finding was judged a false positive and answered point by point; on head 384 PASS / 0 FAIL, all eight gates green, and the destructive verification turned red all three times; squash-merged as 6a327d3, then PR #112 added the status page and the live checklist.
 
 ### Main Changes
 
-- 审阅 PR #111（作者 sachi4clover）：AI 队友页在邀请按钮上方新增「禁用自动选角」勾选框（勾上 = CompanionAutoSelectCharacter false，toggle 即存）、下方新增「继续上次联机对局」按钮（走 AgentRuntime.ContinueDualInstanceAsync，仅在 host 主菜单且有联机存档时可用）
-- 反证 Sourcery 的 blocking finding 是误报：CoopLaunchPolicy.GetError 在 AgentRuntime.cs:804-815 就是同一份判断，两个 NetId 预检查在 DualInstanceCoordinator.cs:74-94 有 backstop，协调器还自己复核 MAIN_MENU——overlay 绕不开任何一处；已在 PR 下回帖并附原文
-- PR #112：状态页新增「v0.12.3 标签后主线未发布变更」段（含这一笔改了 mod 代码、0.12.3 产物里没有它的提醒），docs/live-validation-checklist.md 的 [coop] 段登记待实机点击两项
-- 验证细节：新增契约测试 CoopRoute.OverlayEntries 已注册、每个 <summary> 紧贴自己的方法、5 条新中文 key 都有英文词条、busy 只作用于被按下的按钮
+- Reviewed PR #111 (author sachi4clover): the AI teammate page adds a "Disable auto character select" checkbox above the invite button (checked = CompanionAutoSelectCharacter false, saved on toggle) and a "Continue last co-op run" button below it (goes through AgentRuntime.ContinueDualInstanceAsync, available only on the host main menu with a co-op save)
+- Showed that Sourcery's blocking finding is a false positive: CoopLaunchPolicy.GetError at AgentRuntime.cs:804-815 is the same check, the two NetId pre-checks have a backstop at DualInstanceCoordinator.cs:74-94, and the coordinator itself rechecks MAIN_MENU, so the overlay cannot bypass any of them; replied under the PR with the original text attached
+- PR #112: the status page adds an "Unreleased mainline changes after the v0.12.3 tag" section (including a reminder that this change touched mod code and is not in the 0.12.3 artifact), and the [coop] section of docs/live-validation-checklist.md registers two items awaiting live clicks
+- Verification details: added contract tests CoopRoute.OverlayEntries is registered, every <summary> sits right against its own method, all 5 new Chinese-language keys have English entries, busy applies only to the pressed button
 
 ### Git Commits
 
@@ -813,9 +813,9 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Testing
 
-- [OK] worktree b42bc5a：dotnet run --project STS2AIAgent.Tests = 384 PASS / 0 FAIL，scripts/preflight-release.ps1 全绿（八道 gate 逐条 OK）
-- [OK] CI：#111 与 #112 的 contracts 均 success；Sourcery 在 #111 上 pass
-- [OK] 破坏性验证三次（去掉勾选框回写 / Continue 改走非路线重载 / 勾选框语义取反）均让契约测试转红，随后文件逐字节还原
+- [OK] worktree b42bc5a: dotnet run --project STS2AIAgent.Tests = 384 PASS / 0 FAIL, scripts/preflight-release.ps1 all green (eight gates each OK)
+- [OK] CI: contracts succeeded for both #111 and #112; Sourcery passed on #111
+- [OK] Destructive verification three times (removing the checkbox write-back / switching Continue to a non-route overload / inverting the checkbox semantics) each turned the contract test red, after which the files were restored byte for byte
 
 ### Status
 
@@ -823,27 +823,27 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Next Steps
 
-- #111 改了 mod 代码，工坊与 GitHub 上的 0.12.3 里都没有它：是否发 v0.12.4（或攒一批）待定
-- Continue 按钮与勾选框需要一次实机（真实联机存档）点击验收：按钮时机、读档接回队友、子进程读到的勾选值
-- 工坊简体中文列表仍未更新（自 v0.11.0 起），待工坊网页端粘贴 steam-workshop/description.zh-CN.txt
+- #111 changed mod code and is in neither the Workshop nor the GitHub 0.12.3: whether to ship v0.12.4 (or batch more) is undecided
+- The Continue button and checkbox need a live click acceptance with a real co-op save: button timing, loading the save reconnects teammates, the checkbox value read by the child process
+- The Workshop Simplified Chinese listing is still not updated (since v0.11.0); waiting to be pasted on the Workshop web page, steam-workshop/description.zh-CN.txt
 
 
-## Session 23: v0.12.3 同号重发：把 #111 的两个联机界面入口补进已发布版本
+## Session 23: v0.12.3 same-number re-release: bring the two co-op UI entry points of #111 into the published version
 
 **Date**: 2026-09-14
-**Task**: v0.12.3 同号重发：把 #111 的两个联机界面入口补进已发布版本
+**Task**: v0.12.3 same-number re-release: bring the two co-op UI entry points of #111 into the published version
 **Branch**: `codex/record-recut-details`
 
 ### Summary
 
-版本号保持 0.12.3，只换构建：工坊于 09-14 00:09 重新上传（file_size 1229829、内容 id 6028841468497339213），GitHub 的 v0.12.3 tag 与 Release 重切到 0f60ec4（新资产 552014 字节，SHA256 B7684C9F…）。五处版本号未动，CHANGELOG 的 Unreleased 段并入 v0.12.3 段并写明两份构建只能靠大小/哈希区分。
+The version number stays 0.12.3 and only the build changes: the Workshop was re-uploaded on 09-14 00:09 (file_size 1229829, content id 6028841468497339213), and the GitHub v0.12.3 tag and Release were re-cut to 0f60ec4 (new asset 552014 bytes, SHA256 B7684C9F…). The five version numbers were not touched, the CHANGELOG Unreleased section was merged into the v0.12.3 section, and it states that the two builds can only be told apart by size/hash.
 
 ### Main Changes
 
-- 发布准备：CHANGELOG 把 Unreleased 并入 v0.12.3 段（段首横幅记录 09-14 同号重发与区分口径）、workshop.json 的 changeNote 改为本轮文案；五处版本号刻意不动（check_release_metadata.py 只比对五处彼此一致，不比对 tag 与上一版）
-- 重发执行：把两次旧产物目录改名留档（两个打包脚本都用 Get-UniquePath，不清旧目录会打出 -2 后缀）→ package-steam-workshop.ps1 → 分离进程 ModUploader 上传（一次成功）→ 工坊 GetPublishedFileDetails 复核（file_size 与本地内容字节和 1229829 完全相等）→ package-release.ps1 → 删旧 tag/Release 并按 0f60ec4 重建
-- 载荷交叉核对：两渠道 DLL 大小相同（1190400），只有 72 字节、5 段不同（PE 时间戳与 MVID/调试目录），PCK 与 mod_id.json 逐字节一致
-- 文档：#113 是发布提交，记录由 #114 合入——状态页与 history/release-v0.12.3 都改成「第一次（09-13）/ 第二次（09-14）」两段口径，原「标签后未发布变更」段改为重发内容
+- Release prep: CHANGELOG merges Unreleased into the v0.12.3 section (a banner at the top of the section records the 09-14 same-number re-release and how to tell the builds apart), workshop.json changeNote changed to this round's text; the five version numbers were deliberately left alone (check_release_metadata.py only checks that the five agree with each other, not against the tag or the previous version)
+- Re-release execution: renamed the two old artifact directories to keep them (both packaging scripts use Get-UniquePath, so not clearing the old directories would produce a -2 suffix) -> package-steam-workshop.ps1 -> detached-process ModUploader upload (succeeded first try) -> Workshop GetPublishedFileDetails recheck (file_size exactly equals the local content byte sum 1229829) -> package-release.ps1 -> delete the old tag/Release and rebuild at 0f60ec4
+- Payload cross-check: the two channels' DLLs are the same size (1190400), differing in only 72 bytes in 5 ranges (PE timestamp and MVID/debug directory), PCK and mod_id.json byte-for-byte identical
+- Docs: #113 is the release commit and the record was merged by #114; the status page and history/release-v0.12.3 were both changed to a two-part "first (09-13) / second (09-14)" wording, and the original "unreleased changes after the tag" section was changed to the re-release contents
 
 ### Git Commits
 
@@ -855,9 +855,9 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Testing
 
-- [OK] preflight-release.ps1 全绿（八道 gate 逐条 OK）；#113 与 #114 的 push / pull_request 四个 Validate run 均 success
-- [OK] 工坊复核：file_size 1229829 与本地内容字节和相等、time_updated 2026-09-14 00:09:26、visibility=0、tags 与英文说明未变
-- [OK] GitHub 复核：资产 552014 字节、上报 digest sha256:b7684c9f… 与本地一致、Latest 指向 v0.12.3；zip 内 CHANGELOG 已含 republished 2026-09-14 横幅
+- [OK] preflight-release.ps1 all green (eight gates each OK); all four Validate runs of #113 and #114 (push / pull_request) succeeded
+- [OK] Workshop recheck: file_size 1229829 equals the local content byte sum, time_updated 2026-09-14 00:09:26, visibility=0, tags and English description unchanged
+- [OK] GitHub recheck: asset 552014 bytes, reported digest sha256:b7684c9f… matches local, Latest points to v0.12.3; the CHANGELOG in the zip already contains the republished 2026-09-14 banner
 
 ### Status
 
@@ -865,9 +865,9 @@ v0.12.3 先是只发工坊，本轮补上 tag 与 GitHub Release，把「工坊�
 
 ### Next Steps
 
-- #111 的两个界面入口仍缺实机点击验收：按钮时机、读档接回队友、子进程读到的勾选值
-- 工坊简体中文列表仍未更新（自 v0.11.0 起），待工坊网页端粘贴 steam-workshop/description.zh-CN.txt
-- 同号重发的代价已写进 CHANGELOG 与状态页：0.12.3 指两份构建，下一版若升号即可恢复一一对应
+- The two UI entry points of #111 still lack a live click acceptance: button timing, loading the save reconnects teammates, the checkbox value read by the child process
+- The Workshop Simplified Chinese listing is still not updated (since v0.11.0); waiting to be pasted on the Workshop web page, steam-workshop/description.zh-CN.txt
+- The cost of a same-number re-release is written into the CHANGELOG and the status page: 0.12.3 refers to two builds, and bumping the number at the next release restores the one-to-one mapping
 
 
 ## Session 24: 2026-09-14 v0.12.3 third build: live-pass fix plus the ten-goal sweep
@@ -929,49 +929,49 @@ Turned the macOS/Linux path handling from three unexercised copies into one reso
 
 ### Main Changes
 
-这轮把 macOS/Linux 的路径解析从「三个副本、从未运行过」变成「一份实现 + 29 条离线断言 + CI 闸门」，
-并在过程中修掉 5 个真缺陷（其中 1 个是我自己引入的）。
+This round turned macOS/Linux path resolution from "three copies, never run" into "one implementation + 29 offline assertions + a CI gate",
+and fixed 5 real defects along the way (1 of which I introduced myself).
 
-起因是用户问「macOS 那两条默认路径是不是早期一个兼容 PR 带来的」。查证结果比预期散：
+It started when the user asked "were those two default macOS paths brought in by an early compatibility PR?". The investigation found the picture more scattered than expected:
 
-- `build-mod.sh:91-92` 来自 PR #3（cherry-pick 了从未合并的 PR #2，外部贡献者 Vinluo），
-  该文件从落地至今只被一个 commit 碰过
-- `lib-sts2.sh:34-35` 来自 PR #9（外部贡献者 WILLOSCAR，分支上提交署名是占位符 test@example.com）
-- 同一串路径还有第三份，在进程匹配器的内嵌 Python heredoc 里
-- 引入后路径文本一字未改，CI 只有 windows-latest，全仓找不到任何 macOS 实机证据
+- `build-mod.sh:91-92` comes from PR #3 (a cherry-pick of the never-merged PR #2, by external contributor Vinluo),
+  and that file has been touched by only one commit since it landed
+- `lib-sts2.sh:34-35` comes from PR #9 (external contributor WILLOSCAR; the commit author on the branch is the placeholder test@example.com)
+- the same path strings also appear a third time, in the embedded Python heredoc of the process matcher
+- the path text has not changed by a single character since it was introduced, CI has only windows-latest, and there is no macOS live evidence anywhere in the repo
 
-关键技术发现：整条 macOS 探测链可以在 Windows 的 Git Bash 上真跑（把 $HOME 指向夹具即可）。
-这是「可验证」的落脚点 —— 不需要 Mac、不需要游戏、不需要联网。
+Key technical finding: the entire macOS detection chain can really run on Windows Git Bash (just point $HOME at a fixture).
+This is the foothold for "verifiable": no Mac, no game, and no network needed.
 
-实现：
+Implementation:
 
-- `scripts/lib-sts2-paths.sh`（新）：唯一知道安装布局的地方。解析顺序与 Windows 侧一致
-  （参数 → 环境变量 → 探测 → 约定默认），探测覆盖三个约定 Steam 根 + 每个安装自己的
-  `libraryfolders.vdf`（所以第二个库里装的游戏也能找到）。不起游戏、不开 socket。
-- `scripts/test-lib-sts2-paths.sh`（新）：29 条断言。precedence、vdf 读取（转义反斜杠/尾斜杠/
-  空文件/垃圾内容）、.app bundle 布局、data 与 mods 目录、进程匹配候选路径。
-- `sh-syntax` 闸门：所有 .sh 过 bash -n，并执行上面那个测试。CI 与 preflight 都跑。
-  选 bash 时优先 Git Bash —— Windows 上裸 `bash` 常是 WSL 启动器，能在 PATH 上解析成功、
-  却读不了 C:/ 路径。
-- `mcp_server/tests/test_posix_script_portability.py`（新）：Windows 侧守卫的镜像。安装布局
-  只允许出现在解析器里；每个脚本必须 source 共享库而不是「提到」它；四条破坏性用例。
+- `scripts/lib-sts2-paths.sh` (new): the only place that knows the install layout. The resolution order matches the Windows side
+  (argument -> environment variable -> detection -> conventional default); detection covers the three conventional Steam roots plus each install's own
+  `libraryfolders.vdf` (so a game installed in a second library is also found). It does not start the game or open a socket.
+- `scripts/test-lib-sts2-paths.sh` (new): 29 assertions. Precedence, vdf reading (escaped backslashes/trailing slash/
+  empty file/garbage content), .app bundle layout, data and mods directories, process-match candidate paths.
+- `sh-syntax` gate: every .sh goes through bash -n, and the test above is executed. Both CI and preflight run it.
+  When picking bash, Git Bash is preferred: a bare `bash` on Windows is often the WSL launcher, which resolves fine on PATH
+  but cannot read C:/ paths.
+- `mcp_server/tests/test_posix_script_portability.py` (new): the mirror of the Windows-side guard. The install layout
+  may appear only in the resolver; every script must source the shared library rather than "mention" it; four destructive cases.
 
-修掉的缺陷：
+Defects fixed:
 
-- 空/截断的 libraryfolders.vdf 直接进正则 → 抛异常，四个脚本全废
-- 进程匹配器的 pgrep 回退在「已知 exe 路径」时没有 pattern → 无 ps 的机器上静默返回空
-  （这一条是我自己在重构中引入的，被复核探子抓到）
-- build-mod.sh 继承一个不存在的安装路径：下游全部退化成空串，报错说的是 data 目录
-- 候选列表不去重，同一库经两个根列两次
-- sts2_infer_game_root_from_executable 目录不存在时返回空串却算成功
+- An empty/truncated libraryfolders.vdf went straight into a regex -> threw an exception, breaking all four scripts
+- The pgrep fallback of the process matcher had no pattern when "the exe path is known" -> silently returned empty on machines without ps
+  (this one I introduced myself during the refactor, and the review probe caught it)
+- build-mod.sh inherited a nonexistent install path: everything downstream degraded to empty strings, and the error talked about the data directory
+- The candidate list was not deduplicated, so the same library was listed twice via two roots
+- sts2_infer_game_root_from_executable returned an empty string when the directory did not exist but still counted as success
 
-两个独立探子复核第一版，除了上面的 pgrep 回归，还找出若干「注释声称 A、代码实际 B」的地方
-（已逐条改）以及两处弱断言（已加强并补破坏性用例）。变异验证真的改坏源码再还原，五条变异
-全部被对应层抓到。
+Two independent probes reviewed the first version; besides the pgrep regression above, they found several places where "the comment claims A but the code does B"
+(all fixed one by one) and two weak assertions (strengthened, with destructive cases added). Mutation verification really broke the source and then restored it, and all five mutations
+were caught by the corresponding layer.
 
-合并时的一个坑：本地实测证明 squash 合 #127 会让 #128 在两个文档文件上冲突（两个 PR 改了同
-一段），而 rebase/merge 零冲突。于是 #127 用 rebase 合、#128 本地 rebase 到新 main（git 自动
-跳过已应用的提交）后改 base 再合，main 保持线性历史。
+A trap during merging: a local experiment proved that squash-merging #127 would make #128 conflict on two doc files (the two PRs changed the same
+passage), while rebase/merge had zero conflicts. So #127 was merged with rebase, and #128 was rebased locally onto the new main (git automatically
+skipped the already-applied commits), then its base was changed and it was merged, keeping main a linear history.
 
 
 
@@ -1013,24 +1013,24 @@ Fast-forwarded dev from 196 commits behind main, added the resync rule to CONTRI
 
 ### Main Changes
 
-用户选择「把 dev 重新拉起来」而不是改文档 —— 也就是让 CONTRIBUTING 描述的那套流程重新成立。
+The user chose "bring dev back to life" rather than changing the docs, that is, making the process described in CONTRIBUTING true again.
 
-先前的事实：`origin/dev` 落后 `origin/main` 196 个提交，且 0 个独有提交 —— 严格祖先，所以快进
-是无损的。CI（validate.yml）本来就覆盖 `dev` 的 push，没有 PR 指向 dev，dev 也没有分支保护。
+Prior facts: `origin/dev` was 196 commits behind `origin/main` with 0 commits of its own, a strict ancestor, so a fast-forward
+is lossless. CI (validate.yml) already covers pushes to `dev`, no PR targets dev, and dev has no branch protection.
 
-做法：
+What was done:
 
-- 先把本地那个未推送的 journal 提交推上 main（`4a01e22`）
-- `dev` 快进到 main（`22907b0..4a01e22`），验证 origin/main 与 origin/dev 的 tree 完全相同、
-  且旧 tip `22907b0` 仍是祖先（什么都没丢）
-- 补上「何时把 dev 拉回来」这条规则：CONTRIBUTING.md 里写明每次有东西进 main 之后要
-  `git push origin origin/main:dev`，并写清原因（每次合进 main 都会多出一个 dev 没有的提交，
-  直接进 main 的 PR 更是把它的全部提交都加进去 —— 这就是 dev 变成旧 main 分叉的机制）
-- 两处文档：CONTRIBUTING.md（受版本控制，走 PR）与 AGENTS.md（本地 gitignore，直接改）
-- 这条改动走**恢复后的流程**提交：分支 → PR #129 → base 是 `dev` → 合入。也是第一个进 dev 的 PR
+- First pushed the unpushed local journal commit to main (`4a01e22`)
+- Fast-forwarded `dev` to main (`22907b0..4a01e22`), verified that the trees of origin/main and origin/dev are identical,
+  and that the old tip `22907b0` is still an ancestor (nothing was lost)
+- Added the rule "when to bring dev back": CONTRIBUTING.md now says that after anything lands on main one must
+  `git push origin origin/main:dev`, together with the reason (every merge into main adds a commit that dev lacks,
+  and a PR going straight into main adds all of its commits, which is the mechanism by which dev became a fork of old main)
+- Two docs: CONTRIBUTING.md (version-controlled, goes through a PR) and AGENTS.md (locally gitignored, edited directly)
+- This change was committed through the **restored process**: branch -> PR #129 -> base is `dev` -> merged. It is also the first PR into dev
 
-教训：规则要连原因一起写，否则第一个被丢掉的就是它。196 个提交的漂移之所以发生，是因为仓库里
-没有任何地方说过什么时候该把 dev 拉回来。
+Lesson: write a rule together with its reason, or the reason is the first thing to be dropped. The 196-commit drift happened because
+nowhere in the repo did it say when dev should be brought back.
 
 
 
@@ -1059,22 +1059,22 @@ Fast-forwarded dev from 196 commits behind main, added the resync rule to CONTRI
 
 ### Correction (same day)
 
-那条规则的第一版是错的，而且**在写下的几分钟内就被现实驳回**。第一版说的是拿 ref 直接快进：
-`git push origin origin/main:dev`。这只在 `dev` 是 `main` 的严格祖先时成立 —— 一旦有 feature PR
-合进 dev（那正是 dev 存在的意义），dev 就有了 main 没有的提交，推送被拒：
+The first version of that rule was wrong, and **was refuted by reality within minutes of being written**. The first version said to fast-forward by ref directly:
+`git push origin origin/main:dev`. That holds only while `dev` is a strict ancestor of `main`; once a feature PR
+is merged into dev (which is the whole point of dev), dev has commits main lacks, and the push is rejected:
 
 ```text
 ! [rejected]        origin/main -> dev (non-fast-forward)
 ```
 
-修正后（PR #130）改成陈述不变式「dev 包含 main 的全部提交」配一个永远可用的操作：
-`git fetch origin; git checkout dev; git merge origin/main; git push origin dev`。用 merge 不用
-rebase，所以已发布的历史只会被追加；而当 dev 恰好没有独有提交时，这个 merge 自己会退化成快进，
-也就是旧措辞描述的那个场景 —— 现在是被覆盖而不是被假设。
+The fix (PR #130) states the invariant "dev contains all of main's commits" together with an operation that always works:
+`git fetch origin; git checkout dev; git merge origin/main; git push origin dev`. It uses merge rather than
+rebase, so published history is only ever appended to; and when dev happens to have no commits of its own, the merge degrades into a fast-forward by itself,
+which is exactly the scenario the old wording described, now covered rather than assumed.
 
-教训：规则要连原因一起写，而且**写完要真跑一次**。我这轮两个错都是同一类 —— 先写结论、后验证，
-结果第一个错（squash 会让叠放的 PR 冲突）是在动手前实测发现的，第二个错（这条规则）是在应用时
-被 git 拒绝发现的。两次都是「跑一次」救的，不是「想一遍」救的。
+Lesson: write a rule together with its reason, and **run it once after writing it**. My two mistakes this round were of the same kind: conclusion first, verification later,
+and the first mistake (squash would make stacked PRs conflict) was found by testing before acting, while the second (this rule) was found
+when git rejected it on application. Both times it was "running it once" that saved me, not "thinking it over".
 
 
 ## Session 27: Close the drift that forced four re-cuts, ship v0.12.5, and collapse the action surface
@@ -1121,15 +1121,15 @@ The lesson worth keeping: both runtime defects were found by driving a real game
 [OK] **Completed**
 
 
-## Session 28: 收尾 PR #148 verification gates CI
+## Session 28: Wrap up the PR #148 verification gates CI
 
 **Date**: 2026-09-17
-**Task**: 收尾 PR #148 verification gates CI
+**Task**: Wrap up the PR #148 verification gates CI
 **Branch**: `refactor/split-monoliths`
 
 ### Summary
 
-接手未完成的 CI 修复：让 arch-facts 与 doc-links 以 Git tracked 内容为准，移除 fresh checkout 中不可解析的本地链接，补未跟踪文件与目录回归测试；本地完整 gates/self-test 和 GitHub contracts 全绿。
+Took over the unfinished CI fix: made arch-facts and doc-links go by Git-tracked content, removed local links that cannot be resolved in a fresh checkout, added regression tests for untracked files and directories; the full local gates/self-test and GitHub contracts are all green.
 
 ### Git Commits
 
@@ -1142,15 +1142,15 @@ The lesson worth keeping: both runtime defects were found by driving a real game
 [OK] **Completed**
 
 
-## Session 29: 发布 v0.13.0 并完成收尾
+## Session 29: Release v0.13.0 and wrap up
 
 **Date**: 2026-09-19
-**Task**: 发布 v0.13.0 并完成收尾
+**Task**: Release v0.13.0 and wrap up
 **Branch**: `main`
 
 ### Summary
 
-接手中断的 v0.13.0 发布：验证代理连通，完成最终发布 DLL 隔离实机冒烟，创建 GitHub Release，上传并通过 Steam Web API 核对工坊内容，补齐发布记录与构建指纹，经 PR #162、#163 合入 main，并将 dev 快进同步到 main。
+Took over the interrupted v0.13.0 release: verified proxy connectivity, completed the final release DLL isolated live smoke test, created the GitHub Release, uploaded and checked the Workshop content through the Steam Web API, filled in the release records and build fingerprint, merged into main via PRs #162 and #163, and fast-forwarded dev to main.
 
 ### Git Commits
 
@@ -1465,19 +1465,19 @@ Isolated autoplay cleared Act 1 and ended naturally in Act 2. Thinking-model fai
 [OK] **Completed**
 
 
-## Session 37: 审查修复集成与收尾
+## Session 37: Integrate review fixes and wrap up
 
 **Date**: 2026-09-23
-**Task**: 审查修复集成与收尾
+**Task**: Integrate review fixes and wrap up
 **Branch**: `dev`
 
 ### Summary
 
-整合四路审查修复，补齐模式互斥、Jev 有界重试与同伴配置、按 run 隔离的会话和双 MCP 简报；修复二轴复审指出的边界问题。验证 Mod Release 构建、C# 离线测试、Python 420 项、12 项静态闸门及 OpenAPI 7 项；真实双开与 Jev 服务仍待实机验收。
+Integrated the four review-fix tracks, added mode mutual exclusion, bounded Jev retries and companion settings, per-run isolated sessions, and the dual MCP briefing; fixed the boundary issues pointed out by the second two-axis re-review. Verified the Mod Release build, C# offline tests, 420 Python tests, 12 static gates, and 7 OpenAPI checks; the real two-instance run and the Jev service still await live acceptance.
 
 ### Main Changes
 
-- 提交本轮修复与 code-spec，归档 09-23-audit-remediation；未提交原始 WIP 基线备份。
+- Committed this round's fixes and the code-spec, archived 09-23-audit-remediation; the original WIP baseline backup was not committed.
 
 ### Git Commits
 
@@ -1488,7 +1488,7 @@ Isolated autoplay cleared Act 1 and ended naturally in Act 2. Thinking-model fai
 
 ### Testing
 
-- [OK] dotnet build Release / C# 离线测试 / Python 420 项 / verification gates 12 项 / API schema 7 项通过。
+- [OK] dotnet build Release / C# offline tests / Python 420 tests / verification gates 12 items / API schema 7 items passed.
 
 ### Status
 
@@ -1496,23 +1496,23 @@ Isolated autoplay cleared Act 1 and ended naturally in Act 2. Thinking-model fai
 
 ### Next Steps
 
-- 在隔离存档与受控额度下验证双开、真实 Jev 429、切局与运行中指令；单独处理未提交的 09-22 UI 任务文档。
+- Verify the two-instance run, real Jev 429, run switching, and in-run commands with an isolated save and a controlled quota; separately handle the uncommitted 09-22 UI task docs.
 
 
-## Session 38: 过时文档归档与状态页收口
+## Session 38: Archive outdated docs and close out the status page
 
 **Date**: 2026-09-23
-**Task**: 过时文档归档与状态页收口
+**Task**: Archive outdated docs and close out the status page
 **Branch**: `dev`
 
 ### Summary
 
-将 7 份带日期的旧审查/验证记录原文迁入 history/ 并登记索引，docs/ 原路径保留历史快照跳转页；PRODUCT_PLAN_CURRENT.md 更新为 v0.15.0 本地审查修复状态并明确实机未验收；architecture.md 源码统计刷新为 164 文件 / 45,050 行。12 项离线闸门与 git diff --check 通过。
+Moved 7 dated old review/verification records verbatim into history/ and registered them in the index, left historical snapshot redirect pages at the original docs/ paths; updated PRODUCT_PLAN_CURRENT.md to the v0.15.0 local review-fix status and made explicit that live acceptance is not done; refreshed the source stats in architecture.md to 164 files / 45,050 lines. All 12 offline gates and git diff --check passed.
 
 ### Main Changes
 
-- docs 归档：5 份 2026-03/08 快照 + 2 份 2026-09-21 审查记录移入 history/，原路径留跳转页。
-- 当前状态页区分本轮 v0.15.0 修复与旧版记录；修正 09-22 任务指向已归档任务的链接。
+- docs archive: 5 snapshots from 2026-03/08 + 2 review records from 2026-09-21 moved into history/, with redirect pages left at the original paths.
+- The current status page now distinguishes this round's v0.15.0 fixes from the old version records; fixed the link from the 09-22 tasks that pointed to an archived task.
 
 ### Git Commits
 
@@ -1522,7 +1522,7 @@ Isolated autoplay cleared Act 1 and ended naturally in Act 2. Thinking-model fai
 
 ### Testing
 
-- [OK] python scripts/check_verification_gates.py 12 项全过；git diff --check 通过。
+- [OK] python scripts/check_verification_gates.py all 12 items passed; git diff --check passed.
 
 ### Status
 
@@ -1530,7 +1530,7 @@ Isolated autoplay cleared Act 1 and ended naturally in Act 2. Thinking-model fai
 
 ### Next Steps
 
-- 09-22 四个任务仍在规划/进行中，其文档草稿改动保留未提交；真实双开与 Jev 服务实机验收待做。
+- The four 09-22 tasks are still in planning/progress, and their draft doc changes are kept uncommitted; live acceptance of the real two-instance run and the Jev service is pending.
 
 
 ## Session 39: v0.16.0: live reasoning, dual-layer goal, overlay fit, clean screenshots; released to GitHub and Workshop

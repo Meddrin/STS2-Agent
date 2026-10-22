@@ -1,69 +1,69 @@
-# 设计：两个方向相反的守卫
+# Design: two guards in opposite directions
 
-## 1. 纯策略：`STS2AIAgent/Agent/NoProgressPolicy.cs`（新，纯 BCL）
+## 1. Pure policy: `STS2AIAgent/Agent/NoProgressPolicy.cs` (new, pure BCL)
 
 ```csharp
 internal static class NoProgressPolicy
 {
-    public const int RepeatThreshold = 3;   // 同一 (动作, 指纹) 连续出现多少次算空转
+    public const int RepeatThreshold = 3;   // how many consecutive occurrences of the same (action, fingerprint) count as spinning
 
-    // 指纹只在"成功执行"时更新；换动作或状态变化都视为进度
+    // The fingerprint is updated only on "successful execution"; changing the action or a state change both count as progress
     public static bool IsRepeat(string? previousAction, string? previousFingerprint,
                                 string? action, string? fingerprint);
 
-    // 连续未确认（pending 超时）的上界
+    // Upper bound on consecutive unconfirmed results (pending timeouts)
     public const int UnsettledLimit = 5;
 }
 ```
 
-阈值必须是常量且被测试断言（避免实现里写魔数）。
+Thresholds must be constants and asserted by tests (avoid magic numbers in the implementation).
 
-## 2. `AutoPlayRecovery` 的状态机
+## 2. State machine of `AutoPlayRecovery`
 
 ```csharp
-private int _failures;          // 既有：硬失败
-private string? _lastAction;    // 新
+private int _failures;          // existing: hard failures
+private string? _lastAction;    // new
 private string? _lastFingerprint;
-private int _repeats;           // 新
-private int _unsettled;         // 新
+private int _repeats;           // new
+private int _unsettled;         // new
 ```
 
-`Observe` 分支表（实现时逐条落地）：
+`Observe` branch table (to be landed one by one during implementation):
 
-| 输入 | 行为 |
+| Input | Behavior |
 |---|---|
-| `RequiresConfiguration` | 不变：立即停（Configuration） |
-| `WaitingForGame` | 不变：1s 延迟、不消耗失败 |
-| 成功且有进度（动作变了或指纹变了） | 清零 `_failures`/`_repeats`/`_unsettled`，记下新动作+指纹 |
-| 成功但同一 (动作, 指纹) 重复 < 阈值 | 延迟（沿用退避或 1s），`_repeats++` |
-| 成功但重复 ≥ 阈值 | 停机（`StopKindPolicy` 里选一个已有 kind 或复用现有"连续未成功"文案），并给出可读原因 |
-| 执行了但未确认（新字段） | `_unsettled++`，不消耗 `_failures`；达 `UnsettledLimit` 停机；延迟沿用退避 |
-| `Error != null` | 不变：`_failures++`，≥3 停机 |
+| `RequiresConfiguration` | Unchanged: stop immediately (Configuration) |
+| `WaitingForGame` | Unchanged: 1s delay, consumes no failure |
+| Success with progress (action changed or fingerprint changed) | Reset `_failures`/`_repeats`/`_unsettled`, record the new action + fingerprint |
+| Success but the same (action, fingerprint) repeats < threshold | Delay (reuse the backoff or 1s), `_repeats++` |
+| Success but repeats >= threshold | Halt (pick an existing kind in `StopKindPolicy` or reuse the existing "consecutive non-success" text), and give a readable reason |
+| Executed but unconfirmed (new field) | `_unsettled++`, does not consume `_failures`; halt on reaching `UnsettledLimit`; delay reuses the backoff |
+| `Error != null` | Unchanged: `_failures++`, halt at >= 3 |
 
-## 3. `AgentTurnResult`（`STS2AIAgent/Agent/AgentLoop.cs` 或定义处）
+## 3. `AgentTurnResult` (`STS2AIAgent/Agent/AgentLoop.cs` or wherever it is defined)
 
-新增一个布尔字段表达"已执行但未确认 settle"，由 `AgentLoop` 在 `!settled` 分支置位并把
-`Error` 留空（返回第三个值用 null 或保留文案但不作为失败依据——实现时按"谁读第三个值"决定，
-必须在 evidence 里列出该值的消费点）。
+Add a boolean field expressing "executed but not confirmed settled", set by `AgentLoop` in the `!settled` branch, leaving
+`Error` empty (the third returned value is null, or keeps the text but is not used as the basis for failure; decide at implementation time based on "who reads the third value",
+and the consumers of that value must be listed in the evidence).
 
-`AgentLoop.cs:633-651` 的返回需要相应调整：状态仍是 `pending`（JSON 不变），
-但**不再**让上游把它算成失败。
+The return at `AgentLoop.cs:633-651` needs a matching adjustment: the status is still `pending` (JSON unchanged),
+but upstream must **no longer** count it as a failure.
 
-## 4. 指纹来源
+## 4. Fingerprint source
 
-指纹要便宜且稳定：对 `GetCompactStateJsonAsync` 的字符串做一次哈希即可
-（例如 `System.Security.Cryptography.SHA256` 前 16 字节的十六进制，或直接比较长度+字符串相等）。
-**不要**引入新的游戏 API；不要对每个 token 做序列化比较（compact 已经是字符串）。
-实现时注意：`AgentLoop` 已经在若干路径取了 compact state（`checkState?.Invoke(...)`），
-尽量复用它而不是重复请求。
+The fingerprint must be cheap and stable: hashing the string from `GetCompactStateJsonAsync` once is enough
+(for example the first 16 bytes of `System.Security.Cryptography.SHA256` as hex, or directly compare length + string equality).
+**Do not** introduce new game APIs; do not do per-token serialization comparison (compact is already a string).
+Note at implementation time: `AgentLoop` already fetches the compact state on several paths (`checkState?.Invoke(...)`);
+reuse that as much as possible instead of requesting again.
 
-## 5. 测试
+## 5. Tests
 
-- `NoProgressPolicyTests`（行为，离线）：`IsRepeat` 真值表（null 处理、动作相同指纹相同、
-  动作相同指纹不同、动作不同指纹相同）、两个常量被显式断言。
-- `AutoPlayRecoveryTests`（行为，离线）：喂 `AgentTurnResult` 序列，断言
-  ① 重复同一指纹达阈值 → 停机；② 换动作 → 不停机；③ 未确认状态连续 N 次 → 停机且不影响
-  `_failures`（用随后一次硬失败是否仍需 3 次来间接断言）；④ 既有 3 连败语义不变。
+- `NoProgressPolicyTests` (behavioral, offline): `IsRepeat` truth table (null handling, same action same fingerprint,
+  same action different fingerprint, different action same fingerprint), and the two constants asserted explicitly.
+- `AutoPlayRecoveryTests` (behavioral, offline): feed a sequence of `AgentTurnResult` and assert
+  (1) repeating the same fingerprint to the threshold -> halt; (2) changing the action -> no halt; (3) N consecutive unconfirmed states -> halt without affecting
+  `_failures` (assert indirectly by whether a subsequent hard failure still needs 3 occurrences); (4) the existing 3-consecutive-failure semantics unchanged.
 
-`AutoPlayRecovery` 已在测试工程编译清单里（`..\\STS2AIAgent\\Agent\\AutoPlayRecovery.cs`），
-所以这些必须是**真行为测试**，不是源码契约断言。
+`AutoPlayRecovery` is already in the test project's compile list (`..\\STS2AIAgent\\Agent\\AutoPlayRecovery.cs`),
+so these must be **real behavioral tests**, not source contract assertions.

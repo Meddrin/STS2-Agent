@@ -1,49 +1,49 @@
-# 设计：api-facts 门禁与 README 绑定
+# Design: the api-facts gate and README binding
 
 ## 1. `scripts/check_verification_gates.py`
 
-新增 `check_api_facts(repo_root)` 并注册进 `GATES` 字典（名字 `api-facts`），沿用既有的
-`read_text` / `GateError` 风格与"每步 print 明细"的输出约定。
+Add `check_api_facts(repo_root)` and register it in the `GATES` dict (named `api-facts`), following the existing
+`read_text` / `GateError` style and the output convention of "print details at each step".
 
 ```python
 VERSION_PATTERN = re.compile(r'"mod_version"\s*:\s*"([^"]+)"')
-SCREEN_ROW = re.compile(r"^\|\s*\`([A-Z][A-Z0-9_]*)\`", re.MULTILINE)   # 以文档真实表格形态为准
+SCREEN_ROW = re.compile(r"^\|\s*\`([A-Z][A-Z0-9_]*)\`", re.MULTILINE)   # go by the real table shape in the doc
 SCREEN_LITERAL = re.compile(r'=>\s*"([A-Z][A-Z0-9_]*)"')
 SCREEN_EARLY_RETURN = re.compile(r'return\s+"([A-Z][A-Z0-9_]*)"')
 PORT_PATTERN = re.compile(r'"port"\s*:\s*(\d+)')
 ```
 
-判定：
+Checks:
 
-1. `api.md` 的 `mod_version` == `STS2AIAgent/mod_manifest.json` 的 `version`（不等即 GateError，
-   错误信息里同时给出两个值）。
-2. 从 `STS2AIAgent/Game/GameStateService.cs` 的 `ResolveNonModalScreen` 方法体里提取
-   `=> "NAME"` 与 `return "NAME"` 两类屏幕名（后者覆盖早退分支），要求
-   `代码集合 - 文档集合 == 空`；并给出反向差集作为提示（文档多列不算失败，除非实现时确认要严格）。
-   **注意**：提取必须限定在 `ResolveNonModalScreen` 方法体内（用方法体切片），不要把整个文件里的
-   字符串都收进来。
-3. 端口：以 `HttpServer` 的默认值为事实源（实现时确认真实常量位置），与 `docs/api.md` 里
-   明确声明"默认端口"的那一处比对；若文档没有可解析的默认端口，则退回"文档出现的端口集合必须含
-   代码默认值"。
+1. `mod_version` in `api.md` == `version` in `STS2AIAgent/mod_manifest.json` (a mismatch is a GateError,
+   and the error message gives both values).
+2. From the body of the `ResolveNonModalScreen` method in `STS2AIAgent/Game/GameStateService.cs`, extract
+   the two kinds of screen names `=> "NAME"` and `return "NAME"` (the latter covers early-return branches), requiring
+   `code set - doc set == empty`; and give the reverse difference as a hint (extra items listed in the doc do not count as failure, unless it is confirmed at implementation time that this should be strict).
+   **Note**: the extraction must be confined to the body of `ResolveNonModalScreen` (use a method body slice); do not collect
+   all the strings in the whole file.
+3. Port: take the default value of `HttpServer` as the source of truth (confirm the real constant location at implementation time), and compare it with the one place in `docs/api.md`
+   that explicitly declares the "default port"; if the doc has no parseable default port, fall back to "the set of ports appearing in the doc must contain
+   the code default".
 
-每条都要能被"改坏即红"验证，并写进 `scripts/test-verification-gates.ps1`。
+Each one must be verifiable by "break it and it goes red", and written into `scripts/test-verification-gates.ps1`.
 
-## 2. `mcp_server/README.md` 工具清单
+## 2. The `mcp_server/README.md` tool list
 
-- 先修内容：把缺失的 14 项补进"当前工具"节（保持既有排版与描述风格，描述取自
-  `server.py` 的 `ActionToolSpec` 文案或 `docs/api.md` 的动作描述）。
-- 再加绑定：在 `mcp_server/tests/test_legacy_action_coverage.py` 追加一条测试，
-  解析 README 里的工具名与 `server.py` 的 `_LEGACY_ACTION_TOOLS` 做**双向集合**断言
-  （缺一即红，多一即红）。
+- Fix the content first: add the 14 missing items to the "current tools" section (keeping the existing layout and description style, with descriptions taken from
+  the `ActionToolSpec` text of `server.py` or the action descriptions of `docs/api.md`).
+- Then add the binding: append a test to `mcp_server/tests/test_legacy_action_coverage.py` that
+  parses the tool names in the README and asserts a **two-way set** equality with `_LEGACY_ACTION_TOOLS` of `server.py`
+  (red if one is missing, red if one is extra).
 
-## 3. CI 与门禁自测
+## 3. CI and gate self-tests
 
-- `.github/workflows/validate.yml`：在 verification gates 步骤之后加一步
-  `python scripts/check_release_package.py --source-root .`（工作目录与既有步骤一致）。
-- `scripts/test-verification-gates.ps1`：照既有 fixture 模式（临时复制 + 破坏 + 断言 exit≠0）
-  为新门禁加用例；**该脚本是 .ps1 且含非 ASCII 时必须带 UTF-8 BOM**（script-encoding 门禁会检查）。
+- `.github/workflows/validate.yml`: add a step after the verification gates step:
+  `python scripts/check_release_package.py --source-root .` (working directory the same as the existing steps).
+- `scripts/test-verification-gates.ps1`: following the existing fixture pattern (temporary copy + break + assert exit != 0),
+  add cases for the new gate; **when this script is a .ps1 containing non-ASCII it must carry a UTF-8 BOM** (the script-encoding gate checks this).
 
-## 风险
+## Risks
 
-- 屏幕名提取是文本级的，方法体切片必须准确；实现时先打印提取结果确认条数合理，再断言集合关系。
-- 若 `docs/api.md` 的屏幕枚举表格形态与上面的正则不符，以实现时读到的真实形态为准（不要硬套示例）。
+- Screen name extraction is text-level, so the method body slice must be accurate; at implementation time first print the extraction result to confirm the count is reasonable, then assert the set relations.
+- If the shape of the screen enum table in `docs/api.md` does not match the regex above, go by the real shape read at implementation time (do not force the example).

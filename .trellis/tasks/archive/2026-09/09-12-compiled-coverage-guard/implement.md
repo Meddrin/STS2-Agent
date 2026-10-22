@@ -1,20 +1,20 @@
-# 执行清单
+# Execution checklist
 
-1. 读：`STS2AIAgent.Tests/STS2AIAgent.Tests.csproj`、`STS2AIAgent.Tests/AgentSourceFixture.cs`、
-   `STS2AIAgent.Tests/UnlockScreenContractTests.cs`（测试风格）、`.github/workflows/validate.yml`、
-   `STS2AIAgent.Tests/TestRunner.cs` 末尾（注册形态）。
-2. 按 design 改 csproj（加 Reference）、修 fixture（过滤 obj/bin）、新增 `SourceCoverageTests.cs`。
-3. 注册：在 `TestRunner.cs` 的 `AllTests` 末尾追加你的 `yield return`
-   （**其他 worker 也在并行追加同一位置**：patch 失败就重新读取再试，禁止整文件覆写或删除他人行）。
-4. 可否证自检：
-   - 在任一未编译文件（如 `Server/Router.cs`）末尾临时插入非法语法 → 语法测试必须红 → 还原；
-   - 临时删掉 csproj 里某条 `<Compile Include>` → 覆盖面断言必须红 → 还原。
-5. 验证：
+1. Read: `STS2AIAgent.Tests/STS2AIAgent.Tests.csproj`, `STS2AIAgent.Tests/AgentSourceFixture.cs`,
+   `STS2AIAgent.Tests/UnlockScreenContractTests.cs` (test style), `.github/workflows/validate.yml`,
+   the end of `STS2AIAgent.Tests/TestRunner.cs` (registration shape).
+2. Per the design, change the csproj (add the Reference), fix the fixture (filter obj/bin), add `SourceCoverageTests.cs`.
+3. Register: append your `yield return` at the end of `AllTests` in `TestRunner.cs`
+   (**other workers are also appending at the same spot in parallel**: if the patch fails, re-read and retry; never overwrite whole files or delete others' lines).
+4. Falsifiability self-check:
+   - temporarily insert invalid syntax at the end of any uncompiled file (such as `Server/Router.cs`) -> the syntax test must go red -> restore;
+   - temporarily delete a `<Compile Include>` in the csproj -> the coverage assertion must go red -> restore.
+5. Verify:
    ```powershell
    dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release
    ```
-6. 不提交、不推送；报告改动文件、红/绿证据与"仅在 CI 上才能确认"的清单。
+6. Do not commit or push; report the changed files, the red/green evidence, and the list of "can only be confirmed on CI".
 
-本任务允许改 `STS2AIAgent.Tests.csproj` 与 `AgentSourceFixture.cs`（这是任务核心），但只改这两个
-测试工程文件；不要动 `STS2AIAgent/` 下的生产代码。
+This task may change `STS2AIAgent.Tests.csproj` and `AgentSourceFixture.cs` (these are the core of the task), but only those two
+test project files; do not touch the production code under `STS2AIAgent/`.
 

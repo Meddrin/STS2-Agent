@@ -1,40 +1,40 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent/Agent/DualLaunchOutcome.cs`（新） | 枚举 `Idle/InProgress/Succeeded/Rejected/Failed/Canceled` + 纯策略 `IsFailure`/`IsInProgress`；无 Godot / MegaCrit 引用 |
-| `STS2AIAgent/Agent/AgentRuntime.cs` | `_dualLaunchOutcome` + `DualLaunchOutcome` 属性；`LaunchDualInstanceCoreAsync` 每个 return/catch 分支显式赋值（gate 抢占失败 → `InProgress`，不再沿用上次结果） |
-| `STS2AIAgent/Multiplayer/DualInstanceCoordinator.cs` | 新增 `HostLocalCoopResultAsync` 返回 `(bool Ok, string Message)`；原 `HostLocalCoopAsync` 转调，签名与文案逐字不变 |
-| `STS2AIAgent/Game/GameActionService.cs` | `ExecuteInviteAiTeammateAsync` 删除中文子串判定：`Succeeded→completed`、`InProgress→pending`、其余（含 `Idle`）→ 409 `invite_failed`，details 带 `outcome` |
-| `STS2AIAgent.Tests/DualLaunchOutcomeTests.cs`（新）+ csproj include + TestRunner 注册 | 6 条测试 |
+| `STS2AIAgent/Agent/DualLaunchOutcome.cs` (new) | Enum `Idle/InProgress/Succeeded/Rejected/Failed/Canceled` + pure policy `IsFailure`/`IsInProgress`; no Godot / MegaCrit references |
+| `STS2AIAgent/Agent/AgentRuntime.cs` | `_dualLaunchOutcome` + the `DualLaunchOutcome` property; every return/catch branch of `LaunchDualInstanceCoreAsync` assigns explicitly (gate preemption failure -> `InProgress`, no longer reusing the last outcome) |
+| `STS2AIAgent/Multiplayer/DualInstanceCoordinator.cs` | Added `HostLocalCoopResultAsync` returning `(bool Ok, string Message)`; the original `HostLocalCoopAsync` delegates, with the signature and message text unchanged verbatim |
+| `STS2AIAgent/Game/GameActionService.cs` | `ExecuteInviteAiTeammateAsync` removes the Chinese substring check: `Succeeded->completed`, `InProgress->pending`, the rest (including `Idle`) -> 409 `invite_failed`, with `outcome` in details |
+| `STS2AIAgent.Tests/DualLaunchOutcomeTests.cs` (new) + csproj include + TestRunner registration | 6 tests |
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 枚举/纯策略可离线编译并入库编译清单 | `DualLaunchOutcome.OfflineCompilable` PASS（断言无 `using Godot`/`using MegaCrit`）；csproj 已加 `<Compile Include>` |
-| 每个分支都写结果 | `DualLaunchOutcome.EveryBranchRecords` PASS：`_dualLaunchOutcome =` 在方法体内出现 6 次，gate 分支为 `InProgress` |
-| 不再有对 `DualStatus` 的子串匹配 | `DualLaunchOutcome.LanguageIndependent` PASS；`rg 'Contains\("(失败|请先|找不到)"'` 全仓 0 命中 |
-| 行为测试（真值表 / 语言无关 / 取消异常归类） | `TruthTable`（6 值逐断言）、`OnlySuccessCompletes`、`LanguageIndependent`、`EveryBranchRecords` 全 PASS |
-| 协调器结构化且原签名文案不变 | `DualLaunchOutcome.CoordinatorContract` PASS；文案字符串 diff 逐字未改 |
-| 可否证 | 把 `IsFailure` 改成包含 `Succeeded` → 2 条测试变红（`exit=1`），还原后 311 PASS |
+| Enum/pure policy compile offline and are in the compile list | `DualLaunchOutcome.OfflineCompilable` PASS (asserts no `using Godot`/`using MegaCrit`); the csproj has the `<Compile Include>` added |
+| Every branch writes the outcome | `DualLaunchOutcome.EveryBranchRecords` PASS: `_dualLaunchOutcome =` appears 6 times inside the method body, and the gate branch is `InProgress` |
+| No more substring matching on `DualStatus` | `DualLaunchOutcome.LanguageIndependent` PASS; `rg 'Contains\("(失败|请先|找不到)"'` has 0 hits across the repo |
+| Behavioral tests (truth table / language independence / cancellation exception classification) | `TruthTable` (6 values asserted one by one), `OnlySuccessCompletes`, `LanguageIndependent`, `EveryBranchRecords` all PASS |
+| Coordinator is structured and the original signature/text unchanged | `DualLaunchOutcome.CoordinatorContract` PASS; the message string diff is unchanged verbatim |
+| Falsifiable | Changing `IsFailure` to include `Succeeded` -> 2 tests turn red (`exit=1`), and 311 PASS after restoring |
 
-## 门禁（2026-09-12 全量复跑）
+## Gates (full rerun on 2026-09-12)
 
 `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release` → **PASS=311 FAIL=0**
-`dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-incremental` → 0 警告 0 错误
-`python scripts/check_verification_gates.py` → 通过（api-doc 55 动作）
-`python scripts/check_release_package.py --source-root .` → 通过
+`dotnet build STS2AIAgent/STS2AIAgent.csproj -c Release --no-incremental` -> 0 warnings 0 errors
+`python scripts/check_verification_gates.py` -> passed (api-doc 55 actions)
+`python scripts/check_release_package.py --source-root .` -> passed
 `powershell -File scripts/preflight-release.ps1` → `Static preflight complete.`
-`uv run --locked python -m unittest discover -s tests`（mcp_server）→ 159 tests OK
+`uv run --locked python -m unittest discover -s tests` (mcp_server) -> 159 tests OK
 
-## 只能实机验证
+## Live-only verification
 
-- 端到端 HTTP 语义（真实双开成功 = `completed`；英文客户端下失败必须 = 409 `invite_failed`；并发邀请 = `pending`）。
-- 待实机覆盖三条路径：成功 / 英文客户端失败 / 重复邀请。
+- End-to-end HTTP semantics (a real two-instance success = `completed`; on an English client a failure must = 409 `invite_failed`; a concurrent invite = `pending`).
+- Three paths await live coverage: success / English client failure / repeated invite.
 
-## 备注
+## Notes
 
-`HostLocalCoopAsync` 现在在生产代码中已无调用点，作为兼容入口保留（由 `CoordinatorContract` 测试锁定其转调关系）。
+`HostLocalCoopAsync` now has no call sites in production code and is kept as a compatibility entry (its delegation is locked by the `CoordinatorContract` test).

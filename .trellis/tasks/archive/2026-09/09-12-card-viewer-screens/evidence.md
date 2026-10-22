@@ -1,61 +1,61 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent/Game/GameStateService.cs` | 新增 `using ...Screens.CardLibrary;`；`ResolveNonModalScreen` 在 `CARDS_VIEW` 之后、通用网格之前补两条早退（`NCardLibrary → "CARD_LIBRARY"`、`NCardPileScreen → "CARD_PILE"`）；新增共享判定 `IsClosableCardViewer`（`NCardsViewScreen or NCardPileScreen`）；`GetCardsViewBackButton` 改用该判定 + `Node` 取 `BackButton`；`GetMainMenuSubmenuStack` → `GetSubmenuStack`（匹配基类 `NSubmenuStack`） |
-| `STS2AIAgent/Game/GameActionService.cs` | `ExecuteCloseMainMenuSubmenuAsync` 改用 `GetSubmenuStack`；`WaitForMainMenuSubmenuCloseAsync` 形参上移到 `NSubmenuStack`（编译必需）；`IsCardsViewClosed` 在既有 `NCardsViewScreen` 判定**之前**插入经共享判定的提前返回，使等待条件覆盖 `CARD_PILE` |
-| `docs/api.md` | Screen 枚举补 `CARD_LIBRARY` / `CARD_PILE`；`CARDS_VIEW` 描述、动作清单行与 `close_cards_view` 一节改为"可关闭的看牌屏"口径 |
-| `skills/sts2-mcp-player/SKILL.md` | 共享契约块内补两行路由；marker 对保持成对 |
-| `STS2AIAgent.Tests/CardViewerScreenContractTests.cs` | 新增 3 条源码契约测试 |
-| `STS2AIAgent.Tests/TestRunner.cs` | 追加 3 行注册 |
+| `STS2AIAgent/Game/GameStateService.cs` | Added `using ...Screens.CardLibrary;`; `ResolveNonModalScreen` adds two early returns after `CARDS_VIEW` and before the generic grid (`NCardLibrary → "CARD_LIBRARY"`, `NCardPileScreen → "CARD_PILE"`); added the shared predicate `IsClosableCardViewer` (`NCardsViewScreen or NCardPileScreen`); `GetCardsViewBackButton` uses that predicate + `Node` to take `BackButton`; `GetMainMenuSubmenuStack` → `GetSubmenuStack` (matches the base class `NSubmenuStack`) |
+| `STS2AIAgent/Game/GameActionService.cs` | `ExecuteCloseMainMenuSubmenuAsync` uses `GetSubmenuStack`; the parameter of `WaitForMainMenuSubmenuCloseAsync` moves up to `NSubmenuStack` (required to compile); `IsCardsViewClosed` inserts an early return via the shared predicate **before** the existing `NCardsViewScreen` check so the wait condition covers `CARD_PILE` |
+| `docs/api.md` | Screen enum adds `CARD_LIBRARY` / `CARD_PILE`; the `CARDS_VIEW` description, the action list row, and the `close_cards_view` section changed to the "closable card viewer screens" wording |
+| `skills/sts2-mcp-player/SKILL.md` | Two routing lines added inside the shared contract block; the marker pair stays paired |
+| `STS2AIAgent.Tests/CardViewerScreenContractTests.cs` | Added 3 source contract tests |
+| `STS2AIAgent.Tests/TestRunner.cs` | Appended 3 registration lines |
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 两条判定早于通用网格 | `GameStateService.cs:6840-6850` 早于 `:6861` 的 `GetVisibleGridCardHolders`；红/绿见下 |
-| 用专用名不用 MAIN_MENU | 返回值为 `CARD_LIBRARY` / `CARD_PILE`；理由见 design（`PATCH_NOTES` 先例） |
-| 局内图鉴可关闭 | `GetSubmenuStack` 匹配基类后，局内 `NRunSubmenuStack` 也命中 `CanCloseMainMenuSubmenu` |
-| 牌堆屏可关闭 | 探针/执行端/等待条件三处同源 `IsClosableCardViewer`；执行端 `ForceClick()` 其 `BackButton` |
-| `docs/api.md` 枚举同步 | `api-facts`: **26 screens** 全部出现在文档枚举里 |
-| `SKILL.md` + 内嵌契约 | `Skill.McpPlayerContract`、`Parity.*` 全绿；mod 构建 0 warning |
-| 可否证 | 三组"改坏 → 红 → 还原 → 绿"（见下） |
-| 全量门禁 | C# **351 PASS / 0 FAIL**；MCP 165 OK；7 道 gate 全绿；preflight **372 PASS / 0 FAIL** |
+| Both predicates precede the generic grid | `GameStateService.cs:6840-6850` precedes `GetVisibleGridCardHolders` at `:6861`; red/green below |
+| Dedicated names, not MAIN_MENU | Return values are `CARD_LIBRARY` / `CARD_PILE`; reason in the design (`PATCH_NOTES` precedent) |
+| In-run library is closable | After `GetSubmenuStack` matches the base class, the in-run `NRunSubmenuStack` also hits `CanCloseMainMenuSubmenu` |
+| Pile screen is closable | Probe/executor/wait condition share the one source `IsClosableCardViewer`; the executor `ForceClick()`s its `BackButton` |
+| `docs/api.md` enum in sync | `api-facts`: all **26 screens** appear in the doc enum |
+| `SKILL.md` + embedded contract | `Skill.McpPlayerContract` and `Parity.*` all green; mod build 0 warnings |
+| Falsifiable | Three groups of "break -> red -> restore -> green" (see below) |
+| Full gates | C# **351 PASS / 0 FAIL**; MCP 165 OK; all 7 gates green; preflight **372 PASS / 0 FAIL** |
 
-## 红/绿证据
+## Red/green evidence
 
-命令均为 `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release`：
+All commands are `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release`:
 
-1. 两个早退分支挪到通用网格之后 →
-   `FAIL CardViewer.BranchesPrecedeGrid / NCardLibrary must resolve before its own visible card grid can report CARD_SELECTION.` → 还原后绿
-2. `IsClosableCardViewer` 改回只认 `NCardsViewScreen` →
-   `FAIL CardViewer.ClosableViewerSameSource / Expected '{returnscreenisNCardsViewScreen;}' to contain 'screenisNCardsViewScreenorNCardPileScreen'.` → 还原后绿
-3. `GetSubmenuStack` 改回 `is NMainMenuSubmenuStack` →
-   `FAIL CardViewer.SubmenuStackBase / ... to contain 'currentisNSubmenuStacksubmenuStack'` → 还原后绿
+1. Move both early-return branches after the generic grid ->
+   `FAIL CardViewer.BranchesPrecedeGrid / NCardLibrary must resolve before its own visible card grid can report CARD_SELECTION.` -> green after restoring
+2. Change `IsClosableCardViewer` back to recognize only `NCardsViewScreen` ->
+   `FAIL CardViewer.ClosableViewerSameSource / Expected '{returnscreenisNCardsViewScreen;}' to contain 'screenisNCardsViewScreenorNCardPileScreen'.` -> green after restoring
+3. Change `GetSubmenuStack` back to `is NMainMenuSubmenuStack` ->
+   `FAIL CardViewer.SubmenuStackBase / ... to contain 'currentisNSubmenuStacksubmenuStack'` -> green after restoring
 
-## 两处实现选择（需要复核者知悉）
+## Two implementation choices (reviewers should know)
 
-1. `IsCardsViewClosed` 的**最后一行保留** `return currentScreen is not NCardsViewScreen;`——
-   `ScreenResolutionContractTests.InspectOverlaysCloseThroughTheirOwnClose` 钉住了该字面量，
-   而该测试不在本次写范围。实现改为在其**之前**插入经 `IsClosableCardViewer` 的提前返回，
-   既把新屏纳入同一集合，又不破坏既有断言。后续若允许改该测试，可把它收敛成单行。
-2. 除 design 列出的同步点外，另有 2 处**编译必需**的小改动：
-   `using ...Screens.CardLibrary;`，以及 `WaitForMainMenuSubmenuCloseAsync` 形参类型上移。
+1. **The last line of** `IsCardsViewClosed` **is kept** as `return currentScreen is not NCardsViewScreen;`,
+   because `ScreenResolutionContractTests.InspectOverlaysCloseThroughTheirOwnClose` pins that literal,
+   and that test is outside the write scope of this task. The implementation instead inserts an early return via `IsClosableCardViewer` **before** it,
+   which brings the new screens into the same set without breaking the existing assertion. If that test may be changed later, it can be collapsed to a single line.
+2. Besides the sync points listed in the design, there are 2 small **compile-required** changes:
+   `using ...Screens.CardLibrary;`, and moving up the parameter type of `WaitForMainMenuSubmenuCloseAsync`.
 
-## 顺带修好的邻域（范围坦白）
+## Neighborhood fixed along the way (scope disclosure)
 
-栈查找上移到基类后，`NRunSubmenuStack` 承载的其它 submenu
-（compendium / bestiary / relic collection / potion lab / run history / settings / stats / pause menu，
-见 `NRunSubmenuStack.cs:120-200`）也拿到 `close_main_menu_submenu`。
-它们此前同样是死路（或误报屏幕名），`Pop()` 对它们同样正确——但**这属于本次顺带修好、需要实机确认的邻域**。
+After the stack lookup moved up to the base class, the other submenus hosted on `NRunSubmenuStack`
+(compendium / bestiary / relic collection / potion lab / run history / settings / stats / pause menu,
+see `NRunSubmenuStack.cs:120-200`) also get `close_main_menu_submenu`.
+They were likewise dead ends (or misreported screen names) before, and `Pop()` is equally correct for them, but **this is a neighborhood fixed along the way that needs live confirmation**.
 
-## 只能实机验证
+## Live-only verification
 
-- 点 `NCardPileScreen` 的 BackButton 后屏幕是否真的关闭（`ForceClick()` 绕过输入状态，
-  只有真机能证明 `Released` 真的退栈）。
-- 局内 `NCardLibrary` 经 `NSubmenuStack.Pop()` 后是否回到正确的前一屏。
-- 上述其它局内 submenu 的真机表现。
-- 真机上 `/state.screen` 与 `available_actions` 是否与新屏幕名/新动作一致。
+- Whether the screen really closes after clicking the BackButton of `NCardPileScreen` (`ForceClick()` bypasses the input state,
+  so only a real machine can prove that `Released` really pops the stack).
+- Whether the in-run `NCardLibrary` returns to the correct previous screen after `NSubmenuStack.Pop()`.
+- The real-machine behavior of the other in-run submenus above.
+- Whether `/state.screen` and `available_actions` on a real machine match the new screen names/new actions.
 

@@ -1,27 +1,27 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `mcp_server/src/sts2_mcp/client.py` | 删除 `invite_ai_teammate` 之后（:393-400）不可达的 `execute_action("choose_timeline_epoch", option_index=option_index, ...)` 块；`0 增 9 删`，无其它重构 |
-| `mcp_server/tests/test_client_actions.py`（新） | 6 条用例 + AST 守卫 |
+| `mcp_server/src/sts2_mcp/client.py` | Deleted the unreachable `execute_action("choose_timeline_epoch", option_index=option_index, ...)` block after `invite_ai_teammate` (:393-400); `0 added 9 deleted`, no other refactoring |
+| `mcp_server/tests/test_client_actions.py` (new) | 6 cases + AST guard |
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 死代码消失、只删不加 | `git diff --numstat` → `0 9`；`return` 后紧跟 `choose_timeline_epoch` 定义 |
-| 55 个方法动态遍历 | 方法清单由 `ast` 解析得出（非手写），并断言恰等于 `{_LEGACY_ACTION_TOOLS 的 54 个}` ∪ `{run_console_command}` |
-| 参数映射 6 种形态 | 实测分布：无参 33、`option_index` 15、`play_card(card_index,target_index)`、`resolve_rewards(option_index,card_index)`、`choose_rest_option/use_potion(option_index,target_index)`、`crystal_set_tool(tool)`/`crystal_clear_cell(x,y,tool)`/`run_console_command(command)` |
-| 每方法一次 POST + 正确 action/键/client_context | `_request.assert_called_once_with("POST","/action",payload=...,is_action=True)`；哨兵值互不相同，错键必被抓 |
-| 仅 stdlib、无新依赖 | 只 import `ast`/`unittest`/`unittest.mock`/`pathlib`；`pyproject.toml`/`uv.lock` 未改 |
-| 可否证 | 三处变异全部被抓：`play_card` 键改错（运行时红）、`choose_map_node` 的 `tool_name` 改错（AST+运行时红）、把不可达块插回（AST 守卫 3 条全红，运行时仍绿 → 正是需要 AST 守卫的原因） |
+| Dead code gone, delete only no add | `git diff --numstat` -> `0 9`; the `choose_timeline_epoch` definition follows right after `return` |
+| 55 methods traversed dynamically | The method list comes from `ast` parsing (not hand-written), and is asserted to equal exactly `{the 54 of _LEGACY_ACTION_TOOLS}` ∪ `{run_console_command}` |
+| 6 parameter mapping shapes | Measured distribution: no-arg 33, `option_index` 15, `play_card(card_index,target_index)`, `resolve_rewards(option_index,card_index)`, `choose_rest_option/use_potion(option_index,target_index)`, `crystal_set_tool(tool)`/`crystal_clear_cell(x,y,tool)`/`run_console_command(command)` |
+| One POST per method + correct action/keys/client_context | `_request.assert_called_once_with("POST","/action",payload=...,is_action=True)`; the sentinel values are all distinct, so a wrong key is always caught |
+| stdlib only, no new dependencies | Imports only `ast`/`unittest`/`unittest.mock`/`pathlib`; `pyproject.toml`/`uv.lock` unchanged |
+| Falsifiable | All three mutations caught: a wrong `play_card` key (runtime red), a wrong `tool_name` for `choose_map_node` (AST + runtime red), re-inserting the unreachable block (all 3 AST guard checks red, runtime still green -> exactly why the AST guard is needed) |
 
-## 门禁
+## Gates
 
-`cd mcp_server; uv run --locked python -m unittest discover -s tests` → **159 tests OK**（本任务 +6）。
+`cd mcp_server; uv run --locked python -m unittest discover -s tests` -> **159 tests OK** (this task +6).
 
-## 范围外
+## Out of scope
 
-mod 端是否接受这些 action 未验证（属实机验证）。
+Whether the mod side accepts these actions is unverified (a live verification matter).

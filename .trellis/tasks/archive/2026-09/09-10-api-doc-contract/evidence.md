@@ -16,7 +16,7 @@ listed a `status` enum without the `failed` value the payload can carry.
 
 ## Change
 
-- `docs/api.md`: new "动作总表" section between the `POST /action` heading and the request-body
+- `docs/api.md`: new "Action summary table" section between the `POST /action` heading and the request-body
   table, wrapped in `<!-- BEGIN ACTION CONTRACT -->` / `<!-- END ACTION CONTRACT -->`, listing all 55
   actions in the `- \`name\` — purpose` format.
 - `docs/api.md`: protocol version corrected to `2026-03-11-v1`; `command` and `player_id` request

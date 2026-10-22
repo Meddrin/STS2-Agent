@@ -1,59 +1,59 @@
-# 给牌库/牌堆查看屏正名，并让它们能被逃出去
+# Give the deck/pile viewer screens proper names and let them be escaped
 
-## 背景
+## Background
 
-`NCardLibrary`（图鉴 / 牌库合集）与 `NCardPileScreen`（战斗中点开的抽牌堆/弃牌堆/消耗堆）
-都经 `NCardGrid` 创建可见的 `NGridCardHolder`，于是被 `ResolveNonModalScreen` 的通用网格早退分支
-（E4，`GameStateService.cs:6829-6832`）吃掉，`/state.screen` 报 **假** `CARD_SELECTION`。
+`NCardLibrary` (the compendium / card library) and `NCardPileScreen` (the draw/discard/exhaust pile opened in combat)
+both create visible `NGridCardHolder`s through `NCardGrid`, so they are swallowed by the generic grid early-return branch of `ResolveNonModalScreen`
+(E4, `GameStateService.cs:6829-6832`), and `/state.screen` reports a **false** `CARD_SELECTION`.
 
-而 4c4 之后的 `GetDeckSelectionOptions` **故意**对它们返回空
-（`GameStateService.cs:1725-1731` 有注释说明），`DeckSelectionAvailabilityTests` 钉住这一点。
-所以屏幕上既没有 `select_deck_card`、也没有 `confirm_selection`，`selection` 段为 null，
-但 `skills/sts2-mcp-player/SKILL.md:105` 的 `CARD_SELECTION` 路由却叫模型去调 `select_deck_card`。
+But since 4c4, `GetDeckSelectionOptions` **deliberately** returns empty for them
+(a comment at `GameStateService.cs:1725-1731` explains), and `DeckSelectionAvailabilityTests` pins that.
+So the screen has neither `select_deck_card` nor `confirm_selection`, and the `selection` section is null,
+yet the `CARD_SELECTION` route at `skills/sts2-mcp-player/SKILL.md:105` tells the model to call `select_deck_card`.
 
-可达性是实证的，不是推测：
+Reachability is empirical, not speculative:
 
-- `NCombatCardPile.ShowScreen(_pile, ...)` 把 `NCardPileScreen`（`Control, ICapstoneScreen`）
-  压进 `NCapstoneContainer`；
-  `ActiveScreenContext.GetCurrentScreen()` 在 `NRun.Instance != null` 分支里**先**看
-  `NCapstoneContainer.Instance.CurrentCapstoneScreen`（`ActiveScreenContext.cs:66-69`）⇒ 牌堆屏会被当当前屏；
-- `NCardLibrary : NSubmenu`，由 `NMainMenuSubmenuStack` **和** `NRunSubmenuStack` 两处
-  `GetSubmenuType(typeof(NCardLibrary))` 创建（`NRunSubmenuStack.cs:155-164`）；
-  `GetCurrentScreen` 在 `submenuStack.SubmenusOpen` 时 `Peek()` 到它（`ActiveScreenContext.cs:56-60`）。
+- `NCombatCardPile.ShowScreen(_pile, ...)` pushes `NCardPileScreen` (`Control, ICapstoneScreen`)
+  into `NCapstoneContainer`;
+  in the `NRun.Instance != null` branch `ActiveScreenContext.GetCurrentScreen()` looks at **first**
+  `NCapstoneContainer.Instance.CurrentCapstoneScreen` (`ActiveScreenContext.cs:66-69`) => the pile screen is taken as the current screen;
+- `NCardLibrary : NSubmenu` is created by both `NMainMenuSubmenuStack` **and** `NRunSubmenuStack` through
+  `GetSubmenuType(typeof(NCardLibrary))` (`NRunSubmenuStack.cs:155-164`);
+  `GetCurrentScreen` `Peek()`s it when `submenuStack.SubmenusOpen` (`ActiveScreenContext.cs:56-60`).
 
-逃逸能力两屏不同，这是本任务的核心：
+The two screens differ in escape ability, which is the core of this task:
 
-| 屏 | 今天能逃出去吗 |
+| Screen | Can it be escaped today? |
 |---|---|
-| `NCardLibrary`（主菜单侧） | 能：`close_main_menu_submenu` 经 `CanCloseMainMenuSubmenu` 的 `NSubmenu` + `NMainMenuSubmenuStack` 判定生效 |
-| `NCardLibrary`（局内侧） | **不能**：`GetMainMenuSubmenuStack` 只认 `NMainMenuSubmenuStack`，而局内用的是 `NRunSubmenuStack`（两者是兄弟，都继承 `NSubmenuStack`）⇒ `available_actions` 为空 ⇒ 死路 |
-| `NCardPileScreen` | **不能**：`CanCloseCardsView` 要求 `is NCardsViewScreen`；`GetProceedButton` 走 `IRoomWithProceedButton` / 子节点搜索，该屏只有名为 `"BackButton"` 的按钮（`NCardPileScreen.cs:115-117` 已 `Enable()`）⇒ `available_actions` 为空 ⇒ 死路 |
+| `NCardLibrary` (main menu side) | Yes: `close_main_menu_submenu` works through the `NSubmenu` + `NMainMenuSubmenuStack` check of `CanCloseMainMenuSubmenu` |
+| `NCardLibrary` (in-run side) | **No**: `GetMainMenuSubmenuStack` recognizes only `NMainMenuSubmenuStack`, while in-run uses `NRunSubmenuStack` (the two are siblings, both inheriting `NSubmenuStack`) => `available_actions` is empty => dead end |
+| `NCardPileScreen` | **No**: `CanCloseCardsView` requires `is NCardsViewScreen`; `GetProceedButton` goes through `IRoomWithProceedButton` / a child node search, and this screen has only a button named `"BackButton"` (already `Enable()`d at `NCardPileScreen.cs:115-117`) => `available_actions` is empty => dead end |
 
-## 目标
+## Goals
 
-1. 两个屏各自报**专用**屏幕名，不再冒充 `CARD_SELECTION`；
-2. 两个屏都有真实可用的关闭动作，`available_actions` 不再为空。
+1. Each of the two screens reports a **dedicated** screen name and no longer masquerades as `CARD_SELECTION`;
+2. Both screens have a genuinely usable close action, so `available_actions` is no longer empty.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `ResolveNonModalScreen` 里 `NCardLibrary`、`NCardPileScreen` 的判定早于 E4 通用网格分支
-      （与 `NCardRewardSelectionScreen`/`NUnlockScreen` 同款早退形态）。
-- [x] 屏幕名取专用值 `CARD_LIBRARY` / `CARD_PILE`，**不要**报 `MAIN_MENU`
-      （理由见 design：仓库对"只能关闭的覆盖层"一律给专用名，先例是 `PATCH_NOTES`/`TIMELINE`）。
-- [x] 局内 `NCardLibrary` 能拿到 `close_main_menu_submenu`：submenu 栈查找改为基类 `NSubmenuStack`。
-- [x] `NCardPileScreen` 能拿到 `close_cards_view`：探针与执行端对"可关闭的看牌屏"用**同一个集合**，
-      执行端点它的 `BackButton`，等待条件也能识别该屏已关闭。
-- [x] `docs/api.md` 的 Screen 枚举补两个名字（`api-facts` gate 从源码提取枚举，不补会红）；
-      `close_cards_view` 一节的前提与 `CARDS_VIEW` 描述同步更新。
-- [x] `SKILL.md` 路由补 `CARD_LIBRARY` / `CARD_PILE` 两行；marker 对保持成对，
-      `McpPlayerSkillTests`、`HealthCheckParityTests` 保持绿（内嵌契约仍与 `PlayPrompt.PlayContract` 一致）。
-- [x] 新增源码契约测试（可否证）：早退顺序、`close_cards_view` 探针/执行端同源、栈查找用基类。
-- [x] C# / MCP 全量测试、7 道 gate、preflight 全绿。
+- [x] In `ResolveNonModalScreen` the checks for `NCardLibrary` and `NCardPileScreen` precede the E4 generic grid branch
+      (the same early-return shape as `NCardRewardSelectionScreen`/`NUnlockScreen`).
+- [x] Screen names take the dedicated values `CARD_LIBRARY` / `CARD_PILE`, and **do not** report `MAIN_MENU`
+      (reason in the design: the repo always gives a dedicated name to "overlays that can only be closed", with `PATCH_NOTES`/`TIMELINE` as precedents).
+- [x] The in-run `NCardLibrary` gets `close_main_menu_submenu`: the submenu stack lookup changes to the base class `NSubmenuStack`.
+- [x] `NCardPileScreen` gets `close_cards_view`: the probe and the executor use the **same set** for "closable card viewer screens",
+      the executor clicks its `BackButton`, and the wait condition can recognize that the screen has closed.
+- [x] The Screen enum in `docs/api.md` gains two names (the `api-facts` gate extracts the enum from the source, and without them it goes red);
+      the precondition of the `close_cards_view` section and the `CARDS_VIEW` description are updated in sync.
+- [x] The `SKILL.md` routing gains `CARD_LIBRARY` / `CARD_PILE` lines; the marker pair stays paired,
+      `McpPlayerSkillTests` and `HealthCheckParityTests` stay green (the embedded contract still matches `PlayPrompt.PlayContract`).
+- [x] Added source contract tests (falsifiable): early-return order, `close_cards_view` probe/executor same source, stack lookup using the base class.
+- [x] Full C# / MCP tests, 7 gates, and preflight all green.
 
-## 范围外
+## Out of scope
 
-- 不改动作名、不新增动作（`close_cards_view` / `close_main_menu_submenu` 已存在）。
-- `NCardLibrary` 不走 `close_cards_view`（它由 submenu 栈承载，两条关闭路径会让模型困惑）。
-- `NCardPileScreen` 之外不新增 capstone 屏支持。
-- 实机验证：按钮点击是否真的把屏关掉，只能上真机确认（见 evidence 的"只能实机验证"清单）。
+- Do not change action names or add actions (`close_cards_view` / `close_main_menu_submenu` already exist).
+- `NCardLibrary` does not use `close_cards_view` (it is hosted by the submenu stack, and two close paths would confuse the model).
+- No capstone screen support is added beyond `NCardPileScreen`.
+- Live verification: whether the button click really closes the screen can only be confirmed on a real machine (see the "live-only verification" list in the evidence).
 

@@ -1,32 +1,32 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `mcp_server/tests/test_network_server.py`（新） | 23 条用例 |
-| `mcp_server/tests/test_layered_tools.py`（新） | 12 条用例 |
+| `mcp_server/tests/test_network_server.py` (new) | 23 cases |
+| `mcp_server/tests/test_layered_tools.py` (new) | 12 cases |
 
-生产代码零改动（`network_server.py`/`server.py`/`pyproject.toml`/`uv.lock` 相对 HEAD 无差异）。
+Zero production code changes (`network_server.py`/`server.py`/`pyproject.toml`/`uv.lock` have no difference from HEAD).
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 配置默认值 + 空 token 不启用鉴权 | `NetworkServerConfigTests` 断言 host/port/transport/path/tool_profile/api_base_url/token/log_level 与 `auth_enabled` 两分支 |
-| `_env_flag` 真值表 | `EnvFlagTests`：1/true/True/TRUE/`"  yes  "`/on/0/false/no/2/enabled/空串/纯空白；实测校准出一条真实行为——纯空白不回落默认值（显式非真值） |
-| `_normalize_path` 边界 | `NormalizePathTests`：9 种输入（含 `/mcp/`、`//mcp`、多段、空串） |
-| `parse_args` | `ParseArgsTests`：10 个字段取自环境变量；`sse`+`--stateless-http` → `ctx.exception.code == 2` |
-| `create_network_app` + healthz 两分支 | `NetworkAppTests`：patch `Sts2Client` 注入假 client（不连真实 8080、不绑端口）；断言返回三元组、超时配置、`/`、`/healthz`、`/mcp` 路由；healthz 正常 200 / `Sts2ApiError` → 503（保留 code/retryable）/ 普通异常 → 500 |
-| 8 个 layered 工具 | 每个工具直接调用一次；写入全部落在 `tempfile`（`patch.dict` 设 `STS2_AGENT_KNOWLEDGE_DIR`，在 `create_server` 之前）；断言`jaw_worm_x2+louse_x1` 去重排序、无 event 分支零写入 |
-| 不碰 sts2 的两个工具 | `complete_combat_handoff`/`complete_event_handoff` 断言 `client.get_state_calls == 0` |
-| 仓库不被写脏 | 跑完全套后 `agent_knowledge/` 仍只有 `run_logs/` |
+| Config defaults + empty token does not enable auth | `NetworkServerConfigTests` asserts host/port/transport/path/tool_profile/api_base_url/token/log_level and both branches of `auth_enabled` |
+| `_env_flag` truth table | `EnvFlagTests`: 1/true/True/TRUE/`"  yes  "`/on/0/false/no/2/enabled/empty string/pure whitespace; measuring calibrated one real behavior: pure whitespace does not fall back to the default (an explicit non-true value) |
+| `_normalize_path` boundaries | `NormalizePathTests`: 9 kinds of input (including `/mcp/`, `//mcp`, multi-segment, empty string) |
+| `parse_args` | `ParseArgsTests`: 10 fields taken from environment variables; `sse`+`--stateless-http` -> `ctx.exception.code == 2` |
+| `create_network_app` + both healthz branches | `NetworkAppTests`: patch `Sts2Client` to inject a fake client (no connection to the real 8080, no port binding); assert the returned triple, the timeout configuration, and the `/`, `/healthz`, `/mcp` routes; healthz normal 200 / `Sts2ApiError` -> 503 (keeping code/retryable) / ordinary exception -> 500 |
+| 8 layered tools | Each tool is called once directly; all writes land in `tempfile` (`patch.dict` sets `STS2_AGENT_KNOWLEDGE_DIR`, before `create_server`); assert the deduplicated sorting of `jaw_worm_x2+louse_x1` and zero writes on the no-event branch |
+| Two tools that do not touch sts2 | `complete_combat_handoff`/`complete_event_handoff` assert `client.get_state_calls == 0` |
+| The repo is not dirtied | After running the full suite `agent_knowledge/` still has only `run_logs/` |
 
-## 门禁
+## Gates
 
-`cd mcp_server; uv run --locked python -m unittest discover -s tests` → **159 tests OK**（本任务 +35）。
+`cd mcp_server; uv run --locked python -m unittest discover -s tests` -> **159 tests OK** (this task +35).
 
-## 未证明（只能实机）
+## Not proven (live only)
 
-- `run_network_server_async` 未调用（真实绑端口 + uvicorn.serve），其参数装配只经 `NetworkServerConfig`/`parse_args` 间接覆盖。
-- 真实传输层（端口监听、远程 MCP 客户端 over HTTP/SSE、bearer 鉴权握手）需实机端到端验证。
+- `run_network_server_async` was not called (really binding a port + uvicorn.serve), and its argument assembly is covered only indirectly through `NetworkServerConfig`/`parse_args`.
+- The real transport layer (port listening, remote MCP clients over HTTP/SSE, the bearer auth handshake) needs end-to-end live verification.

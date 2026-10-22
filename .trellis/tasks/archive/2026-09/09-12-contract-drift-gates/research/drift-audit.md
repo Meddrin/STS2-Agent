@@ -1,28 +1,28 @@
-# 证据：会静默漂移的契约
+# Evidence: contracts that drift silently
 
-## 门禁能力矩阵（已核实）
+## Gate capability matrix (verified)
 
-| 脚本 | CI | 本地 preflight | 说明 |
+| Script | CI | Local preflight | Notes |
 |---|---|---|---|
-| `check_verification_gates.py` | ✓ `validate.yml:33` | ✓ `preflight-release.ps1:132` | 四个 gate：lockfile / api-doc / doc-marks / script-encoding |
-| `check_release_metadata.py` | ✓ `:30-32` | ✓ `:96` | 五个文件版本一致 |
-| `check_release_package.py` | ✗ | ✓ `:128`（`--source-root`） | 纯静态，本可进 CI |
-| `test-verification-gates.ps1` | ✓ `:35-36` | ✓ `:136` | 门禁自测 |
+| `check_verification_gates.py` | ✓ `validate.yml:33` | ✓ `preflight-release.ps1:132` | Four gates: lockfile / api-doc / doc-marks / script-encoding |
+| `check_release_metadata.py` | ✓ `:30-32` | ✓ `:96` | Version consistency across five files |
+| `check_release_package.py` | ✗ | ✓ `:128` (`--source-root`) | Purely static, could have been in CI |
+| `test-verification-gates.ps1` | ✓ `:35-36` | ✓ `:136` | Gate self-test |
 
-## 已漂移/裸奔的三条
+## The three that drifted/were unprotected
 
-1. `docs/api.md:124` `"mod_version": "0.11.0"`，文档 `:150` 自述要与 `Router.cs` 一致；
-   没有任何 gate 读它。`rg 'mod_version' docs` 只命中这两处。
-2. 屏幕清单：`ScreenResolutionContractTests` 只覆盖 `return currentScreen switch` 里的 26 项，
-   `GameStateService.ResolveNonModalScreen` 的早退分支（`UNLOCK` / `CARD_SELECTION` /
-   `CARDS_VIEW` / `MULTIPLAYER_LOBBY` / `COMBAT`）不在其内；文档侧（`docs/api.md:70-95` 25 行、
-   SKILL.md 的 Screen Routing）无脚本对齐。
-3. `mcp_server/README.md` 的"当前工具"节缺 14 项（对照 `_LEGACY_ACTION_TOOLS` 的 54 项），
-   没有测试读 README。
+1. `docs/api.md:124` `"mod_version": "0.11.0"`, and the doc itself at `:150` says it must match `Router.cs`;
+   no gate reads it. `rg 'mod_version' docs` hits only those two places.
+2. Screen list: `ScreenResolutionContractTests` covers only the 26 items in `return currentScreen switch`,
+   and the early-return branches of `GameStateService.ResolveNonModalScreen` (`UNLOCK` / `CARD_SELECTION` /
+   `CARDS_VIEW` / `MULTIPLAYER_LOBBY` / `COMBAT`) are not within it; on the doc side (`docs/api.md:70-95`, 25 lines,
+   the Screen Routing in SKILL.md) no script aligns them.
+3. The "current tools" section of `mcp_server/README.md` lacks 14 items (against the 54 of `_LEGACY_ACTION_TOOLS`),
+   and no test reads the README.
 
-## 已受保护的（对照）
+## Already protected (for comparison)
 
-- 动作契约：`GameActionService` switch ↔ `docs/api.md` 契约块（api-doc gate，55 个动作）。
-- 版本五处一致：`check_release_metadata.py`（CI + preflight）。
-- 依赖下限与 lock 一致：`check_verification_gates.py` 的 lockfile gate。
-- SKILL.md 共享契约 ↔ `PlayPrompt`：`McpPlayerSkillTests`（测试工程内）。
+- Action contract: `GameActionService` switch <-> the `docs/api.md` contract block (api-doc gate, 55 actions).
+- Five-place version consistency: `check_release_metadata.py` (CI + preflight).
+- Dependency lower bounds consistent with the lock: the lockfile gate of `check_verification_gates.py`.
+- SKILL.md shared contract <-> `PlayPrompt`: `McpPlayerSkillTests` (inside the test project).

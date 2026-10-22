@@ -1,47 +1,47 @@
-# 证据：等待与乐观判定
+# Evidence: waits and optimistic judgments
 
-## 三处危险写法（原文）
+## The three dangerous patterns (original text)
 
 ```csharp
 // WaitForMainMenuSubmenuOpenAsync (GameActionService.cs:5609-5630)
 var currentScreen = ActiveScreenContext.Instance.GetCurrentScreen();
 if (currentScreen is TSubmenu) { return true; }
-if (!GodotObject.IsInstanceValid(screen)) { return true; }      // ← 主菜单被销毁也算成功
+if (!GodotObject.IsInstanceValid(screen)) { return true; }      // <- a destroyed main menu also counts as success
 
 // WaitForCharacterSelectionTransitionAsync (:5826-5829)
-if (!GodotObject.IsInstanceValid(screen)) { return true; }      // ← 同款
+if (!GodotObject.IsInstanceValid(screen)) { return true; }      // <- the same
 
 // WaitForLobbyReadyTransitionAsync (:5880-5883)
-if (!GodotObject.IsInstanceValid(screen)) { return ready; }     // ← ready=true 时假成功
+if (!GodotObject.IsInstanceValid(screen)) { return ready; }     // <- false success when ready=true
 ```
 
-`WaitForLobbyAscensionTransitionAsync`（:5896+）同位置写的是 `return false;` —— 说明"未确认即失败"
-才是本仓库的既定取态，这三处是漏网。
+`WaitForLobbyAscensionTransitionAsync` (:5896+) writes `return false;` at the same position, which shows that "unconfirmed means failure"
+is this repo's established stance, and these three slipped through.
 
-## 调用点
+## Call sites
 
-- `WaitForMainMenuSubmenuOpenAsync`：:540（open_character_select）、:588（open_timeline）、
-  :4809 / :4816（`StartLocalFourPlayerHostAsync` 邀请链路）。
-- `open_timeline` 的响应直接以该 bool 决定 `status`（:588-600）。
-- `WaitForLobbyReadyTransitionAsync`：`ready_multiplayer_lobby` / `unready` 路径。
+- `WaitForMainMenuSubmenuOpenAsync`: :540 (open_character_select), :588 (open_timeline),
+  :4809 / :4816 (the `StartLocalFourPlayerHostAsync` invite chain).
+- The `open_timeline` response decides `status` directly from that bool (:588-600).
+- `WaitForLobbyReadyTransitionAsync`: the `ready_multiplayer_lobby` / `unready` paths.
 
-## 四个处理器现状
+## Current state of the four handlers
 
-| 动作 | 行 | 现象 |
+| Action | Line | Symptom |
 |---|---|---|
-| `select_deck_card` | :2050-2130 | 守卫用 `CanSelectDeckCard`；执行侧要 `TryGetCombatHandSelectionMetadata` 或 `TryGetCardGridSelectionMetadata` 命中 |
-| `confirm_timeline_overlay` | :702-800 | tutorial/unlock/其它三分支，点击前不重校验 |
-| `crystal_set_tool` | :1607-1645 | `TrySetCrystalSphereTool` 返回 true 即 `completed` |
-| `run_console_command` | :4968-5018 | `consoleTimedOut` 只进 message；`status = stable ? completed : pending` |
+| `select_deck_card` | :2050-2130 | The guard uses `CanSelectDeckCard`; the executor needs `TryGetCombatHandSelectionMetadata` or `TryGetCardGridSelectionMetadata` to hit |
+| `confirm_timeline_overlay` | :702-800 | tutorial/unlock/other three branches, with no revalidation before clicking |
+| `crystal_set_tool` | :1607-1645 | `TrySetCrystalSphereTool` returning true means `completed` |
+| `run_console_command` | :4968-5018 | `consoleTimedOut` goes only into the message; `status = stable ? completed : pending` |
 
-## 误报（不要修）
+## False positive (do not fix)
 
-`open_character_select` 的 `mainMenu.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>()`
-（`GameActionService.cs:545`）**不会返回 null**：反编译
+The `mainMenu.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>()` of `open_character_select`
+(`GameActionService.cs:545`) **never returns null**: decompilation
 `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.MainMenu/NMainMenuSubmenuStack.cs:156-207`
-显示该方法是懒创建（`if (_x == null) { _x = X.Create(); AddChildSafely(...); } return _x;`）。
-E2 审计报告的 B8 是误报。
+shows the method is lazily created (`if (_x == null) { _x = X.Create(); AddChildSafely(...); } return _x;`).
+B8 of the E2 audit report is a false positive.
 
-## 只能实机验证
+## Live-only verification
 
-真实浮层的可达性与点击后行为、timeline 索引契约 —— 离线只能证明"不再乐观"，不能证明"实机成功"。
+Reachability of real overlays and post-click behavior, the timeline index contract: offline can only prove "no longer optimistic", not "succeeds on a real machine".

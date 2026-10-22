@@ -1,32 +1,32 @@
-# 让每个被暴露的动作/字段与执行口径一致
+# Make every surfaced action/field agree with the execution criterion
 
-## 背景
+## Background
 
-探子穷举后的结论：动作级"暴露 vs 可执行"已经同源（同一个 `CanX` 同时驱动 `available_actions`
-与 descriptor 列表），残留矛盾都在 **payload 派生值** 与 **动作口径** 之间：
+The probes' exhaustive conclusion: action-level "exposed vs executable" already share a source (the same `CanX` drives both `available_actions`
+and the descriptor list); the remaining contradictions are between **payload-derived values** and **action criteria**:
 
-| # | 现象 | 证据 |
+| # | Symptom | Evidence |
 |---|---|---|
-| ① | `selection.can_confirm=true` 但 `confirm_selection` 不暴露 | payload `GameStateService.cs:4439-4441` 用 `gridMetadata.CanConfirm`；动作 `CanConfirmSelection`（`:942-954`）还要求 `RequiresConfirmation \|\| MinSelect < MaxSelect` |
-| ② | FTUE modal 的 `modal.can_confirm=false` 但 `confirm_modal` 可用 | payload `:4946` 只看 `confirmButton != null`；动作 `CanConfirmModal`（`:1563-1567`）用 `FtueModalPolicy.ExposeConfirm`（FTUE 无按钮也放行） |
-| ③ | `resolve_rewards` descriptor 谎报 `requires_index=true` | `:395-397`；对照 `collect_rewards_and_proceed`（`:402-404`）是 `false` |
-| ④ | `skip_reward_cards` / `choose_reward_card` 不过滤按钮可用性 | `CanChooseRewardCard`（`:907-910`）只看 `GetCardRewardOptions().Count > 0`；`CanSkipRewardCards`（`:912-915`）只看替代按钮数量；同文件惯例（`CanClaimReward` `:902-905`）要求 `IsEnabled` |
-| ⑤ | 水晶球暴露只看 `IsFinished` | `CanPlayCrystalSphere`（`:1091-1095`）`minigame is { IsFinished: false }`，不看屏幕可见性 |
+| (1) | `selection.can_confirm=true` but `confirm_selection` is not exposed | The payload `GameStateService.cs:4439-4441` uses `gridMetadata.CanConfirm`; the action `CanConfirmSelection` (`:942-954`) additionally requires `RequiresConfirmation \|\| MinSelect < MaxSelect` |
+| (2) | The FTUE modal has `modal.can_confirm=false` but `confirm_modal` is available | The payload at `:4946` looks only at `confirmButton != null`; the action `CanConfirmModal` (`:1563-1567`) uses `FtueModalPolicy.ExposeConfirm` (FTUE lets it through even without a button) |
+| (3) | The `resolve_rewards` descriptor falsely reports `requires_index=true` | `:395-397`; compare `collect_rewards_and_proceed` (`:402-404`), which is `false` |
+| (4) | `skip_reward_cards` / `choose_reward_card` do not filter button availability | `CanChooseRewardCard` (`:907-910`) looks only at `GetCardRewardOptions().Count > 0`; `CanSkipRewardCards` (`:912-915`) looks only at the alternative button count; the convention in the same file (`CanClaimReward` `:902-905`) requires `IsEnabled` |
+| (5) | The crystal sphere exposure looks only at `IsFinished` | `CanPlayCrystalSphere` (`:1091-1095`) `minigame is { IsFinished: false }`, without looking at screen visibility |
 
-## 目标
+## Goals
 
-模型读到的每个"可以做"信号都能被 `act` 接受；每个"必须带 index"的 descriptor 都真的需要 index。
+Every "can do" signal the model reads can be accepted by `act`; every descriptor that "must carry an index" really needs an index.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] ① ② 的 payload 与动作判定同源（同一函数/同一表达式），并有可否证的源码契约测试。
-- [x] ③ 修正为 `requires_index = false`。
-- [x] ④ 过滤条件与同文件惯例一致（`IsEnabled`，必要时 `IsVisibleInTree`）；可否证。
-- [x] ⑤ 给出结论（改或不改 + 理由）并写进 evidence。
-- [x] 全量 C# 测试 / gates / preflight 绿。
+- [x] The payload and the action decision of (1) (2) share a source (the same function/expression), with falsifiable source contract tests.
+- [x] (3) corrected to `requires_index = false`.
+- [x] (4) The filter condition is consistent with the convention in the same file (`IsEnabled`, and `IsVisibleInTree` if necessary); falsifiable.
+- [x] (5) Give a conclusion (change or not + reason) and write it into the evidence.
+- [x] Full C# tests / gates / preflight green.
 
-## 范围外
+## Out of scope
 
-- 不改 `GameActionService.cs`（执行端已同源；本轮只让 payload 与它对齐）。
-- 若既有 `docs/api.md` 描述与修正后的口径冲突才改文档，不做无关重写。
+- Do not change `GameActionService.cs` (the executor already shares the source; this round only aligns the payload with it).
+- Change the docs only if the existing `docs/api.md` description conflicts with the corrected criterion; do no unrelated rewriting.
 

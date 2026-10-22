@@ -1,15 +1,15 @@
-# 设计
+# Design: ground the live assets
 
-## 1. `test-main-menu-active-run.ps1`（活动存档菜单）
+## 1. `test-main-menu-active-run.ps1` (active-save menu)
 
-python 的结论是契约：有存档时 `open_timeline` 被禁用。改法：
+The python conclusion is the contract: with a save, `open_timeline` is disabled. The change:
 
-- 删除 `:92` 的 `Assert-ActionAvailable ... "open_timeline"`；
-- `:112-115` 的等待条件改用活动存档菜单的真实标志（`continue_run` 或 `abandon_run`，与 `:88` 一致）；
-- `:117-152` 的 timeline 序列删除（该路径已由 `run_sts2_validation.py` 的 `suite_new_run_lifecycle`
-  在无存档菜单覆盖）；若想保留诊断，改成"报告 `open_timeline_available` 后跳过"。
+- Delete the `Assert-ActionAvailable ... "open_timeline"` at `:92`;
+- Change the wait condition at `:112-115` to the real flag of the active-save menu (`continue_run` or `abandon_run`, consistent with `:88`);
+- Delete the timeline sequence at `:117-152` (that path is already covered by `suite_new_run_lifecycle` of `run_sts2_validation.py`
+  in the no-save menu); if diagnostics are wanted, change it to "report `open_timeline_available` and then skip".
 
-## 2. `run_sts2_validation.py` 的 epoch 索引
+## 2. The epoch index of `run_sts2_validation.py`
 
 ```python
 timeline_payload = timeline_state.get("timeline") or {}
@@ -23,29 +23,29 @@ timeline_state = ensure_action_ok(
 )["data"]["state"]
 ```
 
-契约依据：`TimelineIndexContractTests.ExecutorIndexesTheSameSlotListTheStateExposes`
-（执行器与 state 用同一槽位列表，不得二次过滤）与 `NonActionableSlotsAreRejectedExplicitly`
-（非 actionable 槽 409 `invalid_target`）。
+Contract basis: `TimelineIndexContractTests.ExecutorIndexesTheSameSlotListTheStateExposes`
+(the executor and the state use the same slot list, with no second filtering) and `NonActionableSlotsAreRejectedExplicitly`
+(a non-actionable slot returns 409 `invalid_target`).
 
-## 3. `test-multiplayer-lobby-flow.ps1` 的屏幕 switch
+## 3. The screen switch of `test-multiplayer-lobby-flow.ps1`
 
-在 `:655` 的 switch 补：
+Add to the switch at `:655`:
 
-- `"CAPSTONE_SELECTION"`：`choose_capstone_option` + `option_index = 0`；
-- `"UNLOCK"`：`confirm_unlock`。
+- `"CAPSTONE_SELECTION"`: `choose_capstone_option` + `option_index = 0`;
+- `"UNLOCK"`: `confirm_unlock`.
 
-兜底 `throw` 已带完整 JSON dump，确认其中含屏幕名与可用动作即可。
+The fallback `throw` already carries a full JSON dump; just confirm that it contains the screen name and the available actions.
 
-## 4. python 屏幕名清单
+## 4. The python screen name list
 
-在 `run_sts2_validation.py` 的 run-progression 区域（`settle_*` / `collect_rewards_if_needed` 附近）
-加注释块：把 `ResolveNonModalScreen` 的 24 个返回值分成"正常流程会消费/由 debug 命令绕过/不会出现"，
-把确实会在正常流程出现却没有分支的屏幕补上处理。分类结论进 evidence。
-`api-facts` gate 会从源码提取屏幕枚举，注释与其同源，不重复维护。
+In the run-progression area of `run_sts2_validation.py` (near `settle_*` / `collect_rewards_if_needed`)
+add a comment block: divide the 24 return values of `ResolveNonModalScreen` into "consumed by the normal flow / bypassed by debug commands / never appear",
+and add handling for the screens that really appear in the normal flow but have no branch. The classification conclusion goes into the evidence.
+`api-facts` gate extracts the screen enum from the source, and the comment shares the same source with it, with no duplicate maintenance.
 
-## 陷阱
+## Pitfalls
 
-- `scripts/*.ps1` 含非 ASCII 必须 UTF-8 BOM；改后跑 `--only script-encoding`。
-- python 改动后 `python -m py_compile scripts/run_sts2_validation.py`。
-- 不引入对 `STS2_ENABLE_DEBUG_ACTIONS` 的新依赖（gating suite 已覆盖 debug 命令）。
+- `scripts/*.ps1` containing non-ASCII must have a UTF-8 BOM; after changing, run `--only script-encoding`.
+- After changing python, run `python -m py_compile scripts/run_sts2_validation.py`.
+- Do not introduce a new dependency on `STS2_ENABLE_DEBUG_ACTIONS` (the gating suite already covers debug commands).
 

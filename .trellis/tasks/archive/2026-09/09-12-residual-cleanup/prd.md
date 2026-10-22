@@ -1,48 +1,48 @@
-# 收尾最后几处残留
+# Close out the last few leftovers
 
-## 背景
+## Background
 
-上一轮收尾后仍留下四处**已被证实、且不需要产品决策**的小问题：
+After the previous round's wrap-up, four **confirmed small issues that need no product decision** remain:
 
-1. **`docs/` 的跟踪漂移**：`.gitignore:15` 忽略 `docs/`，而 31 个 docs/*.md 是被 force-add 进库的。
-   工作树上有 33 个 .md，**两个未入库**（`git status --ignored docs` 显示 `!!`）：
-   `docs/model-compatibility-matrix.md`（2026-09-08 的现行说明）与
-   `docs/phase-6-validation-2026-03-30-dynamic-card-values.md`（带历史快照标记的验证记录）。
-   后果：`git add .` 不会带上新文档；本地 preflight 的 doc-marks 会检查
-   `phase-6-…-dynamic-card-values.md`（实测输出里有它），而 CI 的全新检出看不到该文件 ——
-   **同一道门禁在本地与 CI 的检查集合不同**。
-2. **spec 门禁清单过期**：`.trellis/spec/operations/validation-and-release.md:12` 只列
-   lockfile / api-doc / doc-marks，缺上一轮新增的 `api-facts` 与既有的 `script-encoding`；
-   `--only` 候选串同样过期。同文件的"Release metadata"段仍写"三个文件"，而现在是五个。
-3. **孤儿自测从未运行**：`scripts/sts2-model-budget-proxy-selftest.py` 是全仓唯一的严格零引用脚本，
-   但它正是 `sts2-model-budget-proxy.py`（双开全流程验收的成本守门组件）的**零成本离线自测**：
-   实测离线、4.2 秒、exit 0，检查项含 `real_ledger_untouched`。它从未被 preflight 或 CI 调用。
-4. **打包缺版本守卫**：`scripts/package-release.ps1` 不调用 `check_release_metadata.py`，也不调用
-   `preflight-release.ps1`。也就是说，只要没先手动跑 preflight，就可能用五处不一致的版本号打出发布包。
+1. **Tracking drift of `docs/`**: `.gitignore:15` ignores `docs/`, while 31 docs/*.md files were force-added into the repo.
+   The working tree has 33 .md files, **two not checked in** (`git status --ignored docs` shows `!!`):
+   `docs/model-compatibility-matrix.md` (the current note of 2026-09-08) and
+   `docs/phase-6-validation-2026-03-30-dynamic-card-values.md` (a validation record carrying a historical snapshot marker).
+   Consequence: `git add .` will not pick up new docs; the local preflight's doc-marks checks
+   `phase-6-...-dynamic-card-values.md` (it appears in the measured output) while CI's fresh checkout cannot see that file:
+   **the same gate checks a different set locally and on CI**.
+2. **The spec gate list is outdated**: `.trellis/spec/operations/validation-and-release.md:12` lists only
+   lockfile / api-doc / doc-marks, missing the `api-facts` added last round and the existing `script-encoding`;
+   the `--only` candidate string is likewise outdated. The "Release metadata" section of the same file still says "three files", while it is now five.
+3. **The orphan self-test has never run**: `scripts/sts2-model-budget-proxy-selftest.py` is the only strictly zero-reference script in the repo,
+   but it is exactly the **zero-cost offline self-test** of `sts2-model-budget-proxy.py` (the cost-gating component of the full two-instance acceptance):
+   measured offline, 4.2 seconds, exit 0, with checks including `real_ledger_untouched`. It has never been called by preflight or CI.
+4. **Packaging lacks a version guard**: `scripts/package-release.ps1` does not call `check_release_metadata.py`, nor
+   `preflight-release.ps1`. That is, as long as preflight has not been run by hand first, a release package may be built with five inconsistent version numbers.
 
-## 目标
+## Goals
 
-1. 让 `docs/` 成为受控目录：取消 ignore、把两个未入库文档入库，并加一道门禁
-   "磁盘上的 docs/**/*.md 必须都被 git 跟踪"（本地发现"新文档悄悄没入库"，CI 侧自动退化为恒真）。
-2. 更新 operations spec：门禁表补 `api-facts` / `script-encoding`，刷新 `--only` 列表，
-   把版本同步改成"五个文件"，并补一节脚本清单（离线检查入口 + 刻意不接线的脚本与原因）。
-3. 把 `sts2-model-budget-proxy-selftest.py` 接进 preflight 与 CI，使它从孤儿变成被覆盖的资产；
-   若删除它，门禁必须变红（不能静默消失）。
-4. `package-release.ps1` 在开始构建前先做版本一致性守卫，失败即中止并给出可读原因。
+1. Make `docs/` a controlled directory: remove the ignore, check in the two untracked documents, and add a gate
+   "every docs/**/*.md on disk must be tracked by git" (locally it finds "a new document quietly not checked in", and on CI it automatically degrades to always-true).
+2. Update the operations spec: add `api-facts` / `script-encoding` to the gate table, refresh the `--only` list,
+   change version sync to "five files", and add a script inventory section (offline check entry points + deliberately unwired scripts and reasons).
+3. Wire `sts2-model-budget-proxy-selftest.py` into preflight and CI so it goes from an orphan to a covered asset;
+   if it is deleted, a gate must turn red (it must not vanish silently).
+4. `package-release.ps1` does a version consistency guard before the build starts, aborting on failure with a readable reason.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `git status --ignored docs` 不再显示被忽略的 docs 文件；两个文档已入库。
-- [x] 新门禁对"磁盘上存在但未被 git 跟踪的 docs/*.md"变红，对正常状态变绿；`--only` 可单独选它；
-      在非 git 环境（无 `.git`）下跳过而不是崩溃（给出说明行）。
-- [x] `scripts/test-verification-gates.ps1` 为新门禁补一条自测用例，整体仍全 PASS。
-- [x] spec 的门禁表、`--only` 列表、版本文件数量与当前实现一致；脚本清单准确（每条给 file:line）。
-- [x] preflight 输出里出现运行孤儿自测的步骤且 PASS；`.github/workflows/validate.yml` 同样跑它。
-- [x] `package-release.ps1` 在版本不一致时**先失败**（可离线演示：临时改一处版本号 → 打包脚本立即报错退出，不产出 zip；还原后恢复）。
-- [x] 全量门禁通过：C# 单测、MCP 单测、`check_verification_gates.py`、`check_release_package.py`、preflight 350+ PASS / 0 FAIL。
+- [x] `git status --ignored docs` no longer shows ignored docs files; both documents are checked in.
+- [x] The new gate turns red for "docs/*.md that exist on disk but are not tracked by git" and green for the normal state; `--only` can select it alone;
+      in a non-git environment (no `.git`) it skips instead of crashing (with an explanation line).
+- [x] `scripts/test-verification-gates.ps1` adds one self-test case for the new gate, and still passes entirely.
+- [x] The spec's gate table, `--only` list, and version file count match the current implementation; the script inventory is accurate (each with file:line).
+- [x] The preflight output has a step running the orphan self-test and it PASSes; `.github/workflows/validate.yml` runs it too.
+- [x] `package-release.ps1` **fails first** when versions are inconsistent (demonstrable offline: temporarily change one version number -> the packaging script errors out immediately and produces no zip; restored afterwards).
+- [x] Full gates pass: C# unit tests, MCP unit tests, `check_verification_gates.py`, `check_release_package.py`, preflight 350+ PASS / 0 FAIL.
 
-## 范围外
+## Out of scope
 
-- **不删** `mcp_server/data/eng/`、**不删**任何脚本（删除属产品决策，用户未拍板）。
-- 不改 `docs/api.md` 的动作契约块与其它已受门禁保护的契约。
-- 不给 CI 加 mod 主工程编译（CI 无 `sts2.dll` / `GodotSharp.dll`；本机 preflight 已覆盖该步）。
+- **Do not delete** `mcp_server/data/eng/`, **do not delete** any script (deletion is a product decision, not yet decided by the user).
+- Do not change the action contract block of `docs/api.md` or other contracts already protected by gates.
+- Do not add mod main project compilation to CI (CI has no `sts2.dll` / `GodotSharp.dll`; the local preflight already covers that step).

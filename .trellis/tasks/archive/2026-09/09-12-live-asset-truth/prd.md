@@ -1,48 +1,48 @@
-# 让实机验证资产与当前契约一致
+# Make the live verification assets match the current contract
 
-## 背景
+## Background
 
-`scripts/` 下的实机验证资产在若干处断言了 mod 当前并不提供的契约。它们只在有游戏时才能跑，
-矛盾长期潜伏，会在真机上以"失败"或"崩溃"的形式暴露。已确证四处：
+The live verification assets under `scripts/` assert, in several places, contracts the mod does not currently provide. They can only run when the game is available,
+so the contradictions lay dormant for a long time and would surface on a real machine as "failures" or "crashes". Four are confirmed:
 
-1. `test-main-menu-active-run.ps1` 硬断言活动存档主菜单必有 `open_timeline`（`:92`、
-   `:114` 的等待条件、`:117-152` 的完整 timeline 交互序列）。python 版在同一状态给出相反结论
-   （`run_sts2_validation.py:1548-1550`）：有存档时主菜单 timeline 按钮被禁用
-   （`NMainMenu.UpdateTimelineButtonBehavior`），`open_timeline` 不属于 active-run 契约；
-   `:1827` 再次说明 timeline 只在无存档时打开。两个脚本对同一状态给出互斥断言。
-2. `run_sts2_validation.py:1935-1946` 把 `choose_timeline_epoch` 的 `option_index` 写死为 0。
-   执行端契约（`TimelineIndexContractTests` 钉住 `GameActionService.ResolveTimelineSlot`）要求
-   index 命中 `timeline.slots[]` 里的 actionable 槽位；槽位列表只过滤 `NotObtained`，
-   因此 0 可能是非 actionable 槽 → 409 `invalid_target`。
-3. `test-multiplayer-lobby-flow.ps1:655-733` 的屏幕 switch 只列了 5 种屏幕，其余一律
-   `throw "Unsupported run progression state"`；正常推图会遇到 `CAPSTONE_SELECTION`（章节选择）
-   与 `UNLOCK`，脚本会中途崩溃。
-4. python 侧的屏幕名覆盖缺口：`run_sts2_validation.py` 只识别 9 个屏幕名
-   （MAIN_MENU / MODAL / REWARD / COMBAT / CARD_SELECTION / CHARACTER_SELECT / GAME_OVER /
-   MULTIPLAYER_LOBBY / UNKNOWN），而 `ResolveNonModalScreen` 现在返回 24 个（对照表见 research）；
-   其余屏幕没有分支，遇到即超时或误判。
+1. `test-main-menu-active-run.ps1` hard-asserts that the active-save main menu must have `open_timeline` (`:92`,
+   the wait condition at `:114`, the full timeline interaction sequence at `:117-152`). The python version gives the opposite conclusion for the same state
+   (`run_sts2_validation.py:1548-1550`): with a save, the main menu timeline button is disabled
+   (`NMainMenu.UpdateTimelineButtonBehavior`), and `open_timeline` is not part of the active-run contract;
+   `:1827` again states that the timeline is opened only when there is no save. The two scripts make mutually exclusive assertions about the same state.
+2. `run_sts2_validation.py:1935-1946` hardcodes the `option_index` of `choose_timeline_epoch` to 0.
+   The executor contract (`TimelineIndexContractTests` pins `GameActionService.ResolveTimelineSlot`) requires the
+   index to hit an actionable slot in `timeline.slots[]`; the slot list filters only `NotObtained`,
+   so 0 may be a non-actionable slot -> 409 `invalid_target`.
+3. The screen switch at `test-multiplayer-lobby-flow.ps1:655-733` lists only 5 kinds of screens and `throw`s
+   `"Unsupported run progression state"` for everything else; normal map progression will meet `CAPSTONE_SELECTION` (act selection)
+   and `UNLOCK`, and the script would crash midway.
+4. Screen name coverage gap on the python side: `run_sts2_validation.py` recognizes only 9 screen names
+   (MAIN_MENU / MODAL / REWARD / COMBAT / CARD_SELECTION / CHARACTER_SELECT / GAME_OVER /
+   MULTIPLAYER_LOBBY / UNKNOWN), while `ResolveNonModalScreen` now returns 24 (see research for the comparison table);
+   the other screens have no branch and would time out or be misjudged.
 
-## 目标
+## Goals
 
-让脚本的断言与它读到的 state 同源：不再要求 mod 不提供的动作，索引不再写死，
-屏幕分支与 `ResolveNonModalScreen` 的返回集合对照。
+Make the script assertions share a source with the state they read: no longer require actions the mod does not provide, no longer hardcode indices,
+and check the screen branches against the return set of `ResolveNonModalScreen`.
 
-## 验收标准
+## Acceptance criteria
 
-- [x] `test-main-menu-active-run.ps1` 与 python 版对活动存档主菜单的 timeline 结论一致
-      （两边都不断言 `open_timeline` 必可用），并保留 `open_timeline_available` 这类诊断输出。
-- [x] `choose_timeline_epoch` 的 index 取自 state 的 `timeline.slots[].index` 中 `is_actionable`
-      的第一个槽，不再写死；脚本里留注释指向 `TimelineIndexContractTests`。
-- [x] `test-multiplayer-lobby-flow.ps1` 的屏幕 switch 覆盖正常推图会遇到的屏幕
-      （至少 `CAPSTONE_SELECTION`、`UNLOCK`），兜底错误带屏幕名与可用动作。
-- [x] python 侧把会在正常流程出现的屏幕补上处理或显式说明（写进脚本注释）；
-      最终"哪个屏幕由哪条流程消费"的清单写进 evidence。
-- [x] PowerShell 脚本含非 ASCII 时保持 UTF-8 BOM（`script-encoding` gate），
-      `python -m py_compile` 通过，全量门禁绿。
-- [x] C# / MCP 全量测试、gates、preflight 通过。
+- [x] `test-main-menu-active-run.ps1` and the python version agree on the timeline conclusion for the active-save main menu
+      (neither side asserts that `open_timeline` must be available), and keep diagnostic output such as `open_timeline_available`.
+- [x] The index of `choose_timeline_epoch` is taken from the first `is_actionable` slot among the state's `timeline.slots[].index`
+      and is no longer hardcoded; leave a comment in the script pointing to `TimelineIndexContractTests`.
+- [x] The screen switch of `test-multiplayer-lobby-flow.ps1` covers the screens normal map progression will meet
+      (at least `CAPSTONE_SELECTION`, `UNLOCK`), and the fallback error carries the screen name and available actions.
+- [x] The python side adds handling for screens that appear in the normal flow, or explicitly explains them (written into script comments);
+      the final list of "which screen is consumed by which flow" goes into the evidence.
+- [x] PowerShell scripts containing non-ASCII keep the UTF-8 BOM (the `script-encoding` gate),
+      `python -m py_compile` passes, and the full gates are green.
+- [x] Full C# / MCP tests, gates, and preflight pass.
 
-## 范围外
+## Out of scope
 
-- 不重写脚本的推进策略（不把 python 的 debug-command 路线改成逐屏 UI 路线）。
-- 不为"只能实机验证"的行为新建离线测试骨架；本轮保证语法、编码、契约注释与分支可达。
+- Do not rewrite the scripts' advancement strategy (do not change the python debug-command route into a screen-by-screen UI route).
+- Do not build a new offline test skeleton for behavior that can "only be verified live"; this round guarantees syntax, encoding, contract comments, and branch reachability.
 

@@ -1,25 +1,25 @@
-# 执行清单
+# Execution checklist
 
-1. 读：
-   - `scripts/check_verification_gates.py`：文件头注释（说明每条 gate 的口径）、
-     `GATES` 字典与 `main()`（约 630-670）、`check_docs_tracked`（580-615，跳过形态的范例）、
-     `list_tracked_docs`（560-577，`subprocess.run` 的既有用法）；
-   - `scripts/test-verification-gates.ps1`：`Invoke-Gate` / `Assert-Case` / fixture 构造（1-100 行）与末尾的 case 列表；
-   - `.trellis/spec/operations/validation-and-release.md:10-40`（gate 表与 count）。
-2. 实现 `check_ps1_syntax` 并注册进 `GATES`。
-3. 加两个自测 case。
-4. 更新 spec 的 gate 表/count/--only。
-5. 验证（全部要原始输出）：
+1. Read:
+   - `scripts/check_verification_gates.py`: the file header comment (explaining the criterion of each gate),
+     the `GATES` dict and `main()` (about 630-670), `check_docs_tracked` (580-615, an example of the skip shape),
+     `list_tracked_docs` (560-577, the existing usage of `subprocess.run`);
+   - `scripts/test-verification-gates.ps1`: `Invoke-Gate` / `Assert-Case` / fixture construction (lines 1-100) and the case list at the end;
+   - `.trellis/spec/operations/validation-and-release.md:10-40` (the gate table and count).
+2. Implement `check_ps1_syntax` and register it in `GATES`.
+3. Add two self-test cases.
+4. Update the spec gate table/count/--only.
+5. Verify (raw output is required for all):
    ```powershell
-   python scripts/check_verification_gates.py                     # 7 道全绿
-   python scripts/check_verification_gates.py --only ps1-syntax    # 单跑
+   python scripts/check_verification_gates.py                     # all 7 green
+   python scripts/check_verification_gates.py --only ps1-syntax    # run alone
    powershell -ExecutionPolicy Bypass -File scripts/test-verification-gates.ps1
    powershell -ExecutionPolicy Bypass -File scripts/preflight-release.ps1
    ```
-   手动确认：把 `scripts/build-mod.ps1` 复制一份改成坏语法放进 `scripts/`（**临时**）⇒ 全量 gate 变红并报出该文件；
-   删掉后恢复绿。（或直接依赖自测 case，但至少手动做一次真实的"仓库内坏脚本"验证。）
-6. 不提交、不推送；报告改动文件、红/绿证据、以及任何意外发现。
+   Manual confirmation: copy `scripts/build-mod.ps1` and change it into bad syntax and put it in `scripts/` (**temporarily**) => the full gate turns red and reports that file;
+   after deleting it, green is restored. (Or rely directly on the self-test cases, but at least do one real "bad script inside the repo" verification by hand.)
+6. Do not commit or push; report the changed files, the red/green evidence, and any unexpected findings.
 
-注意：`scripts/*.ps1` 里含非 ASCII 的必须保持 UTF-8 BOM（`script-encoding` gate）——
-你**只新增自测 case 与 gate 代码**，若 `test-verification-gates.ps1` 已经是 BOM 的，保持它。
+Note: scripts under `scripts/*.ps1` that contain non-ASCII must keep the UTF-8 BOM (the `script-encoding` gate):
+you **only add self-test cases and gate code**, and if `test-verification-gates.ps1` already has a BOM, keep it.
 

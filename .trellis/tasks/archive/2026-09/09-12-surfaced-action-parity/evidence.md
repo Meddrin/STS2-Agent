@@ -1,66 +1,66 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent/Game/GameStateService.cs` | 4 处：`:397` `resolve_rewards` → `requires_index = false`；`CanSkipRewardCards` → `GetCardRewardAlternativeButtons(...).Any(button => button.IsEnabled)`（并给 `CanChooseRewardCard` 加注释说明为何**不加**过滤）；`:4448` `selection.can_confirm` → `CanConfirmSelection(currentScreen)`；`:4955` `modal.can_confirm` → `CanConfirmModal(currentScreen)` |
-| `STS2AIAgent.Tests/SurfacedActionParityTests.cs` | 新增，6 条源码契约测试 |
-| `STS2AIAgent.Tests/TestRunner.cs` | 追加 6 行 `SurfacedAction.*` 注册 |
+| `STS2AIAgent/Game/GameStateService.cs` | 4 places: `:397` `resolve_rewards` -> `requires_index = false`; `CanSkipRewardCards` -> `GetCardRewardAlternativeButtons(...).Any(button => button.IsEnabled)` (and a comment on `CanChooseRewardCard` explaining why a filter is **not added**); `:4448` `selection.can_confirm` -> `CanConfirmSelection(currentScreen)`; `:4955` `modal.can_confirm` -> `CanConfirmModal(currentScreen)` |
+| `STS2AIAgent.Tests/SurfacedActionParityTests.cs` | New, 6 source contract tests |
+| `STS2AIAgent.Tests/TestRunner.cs` | Appended 6 `SurfacedAction.*` registration lines |
 
-## 逐条结论
+## Conclusions item by item
 
-| # | 结论 | 依据 |
+| # | Conclusion | Basis |
 |---|---|---|
-| ① | payload 改为直接调用 `CanConfirmSelection(currentScreen)`（design 的 A 方案） | 同源即消除"payload 说能确认、动作不暴露"的窗口；`docs/api.md:1428` 与 `screen-playbooks.md:55` 本就按 `CanConfirmSelection` 规则描述，是旧代码偏离文档 |
-| ② | payload 改为 `CanConfirmModal(currentScreen)` | FTUE 弹窗无自带按钮时仍可确认（`FtueModalPolicy.ExposeConfirm`），旧的 `confirmButton != null` 会低报 |
-| ③ | `requires_index = false` | 执行端不消费 index；`docs/api.md:1028` 的"可带 option_index"描述继续成立 |
-| ④ | `CanSkipRewardCards` 加 `IsEnabled`；`CanChooseRewardCard` **不加** | 见下节 |
-| ⑤ | **不改** | 见下节 |
+| (1) | The payload now calls `CanConfirmSelection(currentScreen)` directly (option A of the design) | A shared source eliminates the window of "the payload says it can confirm, the action is not exposed"; `docs/api.md:1428` and `screen-playbooks.md:55` already describe the `CanConfirmSelection` rule, so the old code deviated from the docs |
+| (2) | The payload changed to `CanConfirmModal(currentScreen)` | An FTUE popup without its own button can still be confirmed (`FtueModalPolicy.ExposeConfirm`), and the old `confirmButton != null` under-reported |
+| (3) | `requires_index = false` | The executor does not consume an index; the description "may carry option_index" at `docs/api.md:1028` still holds |
+| (4) | `CanSkipRewardCards` gains `IsEnabled`; `CanChooseRewardCard` does **not** | See the next section |
+| (5) | **No change** | See the next section |
 
-## ④ / ⑤ 的硬证据（prd 要求落进 evidence）
+## Hard evidence for (4) / (5) (the prd requires it be written into the evidence)
 
-**④ `choose_reward_card` 加不上、也不该加过滤**：
+**(4) `choose_reward_card` cannot take a filter, and should not**:
 
-1. `MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder : Control`，`Control` 没有 `IsEnabled`；
-   奖励选牌的可点状态是私有 `_isClickable`，由 `NCardRewardSelectionScreen.DisableCardsForShortTimeAfterOpening()` 翻转。
-2. 实测编译：改成 `.Any(holder => holder.IsEnabled)` →
-   `GameStateService.cs(913,73): error CS1061: "NCardHolder"未包含"IsEnabled"的定义`。
-3. 执行端 `ExecuteChooseRewardCardAsync` 用 `selected.EmitSignal(NCardHolder.SignalName.Pressed, selected)` 选牌，
-   **绕过** `_isClickable` ⇒ `Count > 0` 正是执行端能兑现的集合，加任何 enabled/visible 过滤只会制造假阴性。
+1. `MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder : Control`, and `Control` has no `IsEnabled`;
+   the clickable state of reward card choice is the private `_isClickable`, flipped by `NCardRewardSelectionScreen.DisableCardsForShortTimeAfterOpening()`.
+2. Measured compile: changing to `.Any(holder => holder.IsEnabled)` ->
+   `GameStateService.cs(913,73): error CS1061: "NCardHolder" does not contain a definition for "IsEnabled"`.
+3. The executor `ExecuteChooseRewardCardAsync` picks the card with `selected.EmitSignal(NCardHolder.SignalName.Pressed, selected)`,
+   **bypassing** `_isClickable` => `Count > 0` is exactly the set the executor can honor, and adding any enabled/visible filter would only create false negatives.
 
-对照组（skip 能加）：`NCardRewardAlternativeButton : NButton : NClickableControl`，`IsEnabled` 是公开属性，
-与 `CanClaimReward` 读 `NRewardButton.IsEnabled` 同源；`GetCardRewardAlternativeButtons` 已过滤 `IsVisibleInTree()`。
+Control group (skip can take it): `NCardRewardAlternativeButton : NButton : NClickableControl`, `IsEnabled` is a public property,
+the same source as `CanClaimReward` reading `NRewardButton.IsEnabled`; `GetCardRewardAlternativeButtons` already filters `IsVisibleInTree()`.
 
-**⑤ 水晶球不加可见性过滤（不可达）**：
+**(5) The crystal sphere gets no visibility filter (unreachable)**:
 
-- `ActiveScreenContext.GetCurrentScreen()` 只在 `NOverlayStack.Peek()` 处产出 `NCrystalSphereScreen`；
-  该屏 `Push` 时 `Visible` 保持 true（`AfterOverlayOpened` 只 tween `modulate:a`，`AfterOverlayHidden` 只 `_proceedButton.Disable()`）。
-- 地图/轮拱盖住 overlay 栈时，`GetCurrentScreen` 更早返回 `NMapScreen` / `CanstoneContainer`。
-- `GetCrystalSphereMinigame` 首行已是 `is not NCrystalSphereScreen → null`，屏幕类型判断就是全部闸门。
-- `SurfacedAction.CrystalSphereScreenGuard` 钉住这一形态：日后有人真加了 `IsVisibleInTree` 过滤会红（已在可否证自检中验证）。
+- `ActiveScreenContext.GetCurrentScreen()` yields `NCrystalSphereScreen` only at `NOverlayStack.Peek()`;
+  on `Push` of that screen `Visible` stays true (`AfterOverlayOpened` only tweens `modulate:a`, `AfterOverlayHidden` only `_proceedButton.Disable()`).
+- When the map/capstone covers the overlay stack, `GetCurrentScreen` returns earlier with `NMapScreen` / `CanstoneContainer`.
+- The first line of `GetCrystalSphereMinigame` is already `is not NCrystalSphereScreen -> null`, so the screen type check is the whole gate.
+- `SurfacedAction.CrystalSphereScreenGuard` pins this shape: if someone later really adds an `IsVisibleInTree` filter it goes red (verified in the falsifiability self-check).
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| ① ② 同源 | 断言 `can_confirm=CanConfirmSelection(currentScreen)` 与 `can_confirm=CanConfirmModal(currentScreen)` |
-| ③ | 断言 `name="resolve_rewards",requires_target=false,requires_index=false` |
-| ④ 是否可证 | `SurfacedAction.SkipRewardCardsEnabledFilter`；`SurfacedAction.ChooseRewardCardCollection` 钉住"不加过滤"的现状 |
-| 全量门禁 | 把 6 处形态逐一还原 → `PASS=341 FAIL=6`（6 条对应断言全红）→ 恢复后 **347 PASS / 0 FAIL**；构建 0 warning；6 gate 全绿；preflight exit 0 |
+| (1)(2) same source | Assert `can_confirm=CanConfirmSelection(currentScreen)` and `can_confirm=CanConfirmModal(currentScreen)` |
+| (3) | Assert `name="resolve_rewards",requires_target=false,requires_index=false` |
+| (4) falsifiable | `SurfacedAction.SkipRewardCardsEnabledFilter`; `SurfacedAction.ChooseRewardCardCollection` pins the "no filter" status quo |
+| Full gates | Reverting the 6 shapes one by one -> `PASS=341 FAIL=6` (all 6 matching assertions red) -> after restoring **347 PASS / 0 FAIL**; build 0 warnings; all 6 gates green; preflight exit 0 |
 
-## 收尾修正（主代理追加，见下一节提交）
+## Wrap-up correction (added by the main agent, see the commit in the next section)
 
-`CanSkipRewardCards` 收紧后，执行端 `ExecuteSkipRewardCardsAsync` 仍写 `alternatives.First()` ⇒
-"暴露说可以、执行可能点到被禁用的第一个按钮"的新窗口。已把执行端改为
-`alternatives.First(button => button.IsEnabled)`（该集合非空由 409 守卫保证），
-并加断言 `SurfacedAction.SkipTargetsEnabledAlternative` 钉住两端口径同源。
+After `CanSkipRewardCards` was tightened, the executor `ExecuteSkipRewardCardsAsync` still wrote `alternatives.First()` =>
+a new window of "exposure says it can, execution may click the first button that is disabled". The executor was changed to
+`alternatives.First(button => button.IsEnabled)` (that the set is non-empty is guaranteed by the 409 guard),
+and the assertion `SurfacedAction.SkipTargetsEnabledAlternative` was added to pin that both ends share the same criterion.
 
-## 只能实机验证
+## Live-only verification
 
-- FTUE 弹窗下 `modal.can_confirm=true` 时 `confirm_modal` 实机确实能收尾。
-- 单选、`RequiresConfirmation=false` 的网格，`selection.can_confirm` 变 false 后模型不再多发 `confirm_selection`。
-- `skip_reward_cards` 的 `IsEnabled` 过滤在真实奖励屏是否恒等价于旧行为。
-- `resolve_rewards` 不带 index 的实机表现。
-- 水晶球"不可见但被解析"的不可达性（结论基于反编译路径，非运行时观测）。
+- Under an FTUE popup with `modal.can_confirm=true`, `confirm_modal` can really finish it on a real machine.
+- For a single-select grid with `RequiresConfirmation=false`, after `selection.can_confirm` becomes false the model no longer sends an extra `confirm_selection`.
+- Whether the `IsEnabled` filter of `skip_reward_cards` is always equivalent to the old behavior on a real reward screen.
+- The live behavior of `resolve_rewards` without an index.
+- The unreachability of "the crystal sphere is invisible but still resolved" (the conclusion is based on decompiled paths, not runtime observation).
 

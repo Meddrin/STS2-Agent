@@ -1,47 +1,47 @@
-# 证据：内嵌契约的可满足性
+# Evidence: satisfiability of the embedded contract
 
-## 链路（已证实）
+## Chain (verified)
 
-`STS2AIAgent.csproj:32-33`（只嵌 `SKILL.md` + `references/screen-playbooks.md`）
-→ `PlayPrompt.cs:43-47`（`ReadEmbedded` + `ExtractSharedContract`）
-→ `PlayPrompt.BuildPlaySystem()`（`:57-71`；`:62` 列工具、`:65/67` 拼契约与 playbook）
-→ `AgentLoop.cs:115-119`（每步重建系统提示）。原生 MCP 的 `instructions` 见 `NativeMcpServer.cs:374`。
+`STS2AIAgent.csproj:32-33` (embeds only `SKILL.md` + `references/screen-playbooks.md`)
+-> `PlayPrompt.cs:43-47` (`ReadEmbedded` + `ExtractSharedContract`)
+-> `PlayPrompt.BuildPlaySystem()` (`:57-71`; `:62` lists tools, `:65/67` splice the contract and playbook)
+-> `AgentLoop.cs:115-119` (rebuilds the system prompt every step). For the `instructions` of native MCP see `NativeMcpServer.cs:374`.
 
-## 唯一的硬性不可满足项
+## The only hard unsatisfiable item
 
-| 契约要求 | 行 | 游戏内 | 证据 |
+| Contract requirement | Line | In-game | Evidence |
 |---|---|---|---|
-| `Call health_check once at session start` | SKILL.md:52、53 | ❌ | `AgentTools.Play`（`AgentTools.cs:70-78`）无该工具；`health_check` 只在 `AgentTools.Mcp`（`:80-83`，`:82`）。调用后 `AgentLoop.cs:547` 返回 `Unknown tool` |
+| `Call health_check once at session start` | SKILL.md:52, 53 | ❌ | `AgentTools.Play` (`AgentTools.cs:70-78`) lacks that tool; `health_check` exists only in `AgentTools.Mcp` (`:80-83`, `:82`). After the call `AgentLoop.cs:547` returns `Unknown tool` |
 
-补充：`PlayPrompt.cs:62` 在同一段里列出了游戏内工具清单（不含 health_check），与要求自相矛盾。
+Addendum: `PlayPrompt.cs:62` lists the in-game tool list (without health_check) in the same passage, contradicting the requirement.
 
-## playbooks 的同类项
+## Similar item in the playbooks
 
-`screen-playbooks.md:93`：debug `fight THE_ARCHITECT_EVENT_ENCOUNTER`。游戏内无 console 工具、
-`act` 无 `command` 位（`AgentTools.cs:7-26`）、`run_console_command` 不在 `available_actions`
-（`GameStateService.cs:2528-2810`）⇒ `AgentLoop.cs:593-603` 判非法。
-外部 MCP 侧可行（`ActionRequest.command` `GameActionService.cs:6623`；
-`STS2_ENABLE_DEBUG_ACTIONS=1` 时注册）。
+`screen-playbooks.md:93`: debug `fight THE_ARCHITECT_EVENT_ENCOUNTER`. In-game there is no console tool,
+`act` has no `command` slot (`AgentTools.cs:7-26`), and `run_console_command` is not in `available_actions`
+(`GameStateService.cs:2528-2810`) => `AgentLoop.cs:593-603` judges it illegal.
+It is feasible on the external MCP side (`ActionRequest.command` `GameActionService.cs:6623`;
+registered when `STS2_ENABLE_DEBUG_ACTIONS=1`).
 
-## 其余契约要求：逐条可满足（抽样已核）
+## The other contract requirements: each satisfiable (sampled and checked)
 
-guided 环、`wait_until_actionable`、三个数据工具、9 个 compact id 字段
-（hand.card_id `GameStateService.cs:3601`；enemies[].enemy_id `3183`；run.deck[].card_ids `3734`；
-relic_ids `3245`；selection/reward/shop/bundles/chest 各字段见 `3298/3324/3696/3343/3542`）、
-`session.mode/phase` 四值（`165-204`）、`error.code/retryable/status_code`（`AgentErrorEnvelope.cs:21,39-46`）、
-`game_over.phase=summary_animating`（`4966-4970`）、`unlock_type/items`（`3036-3043`）、
-`character_select.embark`（`4470`）、`shop.open`（`3384`）、敌方 `intents[].damage/hits/total_damage`
-与 `powers`（`3190-3199`、`3137/3189`）、`map.options[].i/local_vote/votes`（`3462-3481`）、
-`capstone.options[].i`（`1168-1185`）——全部存在。
+The guided loop, `wait_until_actionable`, the three data tools, the 9 compact id fields
+(hand.card_id `GameStateService.cs:3601`; enemies[].enemy_id `3183`; run.deck[].card_ids `3734`;
+relic_ids `3245`; the fields of selection/reward/shop/bundles/chest at `3298/3324/3696/3343/3542`),
+the four values of `session.mode/phase` (`165-204`), `error.code/retryable/status_code` (`AgentErrorEnvelope.cs:21,39-46`),
+`game_over.phase=summary_animating` (`4966-4970`), `unlock_type/items` (`3036-3043`),
+`character_select.embark` (`4470`), `shop.open` (`3384`), enemy `intents[].damage/hits/total_damage`
+and `powers` (`3190-3199`, `3137/3189`), `map.options[].i/local_vote/votes` (`3462-3481`),
+`capstone.options[].i` (`1168-1185`): all exist.
 
-## routing 动作名核对
+## Routing action name check
 
-契约 99-118 行点名的动作名**全部**存在于 `BuildAvailableActionNames`（`2528-2810`）。
-两处非硬性缺口：`MAIN_MENU` 标签同时来自 `NSubmenu`/`NLogoAnimation`/`NMainMenu`
-（`6861-6863`）而 `continue_run`/`switch_profile` 只认 `NMainMenu`；routing 段缺
-`TIMELINE`（`6855`）与 `CARDS_VIEW`（`6815-6818`）两行（playbook 5-17 兜住）。
+The action names mentioned in contract lines 99-118 **all** exist in `BuildAvailableActionNames` (`2528-2810`).
+Two non-hard gaps: the `MAIN_MENU` label comes from `NSubmenu`/`NLogoAnimation`/`NMainMenu` at the same time
+(`6861-6863`) while `continue_run`/`switch_profile` recognize only `NMainMenu`; the routing section lacks the
+`TIMELINE` (`6855`) and `CARDS_VIEW` (`6815-6818`) lines (covered by playbook 5-17).
 
-## 文档层不一致（旁证）
+## Doc-layer inconsistency (corroboration)
 
-`README.md:183` 与 `README.zh-CN.md:183` 都写"Built-in tools match in-game autoplay: health_check, ..."，
-与 `AgentTools.cs:70-78` 不符。
+`README.md:183` and `README.zh-CN.md:183` both say "Built-in tools match in-game autoplay: health_check, ...",
+which does not match `AgentTools.cs:70-78`.

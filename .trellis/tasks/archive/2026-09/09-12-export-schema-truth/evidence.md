@@ -1,33 +1,33 @@
-# 证据
+# Evidence
 
-## 交付
+## Deliverables
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `STS2AIAgent/Agent/GameDataExportSchema.cs`（新） | 7 个 collection 的真实导出字段清单（逐字抄自 `GameDataExportService.cs` 的 `ExportXxx()`）+ `TryGetFields` |
-| `STS2AIAgent/Agent/GameDataFilter.cs` | `SceneFieldSets` 修正：monsters 改 `min_hp/max_hp/moves/damage_values/block_values`；potions 的 `target` → `pool/usage/target_type`；新增 `combat/potions`；补 `is_x_star_cost`/`allow_negative`/`pool`/`is_melted`/`target`/`type`/`act`；新增 internal 只读视图供测试 |
-| `STS2AIAgent.Tests/AgentLoopTests.cs` | 追加 3 条测试（+78 行，未改既有测试） |
+| `STS2AIAgent/Agent/GameDataExportSchema.cs` (new) | The real export field lists of 7 collections (copied verbatim from each `ExportXxx()` in `GameDataExportService.cs`) + `TryGetFields` |
+| `STS2AIAgent/Agent/GameDataFilter.cs` | `SceneFieldSets` corrected: monsters changes to `min_hp/max_hp/moves/damage_values/block_values`; the `target` of potions -> `pool/usage/target_type`; added `combat/potions`; added `is_x_star_cost`/`allow_negative`/`pool`/`is_melted`/`target`/`type`/`act`; added an internal read-only view for tests |
+| `STS2AIAgent.Tests/AgentLoopTests.cs` | Appended 3 tests (+78 lines, existing tests unchanged) |
 
-## 验收
+## Acceptance
 
-| 标准 | 证据 |
+| Criterion | Evidence |
 |---|---|
-| 修复前红 | `FAIL SceneFieldsExistInTheExportSchema`：`combat/monsters: 'hp'/'damage'/'block' is not exported`、`shop/potions: 'target' is not exported` |
-| 修复后绿 | `PASS GameDataExportSchema.SceneFields / ExportCode / KnownCollections` |
-| 双向漂移检测 | 清单加 `ghost_field` → `ExportCode` 红；清单删 `characters` → `KnownCollections` 红；`min_hp`→`hp` → `SceneFields` 红 |
-| collection 键集一致 | `KnownCollectionsMatchTheExportSchema` PASS |
+| Red before the fix | `FAIL SceneFieldsExistInTheExportSchema`: `combat/monsters: 'hp'/'damage'/'block' is not exported`, `shop/potions: 'target' is not exported` |
+| Green after the fix | `PASS GameDataExportSchema.SceneFields / ExportCode / KnownCollections` |
+| Two-way drift detection | Add `ghost_field` to the manifest -> `ExportCode` red; delete `characters` from the manifest -> `KnownCollections` red; `min_hp`->`hp` -> `SceneFields` red |
+| collection key sets agree | `KnownCollectionsMatchTheExportSchema` PASS |
 
-## 门禁
+## Gates
 
-C# **PASS=311 FAIL=0**；`dotnet build` 0 警告 0 错误；MCP 159 OK；`check_verification_gates.py` 通过；`check_release_package.py` 通过；preflight 通过。
+C# **PASS=311 FAIL=0**; `dotnet build` 0 warnings 0 errors; MCP 159 OK; `check_verification_gates.py` passed; `check_release_package.py` passed; preflight passed.
 
-## 只能实机验证 / 已知缺口
+## Live-only verification / known gaps
 
-- 运行时导出内容未验证（清单是源码静态转写；真实 `/data/{collection}` 返回值需游戏在线）。
-- 反向检测只覆盖顶层字段；`vars[]`/`moves[]` 等嵌套子对象的内部字段名不在清单内。
-- Python `_SCENE_FIELD_SETS` 与 C# 清单仍无共享事实源（跨语言机器校验属后续任务）。
-- 新增 `combat/potions` 的实际收益需运行时确认。
+- Runtime export content is unverified (the manifest is a static source transcription; real `/data/{collection}` return values need the game online).
+- Reverse detection covers only top-level fields; the internal field names of nested sub-objects such as `vars[]`/`moves[]` are not in the manifest.
+- The Python `_SCENE_FIELD_SETS` and the C# manifest still have no shared source of truth (cross-language machine verification is a follow-up task).
+- The actual benefit of the new `combat/potions` needs runtime confirmation.
 
-## 备注
+## Notes
 
-录制"修复前红"时使用了仓库外的临时 harness（`%TEMP%\sts2-schema-redcheck`，仅一次性构建产物，未清理成功，与仓库无关）。
+To record "red before the fix" a temporary harness outside the repo was used (`%TEMP%\sts2-schema-redcheck`, a one-off build artifact, not cleaned up successfully, unrelated to the repo).

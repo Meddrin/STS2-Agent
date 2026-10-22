@@ -1,27 +1,27 @@
-# 设计：错误对象的结构化
+# Design: Structuring the error object
 
-## 1. 新文件 `STS2AIAgent/Agent/AgentErrorEnvelope.cs`（纯 BCL，可离线编译）
+## 1. New file `STS2AIAgent/Agent/AgentErrorEnvelope.cs` (pure BCL, compilable offline)
 
 ```csharp
 internal static class AgentErrorEnvelope
 {
     public const string InternalErrorCode = "internal_error";
 
-    // ApiException 以外的一切异常都归到这里；取消由调用方先行处理，不应到达这里。
-    public static bool IsRetryable(Exception exception);          // ApiException.Retryable，否则 false
-    public static string CodeFor(Exception exception);            // ApiException.Code，否则 InternalErrorCode
-    public static int? StatusCodeFor(Exception exception);        // ApiException.StatusCode，否则 null
-    public static object? DetailsFor(Exception exception);        // ApiException.Details，否则 null
-    public static object ToPayload(Exception exception);          // 上面四者组成的匿名对象
+    // Every exception other than ApiException falls into this bucket; cancellation is handled by the caller first and should not reach here.
+    public static bool IsRetryable(Exception exception);          // ApiException.Retryable, otherwise false
+    public static string CodeFor(Exception exception);            // ApiException.Code, otherwise InternalErrorCode
+    public static int? StatusCodeFor(Exception exception);        // ApiException.StatusCode, otherwise null
+    public static object? DetailsFor(Exception exception);        // ApiException.Details, otherwise null
+    public static object ToPayload(Exception exception);          // an anonymous object made of the four above
 }
 ```
 
-**不能**引用 `ApiException` 吗？可以——`ApiException` 本身是纯 BCL（`Server/ApiException.cs`），
-而且已经被编译进测试工程（上一轮的 `ApiExceptionTests`）。所以本文件也可以进测试工程，
-由主代理注册。
+**Can it not** reference `ApiException`? It can: `ApiException` itself is pure BCL (`Server/ApiException.cs`),
+and is already compiled into the test project (`ApiExceptionTests` from the previous round). So this file can also go into the test project,
+registered by the main agent.
 
-若实现时发现把 `StatusCode` 放进 payload 会与既有消费者冲突，可只在 `ApiException` 时输出，
-但要在 evidence 里给出理由与实测。
+If during implementation putting `StatusCode` in the payload conflicts with an existing consumer, it may be emitted only for `ApiException`,
+but the reason and measurements must be given in the evidence.
 
 ## 2. `AgentLoop.cs:665-667`
 
@@ -34,27 +34,27 @@ catch (Exception ex)
 }
 ```
 
-注意返回的第三个值（错误文本）会被 `AutoPlayRecovery` 之类的地方当作"失败原因"使用，
-实现时要确认它仍是非空字符串（用 `ex.Message`，不要改成 code）。
+Note the third returned value (the error text) is used as the "failure reason" by places like `AutoPlayRecovery`,
+so during implementation confirm it is still a non-empty string (use `ex.Message`, do not change it to the code).
 
 ## 3. `GameBridge.ActAsync`
 
-成功路径不变。若实现选择在桥接层也捕获异常，必须与 `AgentLoop` 用**同一个** `AgentErrorEnvelope`，
-不允许两处各写一份字段名。
+The success path is unchanged. If the implementation chooses to also catch exceptions at the bridge layer, it must use the **same** `AgentErrorEnvelope` as `AgentLoop`,
+and two places must not each carry their own copy of the field names.
 
-## 4. 测试
+## 4. Tests
 
-- `AgentErrorEnvelopeTests`（行为测试，离线）：
+- `AgentErrorEnvelopeTests` (behavior tests, offline):
   `ApiException(409, "invalid_action", "m", details, retryable: true)` →
-  `CodeFor`/`StatusCodeFor`/`DetailsFor`/`IsRetryable` 四要素逐个断言；
-  `new InvalidOperationException("x")` → `internal_error` / `null` / `null` / `false`；
-  真值表必须逐值断言（改一个分支就变红）。
-- 源码契约：`AgentLoop` 的 catch 块含 `AgentErrorEnvelope`；`GameBridge.ActAsync` 的
-  序列化对象与 HTTP 信封字段名一致（把 `Router` 的字段名与桥接侧字段名做集合比对，
-  以 `AgentSourceFixture` 读文本）。
+  assert each of the four elements of `CodeFor`/`StatusCodeFor`/`DetailsFor`/`IsRetryable` one by one;
+  `new InvalidOperationException("x")` -> `internal_error` / `null` / `null` / `false`;
+  the truth table must be asserted value by value (changing one branch turns it red).
+- Source contract: the catch block of `AgentLoop` contains `AgentErrorEnvelope`; the
+  serialized object of `GameBridge.ActAsync` has the same field names as the HTTP envelope (compare the field names of `Router` and the bridge side as sets,
+  reading the text via `AgentSourceFixture`).
 
-## 兼容
+## Compatibility
 
-- agent 侧唯一的消费者是 LLM（读 JSON），多出字段只增不减，安全。
-- `error` 从字符串变对象属**破坏性**变化；若 `skills/` 或 `PlayPrompt` 里有地方把 `error` 当字符串读，
-  实现时必须一并修正（在 evidence 里列出全部消费点）。
+- The only consumer on the agent side is the LLM (which reads JSON); extra fields only add and never remove, so it is safe.
+- Changing `error` from a string to an object is a **breaking** change; if anywhere in `skills/` or `PlayPrompt` reads `error` as a string,
+  it must be fixed together during implementation (list all consumers in the evidence).
