@@ -1,71 +1,71 @@
-# v0.12.5 发布记录（2026-09-17）
+# v0.12.5 Release Record (2026-09-17)
 
-> 历史快照：本文件记录 v0.12.5 的 GitHub Release 与 Steam 工坊上传；当前状态见
-> [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical snapshot: this file records the GitHub Release and Steam Workshop upload of v0.12.5; for the current state see
+> [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md).
 
-发布提交：`f361bdb`（PR #145 的 `dev → main` 合并）。tag `v0.12.5` 指向它。
-**一次发布，未重切**——前四次同号重发（v0.12.3 ×2、v0.12.4 ×2）的成因是 tag 之后来的修复
-无处可记；本轮这两条修复也都是 tag 之后发现的，但等在 `CHANGELOG.md` 的 `## Unreleased` 段里，
-直到这次发版才定版。
+Release commit: `f361bdb` (the `dev -> main` merge of PR #145). The tag `v0.12.5` points at it.
+**One release, no re-cut**: the cause of the previous four same-number re-releases (v0.12.3 x2, v0.12.4 x2) was that fixes arriving after the tag
+had nowhere to be recorded; the two fixes this round were also found after the tag, but waited in the `## Unreleased` section of `CHANGELOG.md`
+until this release finalized them.
 
-## 本版内容
+## Contents of This Version
 
-两条玩家 / agent 能感知的运行时修复，**都是驱动真实游戏发现的，不是读代码读出来的**，
-且都在打过补丁的构建上做了实机复验。
+Two runtime fixes that players / agents can perceive, **both found by driving the real game, not by reading code**,
+and both re-verified live on the patched build.
 
-1. **死亡后 `/state.screen` 恢复报 `GAME_OVER`**（PR #142）。死亡后战斗房仍然 active，
-   `ResolveNonModalScreen` 的战斗分支抢在 `NGameOverScreen` 之前命中，整个结算阶段都报 `COMBAT`。
-   实机基线里 8 个「唯一可用动作是 `continue_game_over`」的样本**全部**报 `COMBAT`，
-   2346 个样本里 `GAME_OVER` 一次没出现过。
-2. **失败的游戏动作说出游戏给的原因**（PR #143）。12 条路径共用一句无信息量的
-   "the game task faulted"，分不清「游戏正当拒绝」和「mod 坏了」。
+1. **`/state.screen` reports `GAME_OVER` again after death** (PR #142). After death the combat room is still active, and
+   the combat branch of `ResolveNonModalScreen` hit before `NGameOverScreen`, so the whole settlement phase reported `COMBAT`.
+   In the live baseline, **all** 8 samples where "the only available action is `continue_game_over`" reported `COMBAT`,
+   and `GAME_OVER` never appeared once in 2346 samples.
+2. **Failed game actions state the reason the game gave** (PR #143). 12 paths shared one uninformative
+   "the game task faulted", so "the game legitimately refused" could not be told apart from "the mod is broken".
 
-其余是契约与工具（PR #141）：`docs/api.md` 首次完整描述 `/state`、`api-facts` 闸门扩容、
-打包产出构建指纹、体量棘轮。
+The rest is contracts and tooling (PR #141): `docs/api.md` describes `/state` completely for the first time, the `api-facts` gate was expanded,
+packaging produces a build fingerprint, and a size ratchet was added.
 
 ## GitHub Release
 
-| 字段 | 值 |
+| Field | Value |
 | --- | --- |
-| tag | `v0.12.5` → `f361bdb`（PR #145 的 dev→main 合并） |
-| 资产 | `sts2-ai-agent-v0.12.5-windows.zip` |
-| 字节数 | 562212 |
+| tag | `v0.12.5` -> `f361bdb` (dev->main merge of PR #145) |
+| Asset | `sts2-ai-agent-v0.12.5-windows.zip` |
+| Bytes | 562212 |
 | SHA256 | `0E4A15184A679D95C5064247B2DB0FEFA25E3B68D743D9110A4F59DE0318CFED` |
-| 发布说明 | `build/release/notes-v0.12.5.md`（gitignore） |
+| Release notes | `build/release/notes-v0.12.5.md` (gitignored) |
 
-## Steam 工坊（物品 3796486050）
+## Steam Workshop (Item 3796486050)
 
-上传一次通过，未卡住——这是三次里的第一次（前两次分别卡在 `Upload starting` 与
-`PreparingContent`，都靠重启 Steam 客户端解决）。上传命令：
-`ModUploader.exe upload -w build/steam-workshop/sts2-ai-agent-v0.12.5 -i 3796486050`，
-进程环境带 `HTTP_PROXY` / `HTTPS_PROXY=http://127.0.0.1:10808`（上传前 `curl -x` 自检返回 200）。
+The upload passed on the first try without getting stuck: this is the first of three times (the previous two got stuck at `Upload starting` and
+`PreparingContent`, and both were resolved by restarting the Steam client). Upload command:
+`ModUploader.exe upload -w build/steam-workshop/sts2-ai-agent-v0.12.5 -i 3796486050`,
+with `HTTP_PROXY` / `HTTPS_PROXY=http://127.0.0.1:10808` in the process environment (a `curl -x` self-check before uploading returned 200).
 
-Steam Web API 复核（`GetPublishedFileDetails`）：
+Steam Web API re-check (`GetPublishedFileDetails`):
 
-| 字段 | 值 | 与本地对照 |
+| Field | Value | Comparison with local |
 | --- | --- | --- |
-| `result` | 1 | 物品存在 |
-| `visibility` | 0（公开） | 未因更新回落为私有 |
-| `file_size` | 1238533 | 与 `content/` 字节和**完全相等** |
-| `time_updated` | 2026-09-17 09:36:37 | 上传后即时刷新 |
-| `hcontent_file` | `2962740913650521121` | 本次内容 id |
-| `consumer_app_id` | 2868840 | 正确 |
-| `tags` | Tools & APIs / Utility / QoL | 三个都在位 |
+| `result` | 1 | Item exists |
+| `visibility` | 0 (public) | Not reverted to private by the update |
+| `file_size` | 1238533 | **Exactly equal** to the byte sum of `content/` |
+| `time_updated` | 2026-09-17 09:36:37 | Refreshed immediately after the upload |
+| `hcontent_file` | `2962740913650521121` | This upload's content id |
+| `consumer_app_id` | 2868840 | Correct |
+| `tags` | Tools & APIs / Utility / QoL | All three in place |
 
-当日物品指标（同一次 API 调用）：订阅 90、累计订阅 194、浏览 657、收藏 14。
+Item metrics that day (same API call): 90 subscribers, 194 total subscriptions, 657 views, 14 favorites.
 
-## 构建指纹（首次由打包脚本自动产出）
+## Build Fingerprint (First Produced Automatically by the Packaging Script)
 
-以往这些数字是上传之后手工 `Get-FileHash` 抓的；自 PR #141 起，
-`scripts/lib-build-fingerprint.ps1` 在打包那一刻就写进产物旁的 `build-fingerprint.json`，
-`file_size` 的对账也直接拿它比。`source_tree_dirty: false` 顺带证明产物确实来自该提交，
-而不是从脏工作树构建的。
+In the past these numbers were captured by hand with `Get-FileHash` after the upload; since PR #141,
+`scripts/lib-build-fingerprint.ps1` writes them into `build-fingerprint.json` next to the artifact at packaging time,
+and the `file_size` reconciliation compares against it directly. `source_tree_dirty: false` also proves that the artifact really came from that commit
+and was not built from a dirty working tree.
 
-来源提交 `f361bdb6b2031a434b4f26d04ed764ec6332b27b`，工作树干净。
+Source commit `f361bdb6b2031a434b4f26d04ed764ec6332b27b`, working tree clean.
 
-工坊 content（5 个文件，合计 1238533 字节）：
+Workshop content (5 files, 1238533 bytes in total):
 
-| 文件 | 字节数 | SHA256 |
+| File | Bytes | SHA256 |
 | --- | ---: | --- |
 | `STS2AIAgent.dll` | 1199104 | `1624BBF5CBAB50D415FAFCC59C354A6101616899F2FC00E9C8A76CAFF84CD4A7` |
 | `STS2AIAgent.pck` | 608 | `CD6403306ACA1A3AF5FDC918C0FDD9F9EF78339FCAEFE5BE4032CECC8440BC76` |
@@ -73,32 +73,32 @@ Steam Web API 复核（`GetPublishedFileDetails`）：
 | `README.md` | 3802 | `6A18A53359E678A43F9A436D6F7C6F6B0AFE0C529C3AB40A27958D8E5DC3F0D6` |
 | `LICENSE` | 34637 | `55515BACC3BD3796AF8B3C2864D2BBE1F7B922FB41B827C5C67138F18BB5F008` |
 
-GitHub 产物目录指纹另存于 `build/release/sts2-ai-agent-v0.12.5-windows-fingerprint.json`
-（20 个文件、1695285 字节，gitignore）。
+The fingerprint of the GitHub artifact directory is saved separately at `build/release/sts2-ai-agent-v0.12.5-windows-fingerprint.json`
+(20 files, 1695285 bytes, gitignored).
 
-## 验收证据
+## Acceptance Evidence
 
-实机（隔离离线主机，`--windowed --force-steam off --clientId 2026091701`，API 18080，单实例）：
+Live (isolated offline host, `--windowed --force-steam off --clientId 2026091701`, API 18080, single instance):
 
-- **动作面基线**：2346 对 `/state` 与 `/actions/available` 背靠背采样、12 块屏、22 种动作集变体。
-  非战斗屏 61 个样本零分歧；战斗屏 23 处分歧全部是时序假象（只涉及受门禁管的
-  `end_turn` / `play_card` / `use_potion`，方向跟随「哪个端点后读」而非「哪个表面」）。
-- **`GAME_OVER` 修复复验**：两次独立死亡，10 个 `game_over` 非空样本**全部**报 `GAME_OVER`，
-  零个 `COMBAT`；`continue_game_over` → `return_to_main_menu` 全链路仍然走通，
-  `save_verified` 到达 `true`。12 块基线屏重采、25 条逐屏对照，**没有任何一块屏换名字**。
-- **诊断修复复验**：重复 `room Treasure` 现在返回
+- **Action-surface baseline**: 2346 back-to-back sample pairs of `/state` and `/actions/available`, 12 screens, 22 action-set variants.
+  Zero disagreements in 61 samples on non-combat screens; all 23 disagreements on combat screens are timing artifacts (involving only the gated
+  `end_turn` / `play_card` / `use_potion`, with the direction following "which endpoint was read later" rather than "which surface").
+- **`GAME_OVER` fix re-verification**: two independent deaths, and all 10 non-empty `game_over` samples report `GAME_OVER`,
+  with zero `COMBAT`; the full `continue_game_over` -> `return_to_main_menu` chain still works,
+  and `save_verified` reached `true`. The 12 baseline screens were resampled with 25 per-screen comparisons, and **no screen changed its name**.
+- **Diagnostics fix re-verification**: a repeated `room Treasure` now returns
   `Console command failed: the game task faulted: InvalidOperationException: Attempted to start
-  new relic picking session while one was already occurring.`——异常无害且自解释。
-  成功路径不受影响（成功的控制台命令仍返回 `completed`）。
+  new relic picking session while one was already occurring.`: the exception is harmless and self-explanatory.
+  The success path is unaffected (a successful console command still returns `completed`).
 
-玩家真实 Steam 存档在两轮实机前后各哈希一次：184 个文件、摘要一致、逐文件 diff 为空。
+The player's real Steam save was hashed once before and once after the two live rounds: 184 files, identical digest, empty per-file diff.
 
-离线（发布提交上）：C# **415 PASS / 0 FAIL**、`mcp_server` **224 项 OK**、
-`check_verification_gates.py` **九道闸门全绿**、闸门自测 **29 条**、
-`check_release_metadata.py` 五处版本号一致、`preflight-release.ps1` exit 0、mod 构建 0 警告。
+Offline (on the release commit): C# **415 PASS / 0 FAIL**, `mcp_server` **224 OK**,
+`check_verification_gates.py` **all nine gates green**, gate self-test **29 cases**,
+`check_release_metadata.py` all five version numbers agree, `preflight-release.ps1` exit 0, mod build 0 warnings.
 
-## 未做
+## Not Done
 
-- **工坊简体中文列表仍是旧版**（自 v0.11.0 起缺多条列表项）。`ModUploader` 没有语言参数，
-  只能在工坊网页端手工粘贴 `steam-workshop/description.zh-CN.txt`（仓库里的文案是新的）。
-- 未做订阅端加载冒烟（沿用 2026-09-09 的结论：上传后重启 Steam 可见新内容）。
+- **The Workshop Simplified Chinese listing is still the old version** (missing several list items since v0.11.0). `ModUploader` has no language parameter,
+  so `steam-workshop/description.zh-CN.txt` can only be pasted by hand on the Workshop web page (the copy in the repository is up to date).
+- No subscription-side load smoke check (the 2026-09-09 conclusion stands: after an upload, restarting Steam shows the new content).

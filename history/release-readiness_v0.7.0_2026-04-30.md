@@ -1,20 +1,20 @@
-# 发布验收清单
+# Release Acceptance Checklist
 
-> 历史清单，2026-09-09 归档。以下门槛、版本和已知限制仅针对 v0.7.0，不是当前发布要求。现行发布入口见 [release-readiness.md](../docs/release-readiness.md)。
+> Historical checklist, archived on 2026-09-09. The thresholds, version, and known limitations below apply only to v0.7.0 and are not current release requirements. For the current release entry point see [release-readiness.md](../docs/release-readiness.md).
 
-- 更新时间：`2026-04-30`
-- 目标版本：`v0.7.0`
-- 目标：确认 `STS2 AI Agent` 已达到“多人主流程可发布、验证脚本可复跑、发布包可直接分发”的发布标准。
+- Updated: `2026-04-30`
+- Target version: `v0.7.0`
+- Goal: confirm that `STS2 AI Agent` meets the release standard of "the multiplayer main flow is releasable, the validation scripts can be rerun, and the release package can be distributed as is".
 
-本次发布重点：
+Highlights of this release:
 
-- 多人地图投票可由本地 AI 正确提交，不再丢失主机端首票。
-- 多人休息点 `MEND` 已补齐目标元数据与 `target_index` 执行链路。
-- 启动脚本、多人验证脚本、release 打包流程都已做成可重复执行的封版流程。
+- Multiplayer map voting can be submitted correctly by the local AI and no longer loses the host's first vote.
+- The multiplayer rest site `MEND` now has target metadata and a complete `target_index` execution path.
+- The launch scripts, multiplayer validation scripts, and release packaging flow have all been turned into a repeatable sealed-release process.
 
-## 1. 静态门槛
+## 1. Static Gates
 
-以下命令必须通过：
+The following commands must pass:
 
 ```powershell
 dotnet build "<repo-root>/STS2AIAgent/STS2AIAgent.csproj" -c Release
@@ -23,35 +23,35 @@ cd "<repo-root>/mcp_server"
 uv run python -c "from sts2_mcp.server import create_server; create_server(); print('MCP_IMPORT_OK')"
 ```
 
-也可以直接运行：
+You can also run directly:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/preflight-release.ps1"
 ```
 
-通过标准：
+Pass criteria:
 
-- Mod C# 项目可在 `Release` 配置下编译。
-- MCP Python 源码可编译。
-- MCP server 可成功导入并创建服务实例。
-- `CHANGELOG.md` 与发布文档齐全，且版本信息已同步到 `0.7.0`。
+- The Mod C# project compiles under the `Release` configuration.
+- The MCP Python sources compile.
+- The MCP server can be imported and a server instance created.
+- `CHANGELOG.md` and the release documents are complete, and the version information is synced to `0.7.0`.
 
-## 2. 安装门槛
+## 2. Installation Gates
 
-### Mod 安装
+### Mod Installation
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/build-mod.ps1" -Configuration Release
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/test-mod-load.ps1" -DeepCheck
 ```
 
-通过标准：
+Pass criteria:
 
-- `STS2AIAgent.dll` 已复制到游戏 `mods/` 目录。
-- `STS2AIAgent.pck` 已复制到游戏 `mods/` 目录。
-- 游戏启动后，`/health`、`/state`、`/actions/available` 都能正常返回。
+- `STS2AIAgent.dll` has been copied to the game `mods/` directory.
+- `STS2AIAgent.pck` has been copied to the game `mods/` directory.
+- After the game starts, `/health`, `/state`, and `/actions/available` all return normally.
 
-### MCP 启动
+### MCP Startup
 
 ```powershell
 cd "<repo-root>/mcp_server"
@@ -59,87 +59,87 @@ uv sync
 uv run sts2-mcp-server
 ```
 
-通过标准：
+Pass criteria:
 
-- MCP server 可正常启动。
-- MCP 客户端可成功调用 `health_check`。
-- Mod 未启动时返回的错误信息可理解，不是异常崩溃。
+- The MCP server starts normally.
+- The MCP client can call `health_check` successfully.
+- When the Mod is not running, the error returned is understandable and not a crash.
 
-## 3. 调试门槛
+## 3. Debug Gates
 
-调试控制台必须保持“默认关闭，显式开启后才可用”：
+The debug console must stay "off by default, available only after being explicitly enabled":
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/test-debug-console-gating.ps1"
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/test-debug-console-gating.ps1" -EnableDebugActions
 ```
 
-通过标准：
+Pass criteria:
 
-- 默认情况下，`run_console_command` 返回 `invalid_action`。
-- 显式启用 `STS2_ENABLE_DEBUG_ACTIONS=1` 后，`run_console_command` 可用。
-- MCP server 仅在启用对应环境变量时注册调试工具。
+- By default, `run_console_command` returns `invalid_action`.
+- After explicitly enabling `STS2_ENABLE_DEBUG_ACTIONS=1`, `run_console_command` is available.
+- The MCP server registers the debug tool only when the corresponding environment variable is enabled.
 
-## 4. 单机主流程门槛
+## 4. Single-Player Main Flow Gates
 
-至少覆盖以下流程：
+At least the following flows must be covered:
 
 1. `MAIN_MENU -> open_character_select`
 2. `select_character`
 3. `embark`
-4. 处理开局 `MODAL` / FTUE
+4. Handle the opening `MODAL` / FTUE
 5. `MAP -> choose_map_node`
 6. `COMBAT -> play_card -> end_turn`
-7. 战斗结束后进入奖励或回到地图
+7. After combat ends, enter rewards or return to the map
 
-通过标准：
+Pass criteria:
 
-- `available_actions` 在各阶段暴露正确。
-- 动作执行后状态转换稳定，不出现挂起请求。
-- `state-invariants` 验证通过。
+- `available_actions` is exposed correctly in each phase.
+- State transitions are stable after an action executes, with no hung requests.
+- The `state-invariants` validation passes.
 
-## 5. 多人主流程门槛
+## 5. Multiplayer Main Flow Gates
 
-必须运行：
+Must run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/test-multiplayer-lobby-flow.ps1"
 ```
 
-必须覆盖：
+Must cover:
 
-1. Host 建房、Client 加入。
-2. 双端选角与 ready。
-3. 进入 run 后自动越过开场过场并到达地图。
-4. 双端地图投票与投票状态回显。
-5. 首场战斗中的出牌、回合推进、奖励结算。
-6. 休息点 `MEND` 目标元数据暴露。
-7. 未传 `target_index` 时返回 `invalid_target`。
-8. 传入 `target_index` 后多人 `MEND` 在单次请求内完成。
+1. Host creates a room, Client joins.
+2. Both sides select a character and ready up.
+3. After entering the run, automatically get past the opening cutscene and reach the map.
+4. Both sides' map voting and the vote status echo.
+5. Card plays, turn advancement, and reward settlement in the first combat.
+6. Rest site `MEND` target metadata is exposed.
+7. Omitting `target_index` returns `invalid_target`.
+8. After passing `target_index`, multiplayer `MEND` completes within a single request.
 
-通过标准：
+Pass criteria:
 
-- 脚本整体退出码为 `0`。
-- Host 与 Client 都能推进到战斗后地图或休息点后的稳定状态。
-- `map.local_vote`、`map.player_votes`、节点投票信息可见。
-- `rest.options[*]` 对 `MEND` 暴露 `requires_target` 与有效目标索引。
+- The script's overall exit code is `0`.
+- Both Host and Client can advance to a stable state, on the map after combat or after the rest site.
+- `map.local_vote`, `map.player_votes`, and node vote information are visible.
+- `rest.options[*]` exposes `requires_target` and a valid target index for `MEND`.
 
-## 6. 已知限制
+## 6. Known Limitations
 
-以下限制已确认存在，但不阻塞 `v0.7.0` 作为发布版本：
+The following limitations are confirmed to exist but do not block `v0.7.0` as a release version:
 
-- 在多人奖励结算后，Host 侧调试命令 `run_console_command: room RestSite` 仍可能因为游戏本体同步状态触发内部错误。
-- 该问题只影响 debug 跳房验证，不影响正常 AI 接管下的多人主流程游玩。
+- After multiplayer reward settlement, the host-side debug command `run_console_command: room RestSite` may still trigger an internal error because of the game's own sync state.
+- This issue only affects the debug room-jump validation and does not affect normal multiplayer play under AI takeover.
 
-## 7. 打包门槛
+## 7. Packaging Gates
 
-生成发布包：
+Generate the release package:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/package-release.ps1" -Configuration Release
 ```
 
-发布目录与 zip 至少应包含：
+The release directory and the zip should contain at least:
 
 - `mod/STS2AIAgent.dll`
 - `mod/STS2AIAgent.pck`
@@ -151,8 +151,8 @@ powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/package-release.ps
 - `CHANGELOG.md`
 - `docs/release-readiness.md`
 
-通过标准：
+Pass criteria:
 
-- release 目录生成成功。
-- zip 生成成功。
-- 根目录文档与脚本齐全，可直接交付给最终用户。
+- The release directory is generated successfully.
+- The zip is generated successfully.
+- The root documents and scripts are complete and can be delivered directly to end users.

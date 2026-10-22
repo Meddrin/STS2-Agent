@@ -1,6 +1,6 @@
 # Event option localization variable injection
 
-> 历史快照：本文件记录的是当时的一次排查/修复过程，不代表当前状态。当前状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical snapshot: this file records one investigation and fix from that time and does not represent the current state. For the current state, see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md).
 
 ## Symptom
 

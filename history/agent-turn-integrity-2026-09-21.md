@@ -1,39 +1,39 @@
-# Agent 回合完整性修复记录
+# Agent Turn Integrity Fix Record
 
-Historical snapshot / 历史快照：2026-09-21。设备 CharBook，工作分支 dev。修复前基线为 `00aad146b8bafb27a64aabb806f823f412251998`。
+Historical snapshot: 2026-09-21. Device CharBook, working branch dev. Baseline before the fixes: `00aad146b8bafb27a64aabb806f823f412251998`.
 
-用户要求修复第二轮审查确认的全部 5 项问题。沿用此前要求，本轮不启动游戏、不部署到游戏目录、不调用真实付费模型，也不推送或发布。已有 `cstest.log` 和 `v.log` 保留。
+The user asked for all 5 issues confirmed by the second review round to be fixed. Following the earlier instruction, this round did not launch the game, deploy into the game directory, call a real paid model, or push or release. The existing `cstest.log` and `v.log` were kept.
 
-## 五项修复
+## The Five Fixes
 
-| 问题 | 修改后的行为 | 主要代码与测试 |
+| Issue | Behavior after the change | Main code and tests |
 | --- | --- | --- |
-| F01：已接受动作之后的状态读取失败引起重发 | 收到 bridge 成功回执即记录动作；后续读状态失败报告 pending / stable=false；本次决策不再提交第二个动作。真正的动作拒绝仍可被纠正。 | `AgentLoop.ExecuteActAsync` / `CompleteWithToolsAsync`；工具调用、聊天、JSON fallback、显式拒绝对照。 |
-| F02：当轮已知 Token 未进入下一轮检查 | 每次请求前检查历史用量加当轮已知用量，包含外挂视觉；检查不写账，最终结果只入账一次。 | `SessionBudgetGuard.CheckBudget`；95 + 10 超过上限 100 时拦住下一请求；视觉后同样拦截。 |
-| F03：取消导致已完成动作和使用量丢失 | 取消异常携带部分回执，恢复器先记录已发生事实再停止；run boundary 同样保留回执；没有返回的 provider Token 保持未知。 | `AgentTurnCanceledException` / `AutoPlayRecovery` / `AgentRuntime.Accounting`；完成后取消、出牌后取消、后续模型请求、读工具、视觉和 run boundary。 |
-| F04：主动发言早于游玩记账导致越过请求上限 | 游玩结果和预算先提交，再进入主动发言；预算已满直接停止；共享回合门锁持续到记账完成，排队请求也不会读到旧账。 | Recovery 的 `afterTurn` / `turnGate` 与 runtime 接线；1 次上限不启动主动发言、2 次上限各记一次、主动发言取消、排队请求测试。 |
-| F05：非对象动作参数越过错误处理 | 根节点先验证 Object；`[]` / `null` / 数字 / 布尔 / 字符串 / 损坏 JSON 返回 invalid_request，保留请求用量并允许模型修正。 | `AgentLoop.ParseArgs` / `TryReadActReason`；恢复与结构化错误两组测试。 |
+| F01: a failed state read after an accepted action caused a resend | The action is recorded as soon as the bridge success receipt arrives; a later state-read failure reports pending / stable=false; this decision no longer submits a second action. A genuine action rejection can still be corrected. | `AgentLoop.ExecuteActAsync` / `CompleteWithToolsAsync`; comparisons for tool calls, chat, JSON fallback, and explicit rejection. |
+| F02: the tokens already known in the current turn did not enter the next check | Before each request, history usage plus the current turn's known usage is checked, including the external vision call; the check does not write to the ledger, and the final result is booked only once. | `SessionBudgetGuard.CheckBudget`; 95 + 10 exceeding the limit of 100 blocks the next request; the same block applies after vision. |
+| F03: cancellation lost the completed action and usage | The cancellation exception carries the partial receipt, and the recovery code records what already happened before stopping; the run boundary likewise keeps the receipt; provider tokens that were not returned stay unknown. | `AgentTurnCanceledException` / `AutoPlayRecovery` / `AgentRuntime.Accounting`; cancellation after completion, after playing a card, during a later model request, read tools, vision, and the run boundary. |
+| F04: proactive speech ran ahead of play accounting and crossed the request limit | The play result and budget are committed first, then proactive speech begins; if the budget is full it stops directly; the shared turn gate is held until accounting completes, so queued requests do not read a stale ledger. | Recovery's `afterTurn` / `turnGate` and the runtime wiring; a limit of 1 request does not start proactive speech, a limit of 2 books one each, proactive speech cancellation, and queued request tests. |
+| F05: a non-object action argument got past error handling | The root node is validated as an Object first; `[]` / `null` / numbers / booleans / strings / corrupt JSON return invalid_request, keep the request usage, and let the model correct itself. | `AgentLoop.ParseArgs` / `TryReadActReason`; two test groups for recovery and structured errors. |
 
-## 记账边界
+## Accounting Boundary
 
-普通回合由最终结果入账。中断回合由异常携带的结果入账。两条路径互斥。自动游玩使用 recovery 的统一提交步骤；单步、聊天和队友路径在释放共享回合锁之前消费结果。中断自动游玩只更新事实记录，不把旧回合显示成仍在运行。
+A normal turn is booked from its final result. An interrupted turn is booked from the result carried by the exception. The two paths are mutually exclusive. Auto-play uses the recovery code's unified commit step; the single-step, chat, and teammate paths consume the result before releasing the shared turn lock. An interrupted auto-play only updates the fact record and does not show the old turn as still running.
 
-主动发言在游玩入账之后执行，自己的结果或取消回执单独入账一次。当前回合的预算检查只读取累计值，不提前写入；因此检查重复调用不会重复计数。
+Proactive speech runs after play is booked, and its own result or cancellation receipt is booked separately once. The current turn's budget check only reads cumulative values and does not write ahead; therefore repeated calls to the check do not double count.
 
-本轮新增 `AgentRuntime.Accounting.cs`，将现有会话记账与界面结果投影集中在同一 partial；主文件的大小预算从 1400 下调到 1350。没有调整公开 HTTP/MCP 请求字段、发行版本或第三方依赖。
+This round added `AgentRuntime.Accounting.cs`, putting the existing session accounting and the UI result projection in one partial; the main file's size budget was lowered from 1400 to 1350. No public HTTP/MCP request fields, release version, or third-party dependencies were changed.
 
-## 回归与验证
+## Regression and Validation
 
-基线为 C# 589 项和 Python 315 项。先只增加 10 项永久回归：9 项在原始代码上失败，正常单动作对照通过。证据在 `build/agent-turn-integrity-2026-09-21/red.log`。
+The baseline was 589 C# tests and 315 Python tests. First only 10 permanent regressions were added: 9 failed on the original code, and the normal single-action control passed. Evidence is in `build/agent-turn-integrity-2026-09-21/red.log`.
 
-首轮修复的测试仅被新 partial 尚未暂存的源码清单检查拦截，加入索引后通过。扩展验证已经分别达到 609 和 612 项 C# 全部通过。最终完整 `preflight-release.ps1` 已退出 0：C# **615 项通过 / 0 失败**，Python **315 项通过**，Release 构建 **0 警告 / 0 错误**，16 个预检步骤与其中 12 道验证检查全部通过。
+The tests for the first round of fixes were blocked only by the source manifest check, because the new partial had not been staged yet; after adding it to the index they passed. The extended validation reached 609 and then 612 C# tests, all passing. The final full `preflight-release.ps1` exited 0: C# **615 passed / 0 failed**, Python **315 passed**, Release build **0 warnings / 0 errors**, and all 16 preflight steps and the 12 validation checks within them passed.
 
-本轮新增 **26 项 C# 回归与接线检查**。日志位于 `build/agent-turn-integrity-2026-09-21/preflight.log`；机器可读摘要为同目录的 `verification-summary.json`。`tested-source-hashes.json` 记录接受最终验证的源码摘要，收尾时逐文件核对一致。
+This round added **26 C# regression and wiring checks**. Logs are at `build/agent-turn-integrity-2026-09-21/preflight.log`; the machine-readable summary is `verification-summary.json` in the same directory. `tested-source-hashes.json` records the source digest that passed the final validation, checked file by file at wrap-up and found consistent.
 
-最初的失败用例和最终测试共同证明：动作后的读失败从重复执行 2 次变为仅执行 1 次；95 + 10 Token 超过 100 的场景停止后续模型请求；完成后取消保留 1 次请求 / 25 Token；1 次请求上限拦住主动发言；非对象参数会返回结构化错误并保留已知用量。
+The initial failing cases and the final tests together show: a read failure after an action went from executing twice to executing only once; the 95 + 10 token scenario exceeding 100 stops later model requests; cancellation after completion keeps 1 request / 25 tokens; a 1-request limit blocks proactive speech; a non-object argument returns a structured error and keeps the known usage.
 
-永久回归入口：`dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release`。具体用例集中在 `STS2AIAgent.Tests/AgentTurnIntegrityTests.cs`，每项均注册到 TestRunner。
+Permanent regression entry point: `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj -c Release`. The specific cases are in `STS2AIAgent.Tests/AgentTurnIntegrityTests.cs`, and each one is registered in TestRunner.
 
-## 证据限度
+## Limits of the Evidence
 
-模型和游戏接口使用受控假对象，排队/取消测试使用真实 Task、CancellationToken 与 SemaphoreSlim。涉及 Godot 的 runtime 通过源码接线检查和真实 Mod 编译验证；本轮没有实机线程调度、画面、真实模型用量或完整对局结果。未来实机验证应重点观察暂停恰好发生在出牌收尾、请求结束和主动发言时的界面及决策日志。
+The model and game interfaces use controlled fakes, and the queueing/cancellation tests use real Task, CancellationToken, and SemaphoreSlim. The runtime parts that touch Godot are covered by source wiring checks and a real Mod build; this round had no live thread scheduling, visuals, real model usage, or full-run results. Future live validation should focus on the UI and decision log when a pause lands exactly at the end of a card play, the end of a request, or during proactive speech.

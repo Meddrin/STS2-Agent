@@ -1,99 +1,99 @@
-# STS2 AI Agent 当前开发路线图
+# STS2 AI Agent Current Development Roadmap
 
-> 历史路线图，2026-09-09 归档。标题中的“当前”、任务清单和验收状态仅属于 2026-03-11；当前状态唯一入口为 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical roadmap, archived on 2026-09-09. The "current" in the title, the task list, and the acceptance status apply only to 2026-03-11; the single entry point for current status is [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md).
 
-更新时间：`2026-03-11`
+Updated: `2026-03-11`
 
 ---
 
-## 总体进度
+## Overall Progress
 
-| 阶段 | 描述 | 状态 |
+| Phase | Description | Status |
 | --- | --- | --- |
-| Phase 0A | 环境搭建 | 已完成 |
-| Phase 0B | 反编译与逆向勘察 | 已完成 |
-| Phase 1A | 协议冻结 | 已完成 |
-| Phase 1B | Mod 骨架 + `/health` | 已完成 |
-| Phase 1C | 最小纵切 | 已完成 |
-| Phase 2 | 战斗状态提取 | 已完成 |
-| Phase 3 | 战斗动作执行 | 已完成 |
-| Phase 4A | 地图 / 奖励 / 宝箱 | 代码已完成，待统一实机验证 |
-| Phase 4B | 事件 / 休息点 | 代码已完成，待统一实机验证 |
-| Phase 4C | 商店 | 代码已完成，待统一实机验证 |
-| Phase 5 | 全链路补齐（角色选择 / 药水 / Modal / Game Over） | 代码已完成，待统一实机验证 |
-| Phase 6 | 集成与回归 | 未开始 |
+| Phase 0A | Environment setup | Done |
+| Phase 0B | Decompilation and reverse-engineering survey | Done |
+| Phase 1A | Protocol freeze | Done |
+| Phase 1B | Mod skeleton + `/health` | Done |
+| Phase 1C | Minimal vertical slice | Done |
+| Phase 2 | Combat state extraction | Done |
+| Phase 3 | Combat action execution | Done |
+| Phase 4A | Map / rewards / chests | Code complete, awaiting unified live validation |
+| Phase 4B | Events / rest sites | Code complete, awaiting unified live validation |
+| Phase 4C | Shop | Code complete, awaiting unified live validation |
+| Phase 5 | Full-chain coverage (character select / potions / Modal / Game Over) | Code complete, awaiting unified live validation |
+| Phase 6 | Integration and regression | Not started |
 
 ---
 
-## 当前能力盘点
+## Current Capability Inventory
 
 ### HTTP API
 
-| 端点 | 状态 |
+| Endpoint | Status |
 | --- | --- |
-| `GET /health` | 已验证 |
-| `GET /state` | 已验证 |
-| `GET /actions/available` | 已验证 |
-| `POST /action` | 已验证 |
+| `GET /health` | Verified |
+| `GET /state` | Verified |
+| `GET /actions/available` | Verified |
+| `POST /action` | Verified |
 
-### 已实现动作
+### Implemented Actions
 
-| 动作 | 状态 |
+| Action | Status |
 | --- | --- |
-| `end_turn` | 已验证 |
-| `play_card` | 已验证 |
-| `choose_map_node` | 已验证 |
-| `claim_reward` | 已验证 |
-| `choose_reward_card` | 已验证 |
-| `collect_rewards_and_proceed` | 已验证 |
-| `proceed` | 已验证 |
-| `continue_run` | 代码已完成，待实机验证 |
-| `abandon_run` | 代码已完成，待实机验证 |
-| `open_character_select` | 代码已完成，待实机验证 |
-| `open_timeline` | 代码已完成，待实机验证 |
-| `close_main_menu_submenu` | 代码已完成，待实机验证 |
-| `choose_timeline_epoch` | 代码已完成，待实机验证 |
-| `confirm_timeline_overlay` | 代码已完成，待实机验证 |
-| `skip_reward_cards` | 代码已完成，待实机验证 |
-| `select_deck_card` | 代码已完成，待实机验证 |
-| `open_chest` | 代码已完成，待实机验证 |
-| `choose_treasure_relic` | 代码已完成，待实机验证 |
-| `choose_event_option` | 代码已完成，待实机验证 |
-| `choose_rest_option` | 代码已完成，待实机验证 |
-| `open_shop_inventory` | 代码已完成，待实机验证 |
-| `close_shop_inventory` | 代码已完成，待实机验证 |
-| `buy_card` | 代码已完成，待实机验证 |
-| `buy_relic` | 代码已完成，待实机验证 |
-| `buy_potion` | 代码已完成，待实机验证 |
-| `remove_card_at_shop` | 代码已完成，待实机验证 |
-| `select_character` | 代码已完成，待实机验证 |
-| `embark` | 代码已完成，待实机验证 |
-| `use_potion` | 代码已完成，待实机验证 |
-| `discard_potion` | 代码已完成，待实机验证 |
-| `confirm_modal` | 代码已完成，待实机验证 |
-| `dismiss_modal` | 代码已完成，待实机验证 |
-| `return_to_main_menu` | 代码已完成，待实机验证 |
+| `end_turn` | Verified |
+| `play_card` | Verified |
+| `choose_map_node` | Verified |
+| `claim_reward` | Verified |
+| `choose_reward_card` | Verified |
+| `collect_rewards_and_proceed` | Verified |
+| `proceed` | Verified |
+| `continue_run` | Code complete, awaiting live validation |
+| `abandon_run` | Code complete, awaiting live validation |
+| `open_character_select` | Code complete, awaiting live validation |
+| `open_timeline` | Code complete, awaiting live validation |
+| `close_main_menu_submenu` | Code complete, awaiting live validation |
+| `choose_timeline_epoch` | Code complete, awaiting live validation |
+| `confirm_timeline_overlay` | Code complete, awaiting live validation |
+| `skip_reward_cards` | Code complete, awaiting live validation |
+| `select_deck_card` | Code complete, awaiting live validation |
+| `open_chest` | Code complete, awaiting live validation |
+| `choose_treasure_relic` | Code complete, awaiting live validation |
+| `choose_event_option` | Code complete, awaiting live validation |
+| `choose_rest_option` | Code complete, awaiting live validation |
+| `open_shop_inventory` | Code complete, awaiting live validation |
+| `close_shop_inventory` | Code complete, awaiting live validation |
+| `buy_card` | Code complete, awaiting live validation |
+| `buy_relic` | Code complete, awaiting live validation |
+| `buy_potion` | Code complete, awaiting live validation |
+| `remove_card_at_shop` | Code complete, awaiting live validation |
+| `select_character` | Code complete, awaiting live validation |
+| `embark` | Code complete, awaiting live validation |
+| `use_potion` | Code complete, awaiting live validation |
+| `discard_potion` | Code complete, awaiting live validation |
+| `confirm_modal` | Code complete, awaiting live validation |
+| `dismiss_modal` | Code complete, awaiting live validation |
+| `return_to_main_menu` | Code complete, awaiting live validation |
 
-### 已实现状态字段
+### Implemented State Fields
 
-| 字段 | 状态 |
+| Field | Status |
 | --- | --- |
-| `combat.player` / `combat.hand` / `combat.enemies` | 已实现并验证 |
-| `run.deck` / `run.relics` / `run.potions` / `run.gold` | 已实现，待统一实机验证 |
-| `map.current_node` / `map.available_nodes` | 已验证 |
-| `map.rows` / `map.cols` / `map.starting_node` / `map.boss_node` / `map.second_boss_node` / `map.nodes` | 已实现，待统一实机验证 |
-| `reward.*` / `selection.*` | 已实现，待统一实机验证 |
-| `chest.*` | 已实现，待统一实机验证 |
-| `event.*` | 已实现，待统一实机验证 |
-| `rest.*` | 已实现，待统一实机验证 |
-| `shop.*` | 已实现，待统一实机验证 |
-| `character_select.*` | 已实现，待统一实机验证 |
-| `modal.*` | 已实现，待统一实机验证 |
-| `game_over.*` | 已实现，待统一实机验证 |
+| `combat.player` / `combat.hand` / `combat.enemies` | Implemented and verified |
+| `run.deck` / `run.relics` / `run.potions` / `run.gold` | Implemented, awaiting unified live validation |
+| `map.current_node` / `map.available_nodes` | Verified |
+| `map.rows` / `map.cols` / `map.starting_node` / `map.boss_node` / `map.second_boss_node` / `map.nodes` | Implemented, awaiting unified live validation |
+| `reward.*` / `selection.*` | Implemented, awaiting unified live validation |
+| `chest.*` | Implemented, awaiting unified live validation |
+| `event.*` | Implemented, awaiting unified live validation |
+| `rest.*` | Implemented, awaiting unified live validation |
+| `shop.*` | Implemented, awaiting unified live validation |
+| `character_select.*` | Implemented, awaiting unified live validation |
+| `modal.*` | Implemented, awaiting unified live validation |
+| `game_over.*` | Implemented, awaiting unified live validation |
 
-### MCP 工具
+### MCP Tools
 
-当前 MCP 已注册并可用的工具：
+MCP tools currently registered and available:
 
 - `health_check`
 - `get_game_state`
@@ -134,43 +134,43 @@
 
 ---
 
-## 任务清单
+## Task List
 
-### T-1: Phase 4A 实机回归
+### T-1: Phase 4A Live Regression
 
-- [ ] 验证 `map.nodes` 全图结构
-- [ ] 验证 `skip_reward_cards`
-- [ ] 验证 `select_deck_card`
-- [ ] 验证宝箱 relic 选择后再 `proceed`
+- [ ] Verify the full `map.nodes` graph structure
+- [ ] Verify `skip_reward_cards`
+- [ ] Verify `select_deck_card`
+- [ ] Verify choosing a chest relic and then `proceed`
 
-### T-2: Phase 4B 事件系统
+### T-2: Phase 4B Event System
 
 - [x] `EventPayload`
 - [x] `choose_event_option`
-- [x] MCP / 文档同步
-- [ ] 验证事件分支切换
-- [ ] 验证事件完成后 proceed 选项
-- [ ] 验证事件嵌套战斗链路
+- [x] MCP / documentation sync
+- [ ] Verify event branch switching
+- [ ] Verify the proceed option after an event finishes
+- [ ] Verify the nested-combat event chain
 
-### T-3: Phase 4B 休息点系统
+### T-3: Phase 4B Rest Site System
 
 - [x] `RestPayload`
 - [x] `choose_rest_option`
-- [x] `select_deck_card` 覆盖升级牌选择
-- [ ] 验证普通休息链路
-- [ ] 验证 SMITH 进入选牌并返回
+- [x] `select_deck_card` covers upgrade card selection
+- [ ] Verify the ordinary rest chain
+- [ ] Verify SMITH entering card selection and returning
 
-### T-4: Phase 4C 商店系统
+### T-4: Phase 4C Shop System
 
 - [x] `ShopPayload`
 - [x] `open_shop_inventory` / `close_shop_inventory`
 - [x] `buy_card` / `buy_relic` / `buy_potion`
 - [x] `remove_card_at_shop`
-- [ ] 验证库存开关
-- [ ] 验证买卡 / 买 relic / 买药水
-- [ ] 验证删牌进入选牌后返回商店或地图
+- [ ] Verify the inventory toggle
+- [ ] Verify buying cards / relics / potions
+- [ ] Verify that card removal enters card selection and then returns to the shop or the map
 
-### T-5: Phase 5 全链路补齐
+### T-5: Phase 5 Full-Chain Coverage
 
 - [x] `continue_run`
 - [x] `abandon_run`
@@ -189,32 +189,32 @@
 - [x] `confirm_modal`
 - [x] `dismiss_modal`
 - [x] `return_to_main_menu`
-- [ ] 验证角色选择到开局
-- [ ] 验证 FTUE / Modal 拦截与放行
-- [ ] 验证战斗内药水使用 / 丢弃
-- [ ] 验证 Game Over 返回主菜单
+- [ ] Verify character select through run start
+- [ ] Verify FTUE / Modal interception and release
+- [ ] Verify in-combat potion use / discard
+- [ ] Verify Game Over returning to the main menu
 
-### T-6: Phase 6 集成与回归
+### T-6: Phase 6 Integration and Regression
 
-- [ ] 统一跑一遍完整 run 的关键链路
-- [ ] 记录失败场景与日志
-- [ ] 收敛 API / MCP / 文档剩余漂移
-
----
-
-## 推荐执行顺序
-
-1. 先做统一实机验证，不再继续加新功能。
-2. 验证顺序按阻塞性排：角色选择 / Modal / 地图 / 事件 / 休息点 / 商店 / 奖励 / 宝箱 / Game Over。
-3. 战斗内把 `use_potion` / `discard_potion` 插入回归脚本。
-4. 发现问题后只修阻塞完整 run 的缺陷，避免顺手重构。
+- [ ] Run the key chain of one complete run end to end
+- [ ] Record failure scenarios and logs
+- [ ] Converge the remaining API / MCP / documentation drift
 
 ---
 
-## 当前风险
+## Recommended Execution Order
 
-1. Windows 下无法热替换已加载的 Mod DLL，所有实机验证都依赖“关游戏 -> 安装 -> 重开”。
-2. `GameStateService.cs` 仍是高冲突文件，后续修 bug 时要避免顺手扩大改动面。
-3. 事件、休息点、商店、Modal 都依赖 UI 树结构，游戏更新后最容易失效。
-4. `map.nodes` 只提供结构和运行时状态，不负责路线评分；路径规划仍应留在上层 agent。
-5. 当前代码已完成全链路覆盖，但 Phase 6 之前都不能算“实机闭环已验收”。
+1. Do unified live validation first, and stop adding new features.
+2. Order the validation by how blocking each item is: character select / Modal / map / events / rest sites / shop / rewards / chests / Game Over.
+3. Insert `use_potion` / `discard_potion` into the in-combat regression script.
+4. When problems are found, fix only the defects that block a complete run, and avoid refactoring in passing.
+
+---
+
+## Current Risks
+
+1. On Windows a loaded Mod DLL cannot be hot-swapped, so every live validation depends on "close the game -> install -> reopen".
+2. `GameStateService.cs` is still a high-conflict file, so later bug fixes must avoid widening the change surface in passing.
+3. Events, rest sites, shop, and Modal all depend on the UI tree structure, which is what most easily breaks after a game update.
+4. `map.nodes` only provides structure and runtime state and does no route scoring; path planning should stay in the upper-level agent.
+5. The current code has full-chain coverage, but until Phase 6 nothing counts as "live closed loop accepted".

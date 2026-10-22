@@ -1,265 +1,265 @@
-# 实机验收记录（五个目标候选版本）
+# Live Acceptance Record (Five-Goal Candidate Version)
 
-> 历史快照：本文件是 2026-09-10 的隔离实机验收记录，不代表当前状态；当前状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical snapshot: this file is the isolated live acceptance record of 2026-09-10 and does not represent the current state; see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md) for the current status.
 
-记录日期：2026-09-10。范围：本周期五个目标（依赖收口、主动发言与语气、docs/api.md 动作契约、陈旧文档归档、验证闸门）的 Release 候选，在隔离游戏副本上做离线闸门 + 真实游戏端到端验收，并收口主动发言的最后一项实机验证。
+Record date: 2026-09-10. Scope: the Release candidate for this cycle's five goals (dependency cleanup, proactive speech and tone, the docs/api.md action contract, archiving stale documents, verification gates), accepted on an isolated game copy with offline gates + real-game end-to-end runs, closing out the last live validation item for proactive speech.
 
-## 候选与环境
+## Candidate and Environment
 
-| 项 | 值 |
+| Item | Value |
 | --- | --- |
-| Mod 版本 | 0.10.5 |
-| 候选 DLL SHA256 | 4C2092EFC771BF435440B426989B5E07D8CB5689156CEFA7A06F971B8109D420 |
-| 候选 PCK SHA256 | 73AA0233254B7B79B494E20606A82DA126A3DACED331C1D9B1323A032F90DD38 |
-| 游戏版本 | v0.111.0 |
-| 隔离副本 | build/validation-2026-09-08/game/SlayTheSpire2.exe（exe SHA256 8602C26BFFD2937E3841835FD8360EF8E974624A543E05977229FD3D062BE231） |
-| 启动参数 | --windowed --force-steam off --clientId 2026091001（离线，不写 Steam 档案） |
-| API | http://127.0.0.1:8080，debug actions 开启 |
-| 验收期间 settings | build/validation-2026-09-10/settings.json（端点指向死端口 18099，全程未配真实模型） |
-| 服务日志 | %APPDATA%/SlayTheSpire2/logs/godot.log（后续启动会覆盖，关键结论已摘录本文） |
-| 原始证据目录 | build/validation-2026-09-10/（build 被 gitignore，套件日志在 suites/ 子目录） |
+| Mod version | 0.10.5 |
+| Candidate DLL SHA256 | 4C2092EFC771BF435440B426989B5E07D8CB5689156CEFA7A06F971B8109D420 |
+| Candidate PCK SHA256 | 73AA0233254B7B79B494E20606A82DA126A3DACED331C1D9B1323A032F90DD38 |
+| Game version | v0.111.0 |
+| Isolated copy | build/validation-2026-09-08/game/SlayTheSpire2.exe (exe SHA256 8602C26BFFD2937E3841835FD8360EF8E974624A543E05977229FD3D062BE231) |
+| Launch arguments | --windowed --force-steam off --clientId 2026091001 (offline, does not write the Steam profile) |
+| API | http://127.0.0.1:8080, debug actions enabled |
+| settings during acceptance | build/validation-2026-09-10/settings.json (the endpoint points at the dead port 18099; no real model was configured throughout) |
+| Service log | %APPDATA%/SlayTheSpire2/logs/godot.log (later launches overwrite it; the key conclusions are excerpted in this document) |
+| Raw evidence directory | build/validation-2026-09-10/ (build is gitignored; the suite logs are in the suites/ subdirectory) |
 
-## 离线闸门
+## Offline Gates
 
-| 检查 | 命令 | 结果 |
+| Check | Command | Result |
 | --- | --- | --- |
-| 验证闸门 | python scripts/check_verification_gates.py | exit 0；api-doc 55 动作一致、doc-marks 7 条、lockfile 5 条 |
-| 闸门自测 | powershell -File scripts/test-verification-gates.ps1 | exit 0；全部漂移用例 PASS |
-| 发布预检 | powershell -File scripts/preflight-release.ps1 | exit 0 |
-| C# 核心单测 | dotnet run --project STS2AIAgent.Tests | 210 PASS / 0 FAIL（本周期复验） |
-| MCP 单测 | uv run --with pytest python -m pytest tests/ -q | 49 passed, 61 subtests passed（本周期复验） |
+| Verification gates | python scripts/check_verification_gates.py | exit 0; api-doc 55 actions consistent, doc-marks 7 entries, lockfile 5 entries |
+| Gate self-test | powershell -File scripts/test-verification-gates.ps1 | exit 0; all drift cases PASS |
+| Release preflight | powershell -File scripts/preflight-release.ps1 | exit 0 |
+| C# core unit tests | dotnet run --project STS2AIAgent.Tests | 210 PASS / 0 FAIL (re-verified this cycle) |
+| MCP unit tests | uv run --with pytest python -m pytest tests/ -q | 49 passed, 61 subtests passed (re-verified this cycle) |
 
-本轮同时验证并提交了工作区里未提交的闸门增强（scripts/check_verification_gates.py、scripts/test-verification-gates.ps1 的版本约束求解：支持 >=、<、~=、^ 等，并对 uv.lock / package-lock.json / pyproject.toml 做真实比对）。
+This round also verified and committed the uncommitted gate enhancement in the working tree (the version-constraint solving in scripts/check_verification_gates.py and scripts/test-verification-gates.ps1: supports >=, <, ~=, ^, and so on, with real comparison against uv.lock / package-lock.json / pyproject.toml).
 
-补充发现：AGENTS.md 与 mcp_server/README 记录的测试命令 uv run pytest tests/ -v 在干净检出下不可执行——pytest 并未声明在 mcp_server/pyproject.toml 里，uv run pytest 会直接报 Failed to spawn: pytest / program not found（uv run python -m pytest 亦为 No module named pytest）。本次改用 uv run --with pytest python -m pytest tests/ -q 得到 49 passed。这是目标五「可复现验证」的一处缺口。
+Additional finding: the test command uv run pytest tests/ -v recorded in AGENTS.md and mcp_server/README cannot be executed on a clean checkout: pytest is not declared in mcp_server/pyproject.toml, so uv run pytest fails directly with Failed to spawn: pytest / program not found (uv run python -m pytest likewise gives No module named pytest). This time uv run --with pytest python -m pytest tests/ -q was used, giving 49 passed. This is a gap in goal five, "reproducible verification".
 
-## 实机套件结果
+## Live Suite Results
 
-端口 8080 的隔离实例，套件原始输出保存在 build/validation-2026-09-10/suites/。共执行 13 项：10 通过、3 失败、1 项未运行。
+An isolated instance on port 8080; the raw suite output is saved in build/validation-2026-09-10/suites/. 13 were run in total: 10 passed, 3 failed, 1 not run.
 
-| 套件 | 结果 | 备注 |
+| Suite | Result | Notes |
 | --- | --- | --- |
-| mod-load | PASS | mod_version 0.10.5，status ready |
-| state-summary | PASS | MAIN_MENU，动作可读 |
-| state-invariants | PASS | 4 actions，0 failure / 0 warning |
-| debug-console-gating --enable-debug-actions | PASS | help 返回完整命令表；工具注册门控正确 |
-| mcp-tool-profile | PASS | guided 10 工具 |
-| new-run-lifecycle | PASS | IRONCLAD → MAP → die → GAME_OVER → MAIN_MENU，11 秒 |
-| bootstrap-active-run | PASS | 造局到 MAP |
-| deferred-potion-flow | PASS | LIQUID_MEMORIES 选择流；use_potion 返回 pending，选牌后回到 COMBAT |
-| target-index-contract | PASS | target_index_space / requires_target 契约正确 |
-| enemy-intents-payload | PASS | BYRDONIS SWOOP_MOVE，伤害 17 单次命中 |
-| combat-hand-confirm-flow | FAIL | 见发现 1 |
-| assert-active-run-main-menu | FAIL | 见发现 2（open_timeline 不可用） |
-| main-menu-active-run | FAIL | 见发现 2（同一断点） |
-| multiplayer-lobby-flow | 未运行 | 见「未覆盖项」 |
+| mod-load | PASS | mod_version 0.10.5, status ready |
+| state-summary | PASS | MAIN_MENU, actions readable |
+| state-invariants | PASS | 4 actions, 0 failure / 0 warning |
+| debug-console-gating --enable-debug-actions | PASS | help returns the full command table; tool registration gating is correct |
+| mcp-tool-profile | PASS | guided 10 tools |
+| new-run-lifecycle | PASS | IRONCLAD -> MAP -> die -> GAME_OVER -> MAIN_MENU, 11 seconds |
+| bootstrap-active-run | PASS | Run set up to MAP |
+| deferred-potion-flow | PASS | LIQUID_MEMORIES selection flow; use_potion returns pending, and after card selection it returns to COMBAT |
+| target-index-contract | PASS | target_index_space / requires_target contract correct |
+| enemy-intents-payload | PASS | BYRDONIS SWOOP_MOVE, damage 17, single hit |
+| combat-hand-confirm-flow | FAIL | See finding 1 |
+| assert-active-run-main-menu | FAIL | See finding 2 (open_timeline unavailable) |
+| main-menu-active-run | FAIL | See finding 2 (same breakpoint) |
+| multiplayer-lobby-flow | Not run | See "Not Covered" |
 
-套件之外，本轮还手动走通了这些动作链路（均为隔离实例）：abandon_run + confirm_modal、save_and_quit（战斗中与地图上都成功）、continue_run、choose_map_node → COMBAT、confirm_selection（选牌确认后回到 COMBAT）、以及时间线三连 open_timeline → confirm_timeline_overlay → close_main_menu_submenu。控制台命令 help、room、card、potion、die、win 均可用。
+Outside the suites, this round also walked through these action chains by hand (all on the isolated instance): abandon_run + confirm_modal, save_and_quit (succeeded both in combat and on the map), continue_run, choose_map_node -> COMBAT, confirm_selection (back to COMBAT after confirming a card selection), and the timeline triple open_timeline -> confirm_timeline_overlay -> close_main_menu_submenu. The console commands help, room, card, potion, die, win all worked.
 
-## 实机发现
+## Live Findings
 
-### 1. combat-hand-confirm-flow 失败（基线内既有回归，非本周期引入）
+### 1. combat-hand-confirm-flow Failed (a Pre-existing Regression within the Baseline, Not Introduced This Cycle)
 
-现象：注入 PURITY 打出后进入 CARD_SELECTION，选中一张牌时接口返回 status=completed、stable=true，而界面仍在等待确认（selection.requires_confirmation=true、can_confirm=true、selected_count=1）。套件期望选牌后保持 pending，故断言失败。
+Symptom: after injecting and playing PURITY it enters CARD_SELECTION, and when one card is selected the interface returns status=completed, stable=true while the UI is still waiting for confirmation (selection.requires_confirmation=true, can_confirm=true, selected_count=1). The suite expects pending to be kept after selecting a card, so the assertion failed.
 
-定位：STS2AIAgent/Game/GameActionService.cs 的 WaitForCombatHandSelectionStepAsync 中，选中数变化时直接 return true。该函数引入提交 52c3467（与套件同一提交）此处是 return false；基础线 cdd820a（上次已认可构建）与当前 HEAD 都是 return true，变化发生在本周期起始点之前。对比：同类多选 use_potion 仍返回 pending（deferred-potion-flow 通过），两者语义不一致。
+Location: in WaitForCombatHandSelectionStepAsync in STS2AIAgent/Game/GameActionService.cs, when the selected count changes it directly does return true. In commit 52c3467 that introduced this function (the same commit as the suite) this spot was return false; the baseline cdd820a (the last accepted build) and the current HEAD are both return true, so the change happened before the start of this cycle. Comparison: the similar multi-select use_potion still returns pending (deferred-potion-flow passes), so the two semantics are inconsistent.
 
-影响：调用方无法用 stable 判断「选择仍在等待确认」，只能靠再读一次 selection 字段。修复需重跑联机整局（dd1cfe6 起的自动游玩流程依赖该函数），因此本轮只记录、未改动代码。
+Impact: callers cannot use stable to tell that "the selection is still waiting for confirmation" and can only read the selection field again. The fix requires rerunning a full multiplayer run (the auto-play flow since dd1cfe6 depends on this function), so this round only recorded it and did not change the code.
 
-### 2. 有进行中存档时主菜单不暴露 open_timeline（套件与游戏行为差异）
+### 2. The Main Menu Does Not Expose open_timeline When a Run Save Exists (Difference Between the Suite and the Game's Behavior)
 
-现象：主菜单存在 continue_run/abandon_run 时，动作集为 switch_profile、continue_run、abandon_run、invite_ai_teammate；无存档时为 switch_profile、open_character_select、open_timeline、invite_ai_teammate。assert-active-run-main-menu 与 main-menu-active-run 都断言有存档时 open_timeline 必须可用，故无法通过。
+Symptom: when the main menu has continue_run/abandon_run, the action set is switch_profile, continue_run, abandon_run, invite_ai_teammate; with no save it is switch_profile, open_character_select, open_timeline, invite_ai_teammate. Both assert-active-run-main-menu and main-menu-active-run assert that open_timeline must be available when a save exists, so they cannot pass.
 
-定位：CanOpenTimeline 要求时间线按钮 visible 且 enabled。同一个查找逻辑在没有存档时能正常返回（open_timeline 可用），说明不是节点查找失效，而是游戏 v0.111.0 在有进行中存档时就没有暴露时间线入口。
+Location: CanOpenTimeline requires the timeline button to be visible and enabled. The same lookup logic returns normally when there is no save (open_timeline is available), showing that the node lookup is not broken, but that game v0.111.0 simply does not expose the timeline entry when an in-progress save exists.
 
-替代覆盖：无存档主菜单下已手动验证 open_timeline、confirm_timeline_overlay、close_main_menu_submenu 三个动作全部 completed。choose_timeline_epoch 在全新档案上本就不可用（时间线直接给确认浮层），属档案状态限制。
+Substitute coverage: with no save in the main menu, the three actions open_timeline, confirm_timeline_overlay, and close_main_menu_submenu were manually verified to all complete. choose_timeline_epoch is unavailable on a brand-new profile in any case (the timeline goes straight to the confirmation overlay), which is a profile state limitation.
 
-### 3. 全新档案的一次性教学弹窗会让套件首次运行失败（环境前置）
+### 3. The One-Time Tutorial Popups of a Brand-New Profile Make the Suite Fail on Its First Run (Environment Precondition)
 
-两种实测：首次进图时 NMapSelectFtue 让 run_console_command die 被拒（invalid_action：A run does not appear to be in progress）；首次获得药水时 NObtainPotionFtue 常驻，使 use_potion 在整段等待中不可用。两者都在该档案消费一次后不再出现，重跑即 PASS（new-run-lifecycle、deferred-potion-flow 均如此）。建议在验收流程前先做一次预热，或在等待动作可用前统一 resolve 一次 FTUE。
+Two measured cases: on first entering the map, NMapSelectFtue made run_console_command die get rejected (invalid_action: A run does not appear to be in progress); on first obtaining a potion, NObtainPotionFtue stays up permanently, making use_potion unavailable for the whole wait. Both stop appearing once that profile has consumed them once, and a rerun then PASSes (as new-run-lifecycle and deferred-potion-flow both did). It is advisable to do a warm-up before the acceptance flow, or to resolve the FTUE once uniformly before waiting for actions to become available.
 
-### 4. 进行中的局只在自然进入节点时落盘（流程知识，影响既有脚本）
+### 4. An In-Progress Run Is Written to Disk Only on Naturally Entering a Node (Process Knowledge, Affects Existing Scripts)
 
-实测：bootstrap 造局停在 MAP 时，无论强杀进程还是 save_and_quit 都不会写出 current_run.save，主菜单也没有 continue_run；先用 choose_map_node 自然进入一次节点后，立刻出现 current_run.save（41801 字节）与 progress 更新，此后 save_and_quit 即可得到带 continue_run 的主菜单。调试命令 room Monster 跳房间不会触发该存档钩子。
+Measured: when a bootstrap-built run stops on the MAP, neither killing the process nor save_and_quit writes current_run.save, and the main menu has no continue_run; after first entering a node naturally with choose_map_node, current_run.save (41801 bytes) and the progress update appear immediately, and after that save_and_quit gives a main menu with continue_run. The debug command room Monster jumping rooms does not trigger that save hook.
 
-因此 scripts/test-full-regression.ps1 里「造局 → 强杀 → 重启期待 continue_run」的 Ensure-ActiveRunMainMenu 在本环境不成立，应改为「造局 → 自然选一次地图节点 → save_and_quit」。
+Therefore Ensure-ActiveRunMainMenu in scripts/test-full-regression.ps1, with its "build run -> kill -> restart and expect continue_run", does not hold in this environment and should become "build run -> pick one map node naturally -> save_and_quit".
 
-### 5. 观察：主动发言的情境键不随游玩会话重置
+### 5. Observation: The Proactive Speech Situation Key Is Not Reset with the Play Session
 
-AgentRuntime 的 _proactiveSituationKey 只在观察时写入，没有随自动游玩会话结束清空。因此在战斗中暂停再恢复自动游玩时不会再次触发 CombatStart；需要先离开战斗再进入。这是行为取舍而非故障，记录供后续判断。
+AgentRuntime's _proactiveSituationKey is written only on observation and is not cleared when the auto-play session ends. So pausing and then resuming auto-play in the middle of a combat will not trigger CombatStart again; one has to leave the combat and enter again. This is a behavioral trade-off rather than a fault, recorded for later judgment.
 
-### 6. 观察：停止原因分类不准
+### 6. Observation: The Stop Reason Classification Is Inaccurate
 
-自动游玩因「模型未给出可执行动作」停止时，/health 的 stop_kind 报 run_end，与实际原因（非 run 边界）不符。在桩模型返回非法动作时稳定复现。
+When auto-play stopped because "the model gave no executable action", stop_kind in /health reported run_end, which does not match the actual cause (not a run boundary). It reproduces reliably when the stub model returns an illegal action.
 
-## 主动发言实机验证（目标二收口）
+## Live Validation of Proactive Speech (Closing Out Goal Two)
 
-方法：本地零成本 OpenAI 兼容桩（build/validation-2026-09-10/stub-model-server.py，支持 SSE，逐请求记账），配置 proactiveChatEnabled=true、proactiveChatTone=friendly、supportsTools=false（让 JSON 兜底路径生效），不触碰真实模型端点与预算。
+Method: a local zero-cost OpenAI-compatible stub (build/validation-2026-09-10/stub-model-server.py, supports SSE, accounting per request), with the configuration proactiveChatEnabled=true, proactiveChatTone=friendly, supportsTools=false (so the JSON fallback path takes effect), touching neither the real model endpoint nor the budget.
 
-证据（build/validation-2026-09-10/proactive-chat-live-ledger.jsonl，同时段 /health 读数）：
+Evidence (build/validation-2026-09-10/proactive-chat-live-ledger.jsonl, with the /health readings of the same period):
 
-- 自动游玩由桩驱动自行推进：collect_rewards_and_proceed → choose_map_node option_index=0 → 进入 COMBAT → 连续 end_turn，play_running=true 且未中断。
-- 同一会话内出现一条主动发言请求：stream=true，message_count=8，tool_count=0（只读对话路径），user 消息正是 A fight just started. Say one short line to your teammate about how you want to handle it.
-- 该系统提示尾部含 Voice: warm co-op partner. Encouraging, first person, and still concrete. 加共享规则，即 settings 中的 friendly 语气确实注入到请求。
-- 该请求之后紧接着仍有正常 end_turn 请求，说明会话未因主动发言报错而中断。
+- Auto-play advanced on its own driven by the stub: collect_rewards_and_proceed -> choose_map_node option_index=0 -> entered COMBAT -> consecutive end_turn, with play_running=true and no interruption.
+- A proactive speech request appeared within the same session: stream=true, message_count=8, tool_count=0 (read-only chat path), and the user message was exactly A fight just started. Say one short line to your teammate about how you want to handle it.
+- The tail of that system prompt contains Voice: warm co-op partner. Encouraging, first person, and still concrete. plus the shared rules, i.e. the friendly tone in settings was indeed injected into the request.
+- Right after that request there were still normal end_turn requests, showing the session was not interrupted by an error from the proactive speech.
 
-结论：COMBAT 切换触发、提示词构造、语气注入、只读 chat 路径、回复消费，五项在真实游戏里全部成立，且零模型成本。
+Conclusion: the COMBAT-transition trigger, prompt construction, tone injection, read-only chat path, and reply consumption all hold in the real game, at zero model cost.
 
-## 未覆盖项
+## Not Covered
 
-- multiplayer-lobby-flow：Python 入口依赖 scripts/start-game-session.sh（Windows 上不可用），PowerShell 版 scripts/test-multiplayer-lobby-flow.ps1 没有隔离副本参数、默认指向正式 Steam 安装。为保护玩家真实存档，本轮未运行；建议给该脚本加 --exe-path/--game-root 参数后再补。
-- choose_timeline_epoch：全新档案无可选纪元，属档案状态限制。
-- 真实模型连通与成本路径：本轮用桩验证，未调用真实上游，也未消耗预算。
+- multiplayer-lobby-flow: the Python entry depends on scripts/start-game-session.sh (unavailable on Windows), and the PowerShell version scripts/test-multiplayer-lobby-flow.ps1 has no isolated copy parameter and by default points at the official Steam install. To protect the player's real saves, it was not run this round; it is advisable to add --exe-path/--game-root parameters to that script first and then fill this in.
+- choose_timeline_epoch: a brand-new profile has no selectable epoch, which is a profile state limitation.
+- Real model connectivity and the cost path: this round used the stub, called no real upstream, and consumed no budget.
 
-## 真实存档与部署状态
+## Real Saves and Deployment State
 
-- 保护快照（steam/76561198420578597、default/1、default/1001、%APPDATA%/STS2AIAgent，共 197 个文件）复验：0 changed、0 missing。真实存档、模型配置均未被本次验收修改。
-- 隔离实例只写 default/2026091001 与游戏日志。
-- 正式安装目录 mods/STS2AIAgent.dll 当前 SHA256 为 47CE0F90...（2026-09-11 由合并后的 main 重新构建部署，见下节）；被它覆盖的上一版 4C2092EF... 备份在 build/backup-steam-mods-2026-09-11/，需要回退可直接替换。
+- Re-check of the protection snapshot (steam/76561198420578597, default/1, default/1001, %APPDATA%/STS2AIAgent, 197 files in total): 0 changed, 0 missing. The real saves and model configuration were not modified by this acceptance.
+- The isolated instance wrote only default/2026091001 and the game log.
+- The official install directory's mods/STS2AIAgent.dll currently has SHA256 47CE0F90... (rebuilt and deployed from the merged main on 2026-09-11, see the next section); the previous version 4C2092EF... that it overwrote is backed up in build/backup-steam-mods-2026-09-11/ and can be swapped back directly if a rollback is needed.
 
-## 结论与建议
+## Conclusion and Recommendations
 
-本轮五个目标的成果没有引入回归：变化的文件（ProactiveChatPolicy、SettingsClone、docs/api.md、脚本与闸门）都不在上述三处失败路径上；三处失败都可以在基线构建或游戏行为上复现。
+The results of this round's five goals introduced no regression: the changed files (ProactiveChatPolicy, SettingsClone, docs/api.md, scripts and gates) are none of them on the three failing paths above; all three failures can be reproduced on the baseline build or in the game's own behavior.
 
-建议后续动作，按优先级：
+Recommended follow-up actions, by priority:
 
-1. 修正 WaitForCombatHandSelectionStepAsync 的 return true（改回 pending 语义），随后重跑联机整局验收确认 dd1cfe6 的流程不受影响。
-2. 对齐 assert-active-run-main-menu 与 main-menu-active-run 对 open_timeline 的断言，或在无存档主菜单下单独覆盖时间线流程。
-3. 把 test-full-regression.ps1 的 active-run 引导改成「自然节点 + save_and_quit」，并加入 FTUE 预热步骤。
-4. 给多人大厅 PowerShell 脚本补隔离副本参数，恢复该套件的可运行性。
-5. 在 mcp_server/pyproject.toml 声明 pytest（依赖组或可选依赖），或把文档命令改成 uv run --with pytest，让干净检出按文档就能跑测试。
+1. Fix the return true in WaitForCombatHandSelectionStepAsync (change it back to pending semantics), then rerun the multiplayer full-run acceptance to confirm that the dd1cfe6 flow is unaffected.
+2. Align the open_timeline assertion in assert-active-run-main-menu and main-menu-active-run, or cover the timeline flow separately on the no-save main menu.
+3. Change the active-run bootstrap in test-full-regression.ps1 to "natural node + save_and_quit", and add an FTUE warm-up step.
+4. Add the isolated copy parameters to the multiplayer lobby PowerShell script to restore the suite's runnability.
+5. Declare pytest in mcp_server/pyproject.toml (a dependency group or optional dependency), or change the documented command to uv run --with pytest, so a clean checkout can run the tests as documented.
 
-## 后续修复与复验（2026-09-11）
+## Follow-up Fixes and Re-verification (2026-09-11)
 
-上面结论里排在前面的可修项已经落地，逐条列出改法与证据。
+The fixable items ranked first in the conclusions above have landed; the change and the evidence for each are listed below.
 
-| # | 修复 | 证据 |
+| # | Fix | Evidence |
 | --- | --- | --- |
-| 1 | 停止原因分类：新增纯策略类 STS2AIAgent/Agent/StopKindPolicy.cs，run_end 只匹配 CurrentRunBoundary 的两条真实文案 | 3 个新单测（StopKind.RetryIsNotRunEnd / BoundaryIsRunEnd / OtherKindsSurvive），C# 由 210 升至 213 PASS / 0 FAIL；实机复现：桩模型连续三次给出非法动作后 /health 的 stop_kind 由 run_end 变为 failed |
-| 2 | 验证闸门：uv.lock / package-lock.json 的冻结版本按 >=、<、~=、^ 等约束真实求解 | 闸门 exit 0、自测 exit 0、发布预检 exit 0 |
-| 3 | 文档命令：把 MCP 单测命令从 uv run pytest 改成 CI 实际使用的 uv run --locked python -m unittest discover -s tests -v | CI 同一条命令本地 49 passed；pytest 未声明也不被支持，故不加依赖 |
-| 4 | test-full-regression.ps1：造局引导改为「自然推进一个地图节点 + save_and_quit」，新增 Close-MainMenuOverlay 处理首死后自动弹出的时间线浮层 | 抽出 Ensure-ActiveRunMainMenu 对活实例实跑两条分支均通过（弹窗+未落盘的局 7.1 秒；空主菜单新建 10.2 秒），均达到带 continue_run 的主菜单 |
-| 5 | 一次性教学弹窗：套件等待动作时可自动消解 FTUE，控制台命令支持有界重试，新增 settle_game_over / settle_main_menu | 全新档案（clientId 2026091007）上 new-run-lifecycle、bootstrap-active-run、deferred-potion-flow、target-index-contract、enemy-intents-payload 五个套件全部 exit 0 |
-| 6 | test-multiplayer-lobby-flow.ps1：新增 -ExePath / -HostExtraArguments / -ClientExtraArguments，可指向隔离副本且两个实例各自 clientId | 用隔离副本实跑：两个实例在 8080/8081 起来、创建大厅、进入同一 run（run_id 一致），推进到第 2 层并走完奖励流程 |
+| 1 | Stop reason classification: added the pure policy class STS2AIAgent/Agent/StopKindPolicy.cs, where run_end matches only the two real messages of CurrentRunBoundary | 3 new unit tests (StopKind.RetryIsNotRunEnd / BoundaryIsRunEnd / OtherKindsSurvive), C# up from 210 to 213 PASS / 0 FAIL; live reproduction: after the stub model gave illegal actions three times in a row, stop_kind in /health changed from run_end to failed |
+| 2 | Verification gates: the frozen versions in uv.lock / package-lock.json are really solved against constraints such as >=, <, ~=, ^ | Gate exit 0, self-test exit 0, release preflight exit 0 |
+| 3 | Documented command: changed the MCP unit test command from uv run pytest to the one CI actually uses, uv run --locked python -m unittest discover -s tests -v | The same CI command gives 49 passed locally; pytest is neither declared nor supported, so no dependency was added |
+| 4 | test-full-regression.ps1: the run bootstrap now "naturally advances one map node + save_and_quit", and Close-MainMenuOverlay was added to handle the timeline overlay that pops up automatically after the first death | Ensure-ActiveRunMainMenu was extracted and run against a live instance, and both branches passed (popup + unsaved run 7.1 seconds; new run from an empty main menu 10.2 seconds), both reaching a main menu with continue_run |
+| 5 | One-time tutorial popups: the suite can now automatically dismiss the FTUE while waiting for actions, console commands support bounded retry, and settle_game_over / settle_main_menu were added | On a brand-new profile (clientId 2026091007) the five suites new-run-lifecycle, bootstrap-active-run, deferred-potion-flow, target-index-contract, enemy-intents-payload all exit 0 |
+| 6 | test-multiplayer-lobby-flow.ps1: added -ExePath / -HostExtraArguments / -ClientExtraArguments, which can point at an isolated copy with each of the two instances having its own clientId | Run against the isolated copy: the two instances came up on 8080/8081, created a lobby, and entered the same run (same run_id), advanced to floor 2 and finished the reward flow |
 
-实机复验中确认的一个关键机制（值得写进套件设计）：全新档案上**刚进图就下 die，游戏会接受命令但不会打开结算界面**，留下一个停在 MAP 上的死局；等地图可交互并稳定约 3 秒后再 die，结算立刻正常出现。已固化为 RUN_SETTLE_SECONDS 与相应的稳定等待。
+A key mechanism confirmed during the live re-verification (worth writing into the suite design): on a brand-new profile, **issuing die right after entering the map makes the game accept the command but not open the settlement screen**, leaving a dead run stopped on the MAP; waiting until the map is interactive and has been stable for about 3 seconds before issuing die makes the settlement appear normally right away. This has been fixed in as RUN_SETTLE_SECONDS and the corresponding stability wait.
 
-第 6 项仍有一处未覆盖：多人大厅套件在「双方同到休息点」阶段没有跑完。MP 里两人共享地图位置，对客户端单独下发 room RestSite 后客户端回到 MAP（host 停在 REST），套件随即等待客户端进入 REST。这与本次新增的启动参数无关，属于套件自身的 MP 推进逻辑，建议后续单独处理。
+Item 6 still has one uncovered spot: the multiplayer lobby suite did not finish the "both reach the rest site together" stage. In MP the two players share the map position; after room RestSite is sent to the client alone, the client goes back to MAP (the host stays at REST), and the suite then waits for the client to enter REST. This is unrelated to the launch parameters added this time and belongs to the suite's own MP advancement logic; it is advisable to handle it separately later.
 
-## select_deck_card 语义定案（2026-09-11）
+## select_deck_card Semantics Settled (2026-09-11)
 
-「实机发现 1」里那条战斗多选返回 completed 的问题已按「代码改回 pending」定案并验证。
+The issue in "Live Finding 1", where the combat multi-select returned completed, was settled and verified as "change the code back to pending".
 
-改动：STS2AIAgent/Game/GameActionService.cs 的 WaitForCombatHandSelectionStepAsync 在「选中数已变化但界面仍需确认」时返回 false（pending），与 use_potion 及 skill 文档描述的语义对齐；docs/api.md 的 select_deck_card 段落按 selection.kind 拆成牌库单选（自动确认，completed）与战斗手牌多选（逐步 pending，需 confirm_selection）两种说明。
+Change: WaitForCombatHandSelectionStepAsync in STS2AIAgent/Game/GameActionService.cs now returns false (pending) when "the selected count has changed but the UI still needs confirmation", aligning with use_potion and the semantics the skill documentation describes; the select_deck_card paragraph of docs/api.md was split by selection.kind into two descriptions: deck single selection (auto-confirm, completed) and combat hand multi-select (step-by-step pending, needs confirm_selection).
 
-回归定位：该函数自引入（52c3467）到 PR #56 合并（9295f35）一直是 return false，93e5ab5（#68）把它改成 return true；该提交说明里唯一与选择有关的一句是「stop confirming deck picks at min_select」，指的是牌库路径，战斗手牌这次翻转属于连带改动。
+Regression location: from its introduction (52c3467) to the merge of PR #56 (9295f35) the function was return false, and 93e5ab5 (#68) changed it to return true; the only selection-related sentence in that commit's message is "stop confirming deck picks at min_select", which refers to the deck path, and the flip for the combat hand this time was a side effect.
 
-实机证据（隔离副本，候选 DLL SHA256 43100E7621E1F962D2A1F7B1719339E2EEF8607735AF39B16B9AA232A6FF1A39）：
+Live evidence (isolated copy, candidate DLL SHA256 43100E7621E1F962D2A1F7B1719339E2EEF8607735AF39B16B9AA232A6FF1A39):
 
-| 验证 | 结果 |
+| Verification | Result |
 | --- | --- |
-| combat-hand-confirm-flow | exit 0；post_select_status=pending（修复前为 completed，正是最初的失败断言），confirm_status=completed，final_screen=COMBAT |
-| state-invariants | exit 0，0 failure / 0 warning |
-| deferred-potion-flow | exit 0（牌库单选自动确认路径未受影响） |
+| combat-hand-confirm-flow | exit 0; post_select_status=pending (it was completed before the fix, exactly the original failing assertion), confirm_status=completed, final_screen=COMBAT |
+| state-invariants | exit 0, 0 failure / 0 warning |
+| deferred-potion-flow | exit 0 (the deck single-selection auto-confirm path is unaffected) |
 | target-index-contract / enemy-intents-payload | exit 0 |
-| C# 核心单测 | 213 PASS / 0 FAIL |
-| 自动游玩冒烟（桩模型，零成本） | 桩先打出 PURITY（play_card card_index 5），随后连续三次调用 select_deck_card；日志中 "Timed out waiting for a stable state" 出现次数为 0，会话在每次 pending 之后继续推进 |
+| C# core unit tests | 213 PASS / 0 FAIL |
+| Auto-play smoke (stub model, zero cost) | The stub first played PURITY (play_card card_index 5), then called select_deck_card three times in a row; "Timed out waiting for a stable state" appeared 0 times in the log, and the session kept advancing after every pending |
 
-冒烟测试用的桩（build/validation-2026-09-10/stub-model-server.py）新增了按紧凑状态选牌的能力：紧凑手牌数组只有 i/line/playable/targets 而没有 card_id，且需要目标的牌必须带 target_index，否则会被 agent 自己的索引校验拒绝。这两点对后续写自动游玩验证脚本同样适用。
+The stub used for the smoke test (build/validation-2026-09-10/stub-model-server.py) gained the ability to pick cards from the compact state: the compact hand array has only i/line/playable/targets and no card_id, and a card that needs a target must carry target_index, otherwise it is rejected by the agent's own index validation. Both points apply equally to writing later auto-play validation scripts.
 
-## open_timeline 断言定案（2026-09-11）
+## open_timeline Assertion Settled (2026-09-11)
 
-「实机发现 2」里那条「有存档时主菜单不暴露 open_timeline」已按「套件口径不对」定案并修复。
+The issue in "Live Finding 2", "the main menu does not expose open_timeline when a save exists", was settled and fixed as "the suite's expectation was wrong".
 
-根因（游戏源码，非 mod 缺陷）：extraction/decompiled 下的 NMainMenu.UpdateTimelineButtonBehavior 要求 !SaveManager.Instance.HasRunSave 才启用时间线按钮；有存档时落入 else 分支被 Disable，第二个分支还会在「已发现纪元 > 0」时显式 Disable。mod 的 CanOpenTimeline 要求按钮 IsEnabled，因此有存档时不暴露 open_timeline 是正确行为。同文件还表明该状态受档案进度影响（未发现任何纪元时会 Enable），所以断言「必须有」和「必须没有」都不成立。
+Root cause (the game's source, not a mod defect): NMainMenu.UpdateTimelineButtonBehavior under extraction/decompiled requires !SaveManager.Instance.HasRunSave to enable the timeline button; with a save it falls into the else branch and is Disabled, and the second branch also explicitly Disables it when "discovered epochs > 0". The mod's CanOpenTimeline requires the button to be IsEnabled, so not exposing open_timeline when a save exists is correct behavior. The same file also shows the state depends on profile progress (it Enables when no epoch has been discovered), so asserting either "must have" or "must not have" does not hold.
 
-另有一层档案依赖：choose_timeline_epoch 只在「已揭示但未解锁的纪元」存在时才暴露。实测档案 2026091007 打开时间线后只给 close_main_menu_submenu 与 confirm_timeline_overlay。
+There is another layer of profile dependence: choose_timeline_epoch is exposed only when an "epoch that is revealed but not unlocked" exists. On the measured profile 2026091007, opening the timeline gave only close_main_menu_submenu and confirm_timeline_overlay.
 
-改动：
+Changes:
 
-| 套件 | 改动 |
+| Suite | Change |
 | --- | --- |
-| assert-active-run-main-menu | 去掉 open_timeline 断言，改为在结果里如实报告 open_timeline_available |
-| main-menu-active-run | 去掉「有存档时应有 open_timeline」的前置断言与后续时间线阶段；改为断言撤回放弃对话框后仍保留 continue_run，并继续验证 continue_run 能回到对局 |
-| new-run-lifecycle | 在结尾的无存档主菜单上补做时间线覆盖：open_timeline → （档案支持时）choose_timeline_epoch → confirm_timeline_overlay → close_main_menu_submenu；档案不支持纪元选择时如实记录而不是失败。结尾等待改用 settle_main_menu，以吸收游戏在死亡后自动弹出的时间线浮层 |
+| assert-active-run-main-menu | Dropped the open_timeline assertion and instead reports open_timeline_available honestly in the result |
+| main-menu-active-run | Dropped the precondition "open_timeline should be present when a save exists" and the later timeline stage; instead asserts that continue_run is still kept after withdrawing the abandon dialog, and continues to verify that continue_run can return to the run |
+| new-run-lifecycle | Added timeline coverage on the no-save main menu at the end: open_timeline -> (when the profile supports it) choose_timeline_epoch -> confirm_timeline_overlay -> close_main_menu_submenu; when the profile does not support epoch selection this is recorded honestly rather than failing. The final wait now uses settle_main_menu, to absorb the timeline overlay the game pops up automatically after death |
 
-实机验证（隔离副本，同一实例连续执行）：
+Live verification (isolated copy, run consecutively on the same instance):
 
-| 套件 | 结果 |
+| Suite | Result |
 | --- | --- |
-| assert-active-run-main-menu | exit 0；open_timeline_available=false（有存档时游戏正确地未暴露） |
-| main-menu-active-run | exit 0；menu_after_dismiss_actions 保留 continue_run，continue_run_destination=COMBAT |
-| new-run-lifecycle | exit 0；timeline={opened: true, screen: TIMELINE, epochs_selectable: false, overlay_confirmed: true} |
-| 其余 8 个套件（mod-load、state-summary、state-invariants、bootstrap-active-run、combat-hand-confirm-flow、deferred-potion-flow、target-index-contract、enemy-intents-payload） | 全部 exit 0 |
-| 离线 | 闸门 exit 0、自测 exit 0、C# 213 PASS / 0 FAIL |
+| assert-active-run-main-menu | exit 0; open_timeline_available=false (the game correctly does not expose it when a save exists) |
+| main-menu-active-run | exit 0; menu_after_dismiss_actions kept continue_run, continue_run_destination=COMBAT |
+| new-run-lifecycle | exit 0; timeline={opened: true, screen: TIMELINE, epochs_selectable: false, overlay_confirmed: true} |
+| The other 8 suites (mod-load, state-summary, state-invariants, bootstrap-active-run, combat-hand-confirm-flow, deferred-potion-flow, target-index-contract, enemy-intents-payload) | All exit 0 |
+| Offline | Gates exit 0, self-test exit 0, C# 213 PASS / 0 FAIL |
 
-## 首次推送后的 CI 失败与修复（2026-09-11）
+## CI Failure After the First Push and Its Fix (2026-09-11)
 
-推送 23 个提交到 origin/main 后，CI 的「Verification gate self-test」步骤失败，本地同一命令一直 exit 0。
+After pushing 23 commits to origin/main, the "Verification gate self-test" step of CI failed, while the same command locally always exited 0.
 
-根因：`scripts/test-verification-gates.ps1` 含非 ASCII 文本且没有 UTF-8 BOM 头部。Windows PowerShell 5.1 会用**系统 ANSI 代码页**读取无 BOM 文件，而 CI 的 Windows runner 是 CP1252、开发机是 GBK，同样的字节因此解出不同文本。em-dash（U+2014，UTF-8 字节 E2 80 94）在 CP1252 下解成 `â€”`，其中 0x94 正是右双引号 U+201D，PowerShell 把它当字符串结束符，于是字符串提前闭合、整份脚本解析失败（CI 报 `Unexpected token 'not' in expression or statement`）。本地因 GBK 把同样的字节解成无害汉字而侥幸通过，属区域设置相关的可移植性缺陷，由本次工作引入（脚本与 CI 步骤同批加入，此前从未在 CI 上执行过）。
+Root cause: `scripts/test-verification-gates.ps1` contains non-ASCII text and has no UTF-8 BOM header. Windows PowerShell 5.1 reads a BOM-less file with the **system ANSI code page**, and CI's Windows runner is CP1252 while the dev machine is GBK, so the same bytes decode to different text. The em-dash (U+2014, UTF-8 bytes E2 80 94) decodes to `â€”` under CP1252, and its 0x94 is exactly the right double quote U+201D, which PowerShell treats as a string terminator, so the string closed early and the whole script failed to parse (CI reported `Unexpected token 'not' in expression or statement`). Locally it passed only by luck because GBK decodes the same bytes into harmless Chinese characters, a locale-dependent portability defect introduced by this work (the script and the CI step were added in the same batch and had never been executed on CI before).
 
-复现方式（无需 CI）：把该文件按 CP1252 解码后统计引号类字符，可检出恰好 1 个 U+201D。
+Reproduction (no CI needed): decode the file as CP1252 and count the quote-like characters; exactly 1 U+201D is found.
 
-修复：
+Fix:
 
-1. 该自测里的 phantom fixture 字符串改用 ASCII 连字符，去掉最高风险字符（CP1252 下解成字符串结束符的那一类）。
-2. 给 `scripts/test-verification-gates.ps1` 与同样含非 ASCII 的 `scripts/sts2-coop-full-run-acceptance.ps1` 补上 UTF-8 BOM，使 PowerShell 在任何区域设置下都按 UTF-8 读取。
-3. 新增 `script-encoding` 闸门：`scripts/*.ps1` 含非 ASCII 时必须带 UTF-8 BOM，从根本上阻止同类问题复发。
-4. 自测新增两个用例：带 BOM 的非 ASCII 脚本必须通过，去掉 BOM 后必须被拒。
+1. The phantom fixture string in that self-test now uses an ASCII hyphen, removing the highest-risk character (the kind that decodes to a string terminator under CP1252).
+2. Added a UTF-8 BOM to `scripts/test-verification-gates.ps1` and to `scripts/sts2-coop-full-run-acceptance.ps1`, which likewise contains non-ASCII, so PowerShell reads it as UTF-8 under any locale.
+3. Added the `script-encoding` gate: `scripts/*.ps1` must carry a UTF-8 BOM when it contains non-ASCII, fundamentally preventing the same class of problem from recurring.
+4. The self-test gained two cases: a non-ASCII script with a BOM must pass, and with the BOM removed it must be rejected.
 
-复验：闸门 exit 0（列出两个带 BOM 的脚本）、自测 exit 0（9 个漂移用例 + baseline + restored）、preflight exit 0、C# 213 PASS / 0 FAIL、MCP 49 tests OK；解析错误数为 0；CP1252 下的引号类字符由 1 降为 0。
+Re-verification: gates exit 0 (listing the two scripts with a BOM), self-test exit 0 (9 drift cases + baseline + restored), preflight exit 0, C# 213 PASS / 0 FAIL, MCP 49 tests OK; parse errors 0; quote-like characters under CP1252 dropped from 1 to 0.
 
-## PR #81 评审、合并与实机复验（2026-09-11）
+## PR #81 Review, Merge, and Live Re-verification (2026-09-11)
 
-外部贡献 PR #81（XenoAmess，分支 fix/simple-card-multiselect-acknowledgements，2 个提交、4 文件 +75/−46）把牌库选择元数据从具体类型 `NDeckCardSelectScreen` 泛化到基类 `NCardGridSelectionScreen`，并把 `NSimpleCardSelectScreen` 纳入白名单；同时改名 `TryGetCardGridSelectionMetadata` / `CardGridSelectionMetadata` / `SettleCardGridSelectionClickAsync`。
+External contribution PR #81 (XenoAmess, branch fix/simple-card-multiselect-acknowledgements, 2 commits, 4 files +75/-46) generalizes the deck selection metadata from the concrete type `NDeckCardSelectScreen` to the base class `NCardGridSelectionScreen` and adds `NSimpleCardSelectScreen` to the allowlist; it also renames `TryGetCardGridSelectionMetadata` / `CardGridSelectionMetadata` / `SettleCardGridSelectionClickAsync`.
 
-前提核验（反编译源码，extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.CardSelection/）：
+Premise check (decompiled source, extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.CardSelection/):
 
-| 前提 | 结论 |
+| Premise | Conclusion |
 | --- | --- |
-| `NDeckCardSelectScreen` / `NSimpleCardSelectScreen` 是 `NCardGridSelectionScreen` 的 sealed 子类 | 成立 |
-| `_prefs` / `_selectedCards` 由各子类自行声明（不在基类） | 成立，按具体实例反射是唯一正确写法 |
-| `SettleCardGridSelectionClickAsync` 函数体未被 PR 修改 | 成立，仅签名泛化，「点击后返回 completed」的既有语义保留 |
-| `NChooseACardSelectionScreen` 不继承基类 | 成立，分支不互相吞掉 |
-| Sourcery 的 blocking 发现（`confirm_selection` 对简单屏 409） | 已被第二个提交 27fa223 修掉 |
+| `NDeckCardSelectScreen` / `NSimpleCardSelectScreen` are sealed subclasses of `NCardGridSelectionScreen` | Holds |
+| `_prefs` / `_selectedCards` are declared by each subclass itself (not in the base class) | Holds; reflecting on the concrete instance is the only correct way |
+| The body of `SettleCardGridSelectionClickAsync` is not modified by the PR | Holds; only the signature is generalized, and the existing "return completed after a click" semantics are kept |
+| `NChooseACardSelectionScreen` does not inherit the base class | Holds; the branches do not swallow each other |
+| Sourcery's blocking finding (`confirm_selection` gives 409 on the simple screen) | Already fixed by the second commit 27fa223 |
 
-本地真合并验证（worktree detached from 2bb1f34，git merge 无冲突）：C# 214 PASS / 0 FAIL（213 + PR 新增 CardGridSelection.ConfirmDispatch）、MCP 49 tests OK、四道闸门含新 script-encoding exit 0；上一步的 select_deck_card 战斗手牌修复与 PR 改名同时存活，无旧名残留。
+Local real merge verification (worktree detached from 2bb1f34, git merge without conflict): C# 214 PASS / 0 FAIL (213 + the PR's new CardGridSelection.ConfirmDispatch), MCP 49 tests OK, the four gates including the new script-encoding exit 0; the previous step's select_deck_card combat-hand fix and the PR's renames both survived, with no old names left over.
 
-结论与动作：合并（merge commit ee308ff，与仓库既有 `Merge pull request #NN` 习惯一致；main 保护要求 0 个批准）。评审意见已发到 PR（#issuecomment-5622477667，含 214 基线与两条非阻塞建议），泛化白名单偏窄与改名不彻底两点另开 issue #82 跟踪。
+Conclusion and action: merged (merge commit ee308ff, consistent with the repository's existing `Merge pull request #NN` convention; main protection requires 0 approvals). The review comments were posted to the PR (#issuecomment-5622477667, including the 214 baseline and two non-blocking suggestions), and two points, the generalized allowlist being too narrow and the renaming being incomplete, are tracked in a separate issue #82.
 
-### 合并后的实机复验
+### Live Re-verification After the Merge
 
-| 项 | 值 |
+| Item | Value |
 | --- | --- |
-| 合并后 DLL SHA256 | CC6D616978F726E1BAAFD31732A54AF727A6EB80E23CF4D7B3E00576B9F82C7F |
-| 隔离副本 | build/validation-2026-09-08/game/SlayTheSpire2.exe，`--windowed --force-steam off --clientId 2026091012` |
-| 造局手段 | 调试控制台（`room EVENT` / `event <id>` / `relic add <id>`），`STS2_ENABLE_DEBUG_ACTIONS=1` |
+| Post-merge DLL SHA256 | CC6D616978F726E1BAAFD31732A54AF727A6EB80E23CF4D7B3E00576B9F82C7F |
+| Isolated copy | build/validation-2026-09-08/game/SlayTheSpire2.exe, `--windowed --force-steam off --clientId 2026091012` |
+| Run bootstrap method | Debug console (`room EVENT` / `event <id>` / `relic add <id>`), `STS2_ENABLE_DEBUG_ACTIONS=1` |
 
-踩坑：新建 clientId 档案的 `settings.save` 里 `mod_settings` 为 null，游戏会弹「mods warning」并**跳过加载 mod**（日志 `Skipping loading mod STS2AIAgent, user has not yet seen the mods warning`，门控在 `NMainMenu.cs:306`）。改用已授权过的档案 2026091012 即可，无需改任何存档。
+A pitfall: in the `settings.save` of a newly created clientId profile `mod_settings` is null, and the game pops up a "mods warning" and **skips loading mods** (log `Skipping loading mod STS2AIAgent, user has not yet seen the mods warning`, gated at `NMainMenu.cs:306`). Using the already-authorized profile 2026091012 avoids it, with no save needing to be changed.
 
-结果（均为实测）：
+Results (all measured):
 
-| 场景 | 结果 |
+| Scenario | Result |
 | --- | --- |
-| `event ROOM_FULL_OF_CHEESE` → 大快朵颐（`NSimpleCardSelectScreen`，min=max=2） | 输入前 `min_select=2 max_select=2 selected_count=0`（修复前为 1/1/0）；点第 1 张 151 ms、`selected_count=1`、`cards[0].selected=true`；点第 2 张 347 ms 后屏幕关闭，牌组 10 → 12，原生日志 `Player 1 chose cards [ANGER,THUNDERCLAP]` |
-| `relic add SEA_GLASS`（min=0/max=15，需手动确认） | `confirm_selection` 正确出现在 available_actions；点 1 张 143 ms；`confirm_selection` 235 ms 完成，牌组 12 → 13，原生 `Player 1 chose cards [THUNDERCLAP]` |
-| `relic add GNARLED_HAMMER`（附魔屏，属 issue #82 范围） | 原生提示「选择 3 张牌来附魔」，API 仍报 `1/1/0` 且不暴露 `confirm_selection`；首次点击耗时 10036 ms（整整一个 10 s 超时）并返回 pending |
-| `event SAPPHIRE_SEED` → 吃下（升级屏，单选） | 报 `1/1/0`；因单选原生值本就是 1/1，此处误报不可见，问题只在 min≠max 或多选时显现 |
+| `event ROOM_FULL_OF_CHEESE` -> Gorge (`NSimpleCardSelectScreen`, min=max=2) | Before input `min_select=2 max_select=2 selected_count=0` (1/1/0 before the fix); the first card click took 151 ms with `selected_count=1`, `cards[0].selected=true`; the second click, 347 ms later, closed the screen, the deck went 10 -> 12, and the native log showed `Player 1 chose cards [ANGER,THUNDERCLAP]` |
+| `relic add SEA_GLASS` (min=0/max=15, needs manual confirmation) | `confirm_selection` correctly appeared in available_actions; clicking 1 card took 143 ms; `confirm_selection` completed in 235 ms, the deck went 12 -> 13, and the native log showed `Player 1 chose cards [THUNDERCLAP]` |
+| `relic add GNARLED_HAMMER` (enchant screen, within the scope of issue #82) | The native prompt said "Choose 3 cards to enchant", while the API still reported `1/1/0` and did not expose `confirm_selection`; the first click took 10036 ms (a full 10 s timeout) and returned pending |
+| `event SAPPHIRE_SEED` -> Eat (upgrade screen, single selection) | Reports `1/1/0`; because for a single selection the native value is 1/1 anyway, the misreport is invisible here, and the problem only appears when min != max or for multi-select |
 
-离线复验：C# 214 PASS / 0 FAIL、MCP 49 tests OK（合并后的 main）。
+Offline re-verification: C# 214 PASS / 0 FAIL, MCP 49 tests OK (post-merge main).
 
-### 部署到正式安装并复验（2026-09-11）
+### Deployed to the Official Install and Re-verified (2026-09-11)
 
-正式安装长期停留在旧 DLL（4C2092EF...，缺合并前的全部近期修复），因此把合并后的 main 重新构建并部署到真实 Steam 安装：`scripts/build-mod.ps1 -Configuration Release`（不带 -GameRoot，默认指向 Steam 安装）。部署前先备份到 build/backup-steam-mods-2026-09-11/。
+The official install had long stayed on an old DLL (4C2092EF..., missing all the recent fixes before the merge), so the merged main was rebuilt and deployed to the real Steam install: `scripts/build-mod.ps1 -Configuration Release` (without -GameRoot, which defaults to the Steam install). Before deploying, a backup was made to build/backup-steam-mods-2026-09-11/.
 
-构建非确定性排查：部署后的 DLL（47CE0F90...）与隔离实例里实测过的那份（CC6D6169...）字节数相同但哈希不同。逐字节比对只有 72 字节差异，全部落在 PE 时间戳（偏移 0x88）与程序集/PDB 标识 GUID 区（0xE6E64 起 16 字节 MVID、0xFE4E4 起、0xFE538 起、0xFE5A6 起），代码段无差异；重复构建稳定复现 47CE0F90。进一步核对：两处 `data_sts2_windows_x86_64/sts2.dll` 哈希一致（0861BFA1...），说明不是引用不同程序集所致。结论是编译标识差异而非代码差异，并用符号检索佐证——已部署 DLL 含 `TryGetCardGridSelectionMetadata` / `SettleCardGridSelectionClickAsync`，旧名 `TryGetDeckCardSelectionMetadata` / `SettleDeckCardSelectionClickAsync` 已完全消失。
+Build nondeterminism investigation: the deployed DLL (47CE0F90...) and the one measured in the isolated instance (CC6D6169...) have the same byte count but different hashes. A byte-by-byte comparison shows only 72 bytes differ, all in the PE timestamp (offset 0x88) and the assembly/PDB identity GUID regions (the 16-byte MVID from 0xE6E64, plus those from 0xFE4E4, 0xFE538, and 0xFE5A6), with no difference in the code section; repeated builds reproduce 47CE0F90 stably. A further check: the two `data_sts2_windows_x86_64/sts2.dll` hashes are identical (0861BFA1...), showing it is not caused by referencing different assemblies. The conclusion is a compile-identity difference rather than a code difference, backed by a symbol search: the deployed DLL contains `TryGetCardGridSelectionMetadata` / `SettleCardGridSelectionClickAsync`, and the old names `TryGetDeckCardSelectionMetadata` / `SettleDeckCardSelectionClickAsync` have disappeared completely.
 
-为消除「未实测的二进制」这一疑虑，把与 Steam 完全同字节的产物放回隔离实例，用同一套造局手段重跑两个场景：
+To dispel the doubt about an "untested binary", the artifact with exactly the same bytes as the Steam one was put back in the isolated instance, and the two scenarios were rerun with the same bootstrap methods:
 
-| 场景 | 结果 |
+| Scenario | Result |
 | --- | --- |
-| `event ROOM_FULL_OF_CHEESE` → 大快朵颐（简单屏，min=max=2） | 输入前 `min=2 max=2 count=0`；两次点击分别 30 ms / 131 ms（均 completed）；牌组 10 → 12；原生 `Player 1 chose cards [SETUP_STRIKE,TAUNT]` |
-| `relic add SEA_GLASS`（min=0/max=15，手动确认） | `confirm_selection` 正确暴露；点击 34 ms；`confirm_selection` 168 ms 完成；牌组 12 → 13 |
+| `event ROOM_FULL_OF_CHEESE` -> Gorge (simple screen, min=max=2) | Before input `min=2 max=2 count=0`; the two clicks took 30 ms / 131 ms (both completed); deck 10 -> 12; native `Player 1 chose cards [SETUP_STRIKE,TAUNT]` |
+| `relic add SEA_GLASS` (min=0/max=15, manual confirmation) | `confirm_selection` correctly exposed; click 34 ms; `confirm_selection` completed in 168 ms; deck 12 -> 13 |
 
-复验后真实安装 DLL 仍为 47CE0F90。除此以外未对真实安装做任何改动（其余 mods 目录与真实存档均未触碰）。
+After the re-verification the official install DLL was still 47CE0F90. Nothing else about the official install was changed (the rest of the mods directory and the real saves were untouched).

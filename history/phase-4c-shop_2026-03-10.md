@@ -1,6 +1,6 @@
 # Phase 4C Shop Status
 
-> 历史记录，2026-09-09 归档。以下实现说明仅属于 2026-03-10；当前接口见 [API 文档](../docs/api.md)，当前状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical record, archived on 2026-09-09. The implementation notes below apply only to 2026-03-10; see the [API docs](../docs/api.md) for the current interface and [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md) for the current status.
 
 Updated: `2026-03-10`
 

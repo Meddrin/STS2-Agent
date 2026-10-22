@@ -1,211 +1,211 @@
-# STS2 AI Agent 产品现状与后续开发计划
+# STS2 AI Agent Product Status and Development Plan
 
-> **历史，不代表当前。** 2026-09-09 归档。当前状态唯一入口为 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)；[COOP_DELIVERY.md](../COOP_DELIVERY.md) 现在只是历史证据索引。下文的提交号、测试数量和“待实现”条目属于旧时间点，不要当任务板用。
+> **Historical; does not represent the current state.** Archived on 2026-09-09. The single entry point for current status is [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md); [COOP_DELIVERY.md](../COOP_DELIVERY.md) is now only an index of historical evidence. The commit hashes, test counts, and "to be implemented" items below belong to an old point in time; do not use them as a task board.
 
-评估日期：2026-09-05。本文为开发建议，不代表功能已经交付或发布承诺。
+Assessment date: 2026-09-05. This document is a development proposal; it does not mean any feature has been delivered or constitute a release commitment.
 
-## 1. 结论与产品定位
+## 1. Conclusion and Product Positioning
 
-项目已经具备玩家产品的基础：游戏内窗口、模型配置、自动游玩、可选视觉、外部 MCP 接入，以及较广的游戏状态和动作覆盖。当前更适合定位为“功能较完整、仍需稳定性建设的 Beta”。这是基于代码、公开问题和验证体系的判断，不是基于用户规模或留存数据。
+The project already has the foundations of a player product: an in-game window, model configuration, auto-play, optional vision, external MCP access, and fairly broad coverage of game state and actions. It is currently best positioned as a "fairly complete Beta that still needs stability work". This judgment is based on the code, public issues, and the validation system, not on user scale or retention data.
 
-建议下一阶段的产品承诺是：**邀请一个能聊天、会配合、有个性的 AI 队友，和玩家一起探索尖塔。玩家操作自己的角色，AI 操作同伴角色；两人可以商量路线、协同战斗、分享惊险时刻并复盘。**
+The proposed product promise for the next phase: **invite an AI teammate who can chat, cooperate, and has a personality, and explore the Spire together with the player. The player controls their own character and the AI controls the companion character; the two can discuss routes, fight in coordination, share close calls, and review the run afterward.**
 
-主用户为希望与 AI 一起游玩的玩家；外部 Agent 开发者是第二用户群。**本地双开与人机联机是 Mod 的主要卖点，也是 1.0 必须通过的主流程验收。** 单人自动游玩保留为辅助模式，MCP 保留为高级入口。不能以单人模式验证通过代替双开交付。
+The primary users are players who want to play together with an AI; external Agent developers are the second user group. **Local dual-instance launch and human-AI co-op are the Mod's main selling point and the main-flow acceptance that 1.0 must pass.** Solo auto-play stays as an auxiliary mode, and MCP stays as an advanced entry point. Passing solo mode cannot substitute for delivering dual-instance play.
 
-1.0 首先要证明“这是一起玩，而不是看另一个窗口里的机器人”。衡量组队成功、玩家建议是否进入队友决策、AI 的回应是否基于真实局面、协同体验、暂停接管、整局完成和成本可见；策略胜率独立评估。
+1.0 must first prove that "this is playing together, not watching a bot in another window". It measures team formation success, whether player suggestions enter the teammate's decisions, whether the AI's responses are based on the real situation, co-op experience, pause and takeover, full-run completion, and cost visibility; strategy win rate is evaluated separately.
 
-产品方向于 2026-09-05 按用户要求调整。以下优先级以本段及 [COOP_DELIVERY.md](../COOP_DELIVERY.md) 的人机联机验收为准；原始调研数据保留其历史时间边界。
+The product direction was adjusted on 2026-09-05 at the user's request. The priorities below follow this section and the human-AI co-op acceptance in [COOP_DELIVERY.md](../COOP_DELIVERY.md); the original research data keeps its historical time boundary.
 
-## 2. 评估基线与证据边界
+## 2. Assessment Baseline and Evidence Boundary
 
-| 项目 | 实际情况 |
+| Item | Actual situation |
 | --- | --- |
-| 当前工作目录 | `C:/Users/chart/Documents/project/sp`，分支 `dev`，提交 `f362f73`，v0.9.0 |
-| 最新发布 | GitHub v0.9.2，发布于 2026-08-31 |
-| 规划代码基线 | `main`，`71c3e41c0735fae91b6349495941268ed8fa3909`；已通过 GitHub API 确认与远端 main 一致 |
-| main 检查位置 | 已存在且检查时干净的 `C:/Users/chart/Documents/project/sp-main-workshop` worktree |
-| 游戏兼容性 | main 清单声明最低 v0.111.0，Changelog 记录在该版本验证；不据此推断所有后续游戏版本兼容 |
-| 调研范围 | README、Changelog、现有路线图和发布清单、核心运行循环、LLM、设置、UI、状态/动作入口、MCP 重试、测试、打包脚本、开放 issue/PR |
-| 未进行 | 启动或操作游戏、真实付费模型调用、整局实机回归、用户访谈、完整依赖安全审计、Workshop 订阅安装验证 |
+| Current working directory | `C:/Users/chart/Documents/project/sp`, branch `dev`, commit `f362f73`, v0.9.0 |
+| Latest release | GitHub v0.9.2, released 2026-08-31 |
+| Planning code baseline | `main`, `71c3e41c0735fae91b6349495941268ed8fa3909`; confirmed via the GitHub API to match the remote main |
+| Where main was inspected | The existing `C:/Users/chart/Documents/project/sp-main-workshop` worktree, which was clean at inspection time |
+| Game compatibility | The main manifest declares a minimum of v0.111.0, and the Changelog records validation on that version; compatibility with later game versions is not inferred from this |
+| Research scope | README, Changelog, existing roadmap and release checklist, core runtime loop, LLM, settings, UI, state/action entry points, MCP retries, tests, packaging scripts, open issues/PRs |
+| Not done | Launching or operating the game, real paid model calls, full-run live regression, user interviews, a complete dependency security audit, Workshop subscription install validation |
 
-本次没有切换分支、合并 PR、修改业务代码、部署或发布。当前目录已有未跟踪文件未改动。语义搜索工具 `fast_context_search` 在本次会话不可用，使用文件清单和精确搜索完成调研。
+This pass did not switch branches, merge PRs, modify business code, deploy, or release. Existing untracked files in the working directory were left untouched. The semantic search tool `fast_context_search` was unavailable in this session; the research used file listings and exact searches.
 
-### 本次实际运行的验证
+### Validation actually run this time
 
-以下命令在上述 main worktree 执行：
+The following commands were run in the main worktree above:
 
-| 检查 | 命令 | 结果 |
+| Check | Command | Result |
 | --- | --- | --- |
-| C# 独立核心测试 | `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj --configuration Release` | 48 项通过，退出码 0 |
-| Python 单元测试 | 在 `mcp_server` 执行 `uv run --locked python -m unittest discover -s tests -v` | 29 项通过，退出码 0 |
-| MCP profile 契约验证 | 在 `mcp_server` 执行 `uv run --locked python ../scripts/run_sts2_validation.py mcp-tool-profile` | 失败，退出码 1；guided 预期集合遗漏现有四个工具 |
+| C# standalone core tests | `dotnet run --project STS2AIAgent.Tests/STS2AIAgent.Tests.csproj --configuration Release` | 48 passed, exit code 0 |
+| Python unit tests | Run in `mcp_server`: `uv run --locked python -m unittest discover -s tests -v` | 29 passed, exit code 0 |
+| MCP profile contract validation | Run in `mcp_server`: `uv run --locked python ../scripts/run_sts2_validation.py mcp-tool-profile` | Failed, exit code 1; the guided expected set omits four existing tools |
 
-C# 测试项目链接部分无游戏依赖的源码，不覆盖整个 Mod、Godot UI 或 `AgentRuntime`。这些通过结果不能证明整局稳定性，也不是完整 Mod 编译结果。PR 描述中的测试和实机证据属于贡献者报告，本次未复验。
+The C# test project links some game-independent sources and does not cover the whole Mod, the Godot UI, or `AgentRuntime`. These passing results cannot prove full-run stability and are not a full Mod build result. The tests and live evidence in PR descriptions are contributor reports and were not re-verified this time.
 
-## 3. 已有能力与产品缺口
+## 3. Existing Capabilities and Product Gaps
 
-| 方向 | 已有基础 | 下一步缺口 |
+| Area | Existing foundation | Next gap |
 | --- | --- | --- |
-| 玩家入口 | F8/AI 标签、设置/对话/游玩/双开/接入页 | 首次使用路径、能力检测、错误的可操作说明、界面语言和缩放验收 |
-| 模型接入 | 多端点、多模型、工具调用、JSON 动作后备、按模型思考强度、可选视觉 | 连通测试只证明简单请求成功；需要区分可聊天、可调用工具、可接收截图等能力 |
-| 自动游玩 | 状态优先、索引检查、单次决策单动作、pending 等待、取消令牌、进程内回合互斥 | 明确生命周期、错误分类、有限重试、无进展检测、人工接管边界、对局结束后的停止策略 |
-| 人机联机 | 双实例启动、自动加入/准备、本地玩家动作和多人状态 | 主窗口与 AI 队友双向交流、协同目标、队友暂停/恢复、失联恢复、联机全流程验收 |
-| 游戏覆盖 | 战斗、地图、奖励、商店、事件、休息、多人等；v0.9.1 已补水晶球和解锁 | 原生结算/存档正确性、动态事件描述和复杂场景回归仍有开放 PR |
-| 外部接入 | HTTP、SSE、guided/layered/full MCP；响应已有 request_id | 写操作结果不确定时的防重放、跨客户端控制权、状态与动作的一致性契约 |
-| 成本与体验 | 最近动作、思考、聊天记录；可解析 SSE 响应 | 尚无 usage 字段和对局预算；SSE 内容先完整读入再解析，没有端到端增量展示 |
-| 设置 | 本地 JSON、多模型角色、基础迁移 | API key 随设置对象明文序列化；固定 `.tmp` 加进程内锁不能协调双实例写入；加载异常回退默认值，需显式提示和恢复机制 |
-| 交付 | GitHub Release、构建脚本、Workshop 打包/VDF/双语文案 | 不等于已验证公开订阅路径；还需要干净机器安装、升级/回退和渠道一致性验证 |
-| 工程保障 | 48 项核心测试、29 项 Python 测试、多种实机验证脚本 | main 未见 `.github/workflows`；profile 验证已漂移；老路线图和发布清单仍停留在早期版本 |
+| Player entry | F8/AI tab, settings/chat/play/dual-instance/connect pages | First-use path, capability detection, actionable error explanations, UI language and scaling acceptance |
+| Model access | Multiple endpoints, multiple models, tool calls, JSON action fallback, per-model thinking intensity, optional vision | The connectivity test only proves a simple request succeeds; it needs to distinguish chat-capable, tool-capable, and screenshot-capable |
+| Auto-play | State first, index checks, one action per decision, pending wait, cancellation token, in-process turn mutex | A clear lifecycle, error classification, bounded retries, no-progress detection, human takeover boundary, and a stop policy after the run ends |
+| Human-AI co-op | Dual-instance launch, auto join/ready, local player actions and multiplayer state | Two-way communication between the main window and the AI teammate, shared goals, teammate pause/resume, disconnect recovery, full co-op flow acceptance |
+| Game coverage | Combat, map, rewards, shop, events, rest, multiplayer, and more; v0.9.1 added the crystal sphere and unlocks | Native settlement/save correctness, dynamic event descriptions, and complex-scenario regression still have open PRs |
+| External access | HTTP, SSE, guided/layered/full MCP; responses already carry request_id | Replay protection when a write result is uncertain, cross-client control ownership, a consistency contract between state and actions |
+| Cost and experience | Recent actions, thinking, chat history; parsable SSE responses | No usage field or per-run budget yet; the SSE content is read in full before parsing, with no end-to-end incremental display |
+| Settings | Local JSON, multi-model roles, basic migration | The API key is serialized in plaintext with the settings object; a fixed `.tmp` plus an in-process lock cannot coordinate writes from two instances; a load error falls back to defaults and needs explicit notice and a recovery mechanism |
+| Delivery | GitHub Release, build scripts, Workshop packaging/VDF/bilingual copy | Not equal to a validated public subscription path; clean-machine install, upgrade/rollback, and channel consistency validation are still needed |
+| Engineering assurance | 48 core tests, 29 Python tests, several live validation scripts | No `.github/workflows` seen on main; profile validation has drifted; the old roadmap and release checklist still sit at an early version |
 
-### 关键代码依据
+### Key code references
 
-以下链接固定到评估提交，避免当前 dev 与最新 main 混淆：
+The links below are pinned to the assessed commit, to avoid confusing the current dev with the latest main:
 
-- [AgentRuntime](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Agent/AgentRuntime.cs)：自动循环错误后延时继续，未见连续失败阈值和会话预算。
-- [AgentLoop](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Agent/AgentLoop.cs)：已有每轮最多 8 次工具轮次、合法动作检查和最新索引校验；每次 PlayOnce 重建消息，缺少显式跨步骤战略上下文。
-- [LLM 类型](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Llm/LlmTypes.cs)与[客户端](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Llm/OpenAiCompatibleClient.cs)：Completion 没有 token usage，流响应调用 `ReadAsStringAsync` 后解析。
-- [SettingsStore](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Config/SettingsStore.cs)：固定临时路径、复制覆盖与错误回退是并发和恢复方面的建设依据；本次未复现配置损坏。
-- [MCP client](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/mcp_server/src/sts2_mcp/client.py)：公共请求重试循环未按读写区分重试次数；动作参数仅影响超时选择，连接错误存在重发写请求的路径。
-- [发布预检](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/scripts/preflight-release.ps1)：已有多文件版本一致性检查；外部命令后未见显式非零退出码检查，需要用失败注入验证错误是否能传到最外层，不能仅凭输出 OK 判断成功。
+- [AgentRuntime](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Agent/AgentRuntime.cs): the auto loop continues after a delay on error; no consecutive-failure threshold or session budget seen.
+- [AgentLoop](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Agent/AgentLoop.cs): already has at most 8 tool rounds per turn, legal-action checks, and latest-index validation; each PlayOnce rebuilds the messages and lacks an explicit cross-step strategic context.
+- [LLM types](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Llm/LlmTypes.cs) and [client](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Llm/OpenAiCompatibleClient.cs): Completion has no token usage, and streaming responses are parsed after `ReadAsStringAsync`.
+- [SettingsStore](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/STS2AIAgent/Config/SettingsStore.cs): the fixed temp path, copy-overwrite, and error fallback are the grounds for concurrency and recovery work; no configuration corruption was reproduced this time.
+- [MCP client](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/mcp_server/src/sts2_mcp/client.py): the shared request retry loop does not vary the retry count between reads and writes; action parameters only affect the timeout choice, and a connection error has a path that resends a write request.
+- [Release preflight](https://github.com/CharTyr/STS2-Agent/blob/71c3e41c0735fae91b6349495941268ed8fa3909/scripts/preflight-release.ps1): already has a multi-file version consistency check; no explicit non-zero exit code check after external commands, so failure injection is needed to verify that errors propagate to the outermost level; success cannot be judged from an "OK" in the output alone.
 
-## 4. 现有 issue/PR 的处理顺序
+## 4. Handling Order for Existing Issues/PRs
 
-| 优先级 | 工作 | 判断与验收要求 |
+| Priority | Work | Judgment and acceptance requirements |
 | --- | --- | --- |
-| P0 | [#55 端口保留区导致初始化失败](https://github.com/CharTyr/STS2-Agent/issues/55) | 直接阻断使用。验证默认端口被占用、连续端口被保留、显式指定端口失败、多实例竞争；自动模式应找到可绑定端口，显式模式给出准确错误 |
-| P0 | [PR #53 原生结算、解锁和存档](https://github.com/CharTyr/STS2-Agent/pull/53) | 涉及玩家进度和写动作重试。先审查再决定合入；复验普通结算、跨解锁阈值、完整解锁队列、存档落盘及动作响应丢失，不以 PR 自述替代主线验收 |
-| P0 | [PR #54 事件描述本地化变量](https://github.com/CharTyr/STS2-Agent/pull/54) | 影响决策信息完整性。审查通用变量注入，验证已报告事件、中英文和空字段；不得把读取失败的空描述当完整状态 |
-| P0 | MCP profile 验证漂移、预检退出码和最小 CI | 恢复可信的发布门禁；失败必须返回非零。契约测试既要发现遗漏，也要发现多余或越权工具 |
-| P1，若证实可利用则提升 P0 | [#50](https://github.com/CharTyr/STS2-Agent/issues/50)、[#51](https://github.com/CharTyr/STS2-Agent/issues/51) 依赖报告 | 核实锁定版本、上游公告、是否进入发布包以及实际调用路径，再升级和回归。本次只确认报告存在，未验证其漏洞数量、严重性或可利用性；不直接应用报告中的示例补丁 |
+| P0 | [#55 reserved port range causes initialization failure](https://github.com/CharTyr/STS2-Agent/issues/55) | Directly blocks use. Verify default port in use, consecutive ports reserved, explicit port failure, and multi-instance contention; auto mode should find a bindable port, and explicit mode should give an accurate error |
+| P0 | [PR #53 native settlement, unlocks, and saves](https://github.com/CharTyr/STS2-Agent/pull/53) | Touches player progress and write-action retries. Review first, then decide on merging; re-verify normal settlement, crossing an unlock threshold, a full unlock queue, save persistence, and lost action responses, and do not substitute the PR's own description for mainline acceptance |
+| P0 | [PR #54 event description localization variables](https://github.com/CharTyr/STS2-Agent/pull/54) | Affects decision information completeness. Review the generic variable injection, and verify the reported events, Chinese and English, and empty fields; an empty description caused by a read failure must not be treated as complete state |
+| P0 | MCP profile validation drift, preflight exit codes, and a minimal CI | Restore a trustworthy release gate; failure must return non-zero. The contract tests must catch both omitted and extra or over-privileged tools |
+| P1, promoted to P0 if exploitable | Dependency reports [#50](https://github.com/CharTyr/STS2-Agent/issues/50) and [#51](https://github.com/CharTyr/STS2-Agent/issues/51) | Verify the locked versions, upstream advisories, whether they enter the release package, and the actual call paths, then upgrade and regress. This pass only confirmed that the reports exist and did not verify their vulnerability counts, severity, or exploitability; do not directly apply the example patches in the reports |
 
-这些工作应复用已有贡献，避免另外重写相同功能。版本号在发布时确定，下面的编号只是建议里程碑。
+This work should reuse existing contributions and avoid rewriting the same features. Version numbers are decided at release time; the numbers below are only suggested milestones.
 
-## 5. 分阶段路线图
+## 5. Phased Roadmap
 
-排期假设：1 名熟悉仓库的主要开发者，持续获得约半人力的实机 QA/维护协助，且可使用合法游戏安装和有限模型测试预算。预计 8–12 周；游戏版本变化、PR 返工和人力不足会延长。以验收结果推进阶段，不为日期跳过门槛。
+Scheduling assumptions: one main developer familiar with the repository, with roughly half-time live QA/maintenance help throughout, and access to a legitimate game installation and a limited model test budget. Estimated 8-12 weeks; game version changes, PR rework, and staffing shortfalls will extend it. Phases advance on acceptance results, and gates are not skipped to meet dates.
 
-### M0：恢复可信基线，建议 v0.9.3，1–2 周
+### M0: Restore a Trustworthy Baseline, suggested v0.9.3, 1-2 weeks
 
-交付目标：能够可靠启动，完整完成结算，发布失败不会被掩盖。
+Delivery goal: the game launches reliably, settlement completes fully, and release failures are not hidden.
 
-1. 明确从最新 main 开发的基线，安排 dev 同步，保留现有 worktree 和用户改动。本次不执行同步。
-2. 处理 #55，审查并复验 #53/#54 后决定合入。
-3. 修正 profile 验证；增加 Windows PowerShell 下的非零退出码传播检查。
-4. 接入无游戏依赖 CI：C# 核心测试、Python unittest、MCP profile、版本/manifest 一致性；完整 Mod 编译与实机验收安排在有游戏依赖的受控 runner 或维护者机器，避免把游戏 DLL 提交进仓库。
-5. 核查 #50/#51；更新陈旧的版本说明、测试命令和验收清单。关键产品计划与发布文档应纳入版本管理，新文档不能因 `docs/` 忽略规则而丢失。
+1. Establish a clear baseline of developing from the latest main, schedule a dev sync, and keep the existing worktrees and user changes. This pass does not run the sync.
+2. Handle #55, and decide on merging #53/#54 after review and re-verification.
+3. Fix profile validation; add an exit code propagation check under Windows PowerShell.
+4. Add a game-independent CI: C# core tests, Python unittest, MCP profile, version/manifest consistency; the full Mod build and live acceptance go on a controlled runner with game dependencies or on the maintainer's machine, to avoid committing game DLLs into the repository.
+5. Check #50/#51; update stale version notes, test commands, and acceptance checklists. Key product plan and release documents should be under version control, so new documents are not lost to the `docs/` ignore rule.
 
-退出条件：开放的上述阻断问题有关闭依据或明确范围说明；CI 全绿；故意注入一个测试失败时预检非零退出；至少完成一条普通结算及一条跨阈值解锁的实机证据链。
+Exit criteria: the blocking issues above are closed with evidence or have a clear scope note; CI is all green; preflight exits non-zero when a test failure is deliberately injected; at least one live evidence chain for normal settlement and one for crossing an unlock threshold is complete.
 
-### M1：可以交流和控制的 AI 队友，建议 v0.10.0，2–3 周
+### M1: An AI Teammate You Can Talk To and Control, suggested v0.10.0, 2-3 weeks
 
-交付目标：玩家在自己的游戏窗口邀请、联系和暂停 AI 队友；建议会进入队友的下一次决策，队友可以解释选择、回应玩家，且绝不接管玩家自己的角色。
+Delivery goal: the player invites, contacts, and pauses the AI teammate from their own game window; suggestions enter the teammate's next decision, the teammate can explain choices and respond to the player, and never takes over the player's own character.
 
-核心交互：主窗口的“AI 队友”页、队友连接状态、战术交流、快捷建议、队友主动简短发言、暂停/恢复。通信绑定本次启动的真实队友实例，避免把命令发给另一局。暂停时仍能交流；正在请求模型时显示等待状态。
+Core interaction: an "AI Teammate" page in the main window, teammate connection status, tactical chat, quick suggestions, brief proactive teammate remarks, and pause/resume. Communication binds to the real teammate instance of this launch, avoiding sending commands to another run. Chat still works while paused; a waiting state is shown while a model request is in flight.
 
-1. 为自动游玩增加明确状态：空闲、读取状态、请求模型、执行动作、等待游戏、已暂停、需人工处理、对局结束。
-2. 建立错误分类：凭据/模型配置错误立即停；临时网络/限流有限退避；UNKNOWN 或无进展达到阈值后停；动作结果不确定先读状态，不盲目重发。
-3. 增加对局控制：当前角色、当前局/新局选择、仅运行当前局、暂停、单步、人工接管。禁止默认在结算后无止境新开局。
-4. 将现有进程内互斥扩展为服务端统一动作协调：内置 Agent、MCP 和其他 API 客户端竞争控制时返回明确状态；手动操作使旧决策失效。
-5. 增加最小会话记录：会话/决策/请求 ID、屏幕、模型、动作、前后状态摘要、耗时、结果和暂停原因；沿用现有 request_id，不重复建设另一套无关联日志。
+1. Add explicit auto-play states: idle, reading state, requesting model, executing action, waiting for game, paused, needs manual handling, run ended.
+2. Build an error classification: credential/model configuration errors stop immediately; transient network/rate-limit errors back off a bounded number of times; stop once UNKNOWN or no-progress reaches a threshold; when an action result is uncertain, read the state first and do not resend blindly.
+3. Add run control: current character, current run/new run choice, run the current run only, pause, single step, manual takeover. Do not by default endlessly start new runs after settlement.
+4. Extend the existing in-process mutex into server-side unified action coordination: when the built-in Agent, MCP, and other API clients compete for control, return a clear status; manual operation invalidates old decisions.
+5. Add a minimal session record: session/decision/request IDs, screen, model, action, before/after state summary, duration, result, and pause reason; reuse the existing request_id instead of building another unrelated log.
 
-退出条件：断网、401/429/5xx、无工具动作、连续 UNKNOWN、pending 超时、响应丢失、暂停/恢复和外部客户端竞争均有自动化场景；暂停后不再派发新的写动作。已经提交给游戏的动作允许结算，UI 必须如实显示。实机长会话中的失败能够导出并定位到具体决策。
+Exit criteria: network loss, 401/429/5xx, no-tool actions, consecutive UNKNOWN, pending timeout, lost response, pause/resume, and external client contention each have an automated scenario; no new write action is dispatched after a pause. Actions already submitted to the game are allowed to settle, and the UI must show this honestly. Failures in long live sessions can be exported and traced to a specific decision.
 
-### M2：首次使用与成本控制，建议 v0.11.0，2–3 周
+### M2: First Use and Cost Control, suggested v0.11.0, 2-3 weeks
 
-交付目标：非开发者可以独立完成首次游玩，知道数据发给谁、用了多少。
+Delivery goal: a non-developer can complete their first play session independently and knows who the data is sent to and how much was used.
 
-1. 增加首次引导：检查 Mod/游戏版本 → 填写端点 → 选择模型 → 按需测试工具/视觉能力 → 执行一次可控单步 → 开始当前局。
-2. 把简单连通测试升级为分项诊断；已实现多端点继续保留，先覆盖测试过的兼容类型，不承诺所有 OpenAI 兼容实现完全一致。
-3. 加入 token usage、请求计数、用时和会话预算。费用按用户配置的单价估算，明确标记估算值；服务端不返回 usage 时显示未知。无法可靠算费用时，以请求次数、token 上限和运行时长做可执行的停止条件。
-4. 实现端到端增量状态/文本展示和取消；截图按需或按场景变化发送，记录额外视觉调用成本。
-5. 设置 schema 版本、备份与可恢复迁移；采用跨进程协调和唯一临时文件/可靠替换。凭据与普通设置分离，优先使用对应平台的凭据存储；导出诊断默认移除密钥、授权头和敏感输入。
-6. 以“AI 队友”为主要页面，展示组队阶段、队友角色、当前意图、队伍对话和恢复按钮；单人代打与 MCP 放入辅助/高级入口。增加轻松搭档、沉稳参谋等交流风格及主动发言频率，避免每张牌都刷屏。把中文界面字符串资源化，验收中英文、常见分辨率和缩放。
+1. Add a first-run guide: check Mod/game version -> enter endpoint -> choose model -> test tool/vision capability as needed -> perform one controlled single step -> start the current run.
+2. Upgrade the simple connectivity test into itemized diagnostics; keep the already implemented multi-endpoint support, cover the tested compatible types first, and do not promise that every OpenAI-compatible implementation behaves identically.
+3. Add token usage, request counts, duration, and a session budget. Cost is estimated from the user-configured unit price and clearly marked as an estimate; show unknown when the server returns no usage. When cost cannot be computed reliably, use request count, token cap, and run duration as actionable stop conditions.
+4. Implement end-to-end incremental state/text display and cancellation; send screenshots on demand or on scene change, and record the extra vision call cost.
+5. Settings schema version, backup, and recoverable migration; use cross-process coordination and unique temp files/reliable replacement. Separate credentials from ordinary settings, preferring the platform's credential store; diagnostic export removes keys, authorization headers, and sensitive input by default.
+6. Make "AI Teammate" the main page, showing the team formation stage, teammate role, current intent, team chat, and recovery button; put solo play-for-me and MCP in auxiliary/advanced entry points. Add communication styles such as relaxed partner and steady advisor, plus a proactive speech frequency, avoiding chatter on every card. Move the Chinese UI strings into resources, and validate Chinese and English, common resolutions, and scaling.
 
-退出条件：邀请 5–8 名未参与开发的玩家，用自己的模型凭据测试；目标至少 80% 在 10 分钟内完成第一步合法动作。端点故障单独记录原因，不悄悄排除失败样本。预算到达后不再发新请求；设置升级、损坏恢复、双实例保存和脱敏导出均通过场景验证。
+Exit criteria: invite 5-8 players who did not take part in development to test with their own model credentials; the goal is at least 80% completing the first legal action within 10 minutes. Endpoint failures are recorded separately with reasons, and failed samples are not quietly excluded. No new requests are sent once the budget is reached; settings upgrade, corruption recovery, two-instance saving, and redacted export all pass scenario validation.
 
-### M3：建立策略质量闭环，1.0 Beta/RC，2–3 周
+### M3: Build a Strategy Quality Loop, 1.0 Beta/RC, 2-3 weeks
 
-交付目标：能用证据解释策略是否改善、成本是否值得，而不是依赖少数演示录像。
+Delivery goal: be able to explain with evidence whether the strategy improved and whether the cost is worth it, instead of relying on a few demo recordings.
 
-1. 固定评估记录：游戏/Mod 版本、角色、难度、种子、模型标识、提示词版本、参数和视觉开关。模型后端仍可能非确定，结果按分组和多次运行比较。
-2. 建立两层评估：状态夹具回放验证合法性、契约和恢复；实机固定场景与对局测试验证真实动作、流程和策略。离线回放不声称能完整模拟游戏。
-3. 先建立 10–20 个高频/已知故障场景；累积至少 30 次端到端会话，覆盖战斗、奖励、事件、商店、特殊选择、死亡结算、解锁、继续存档。30 次只作为 RC 样本门槛，不构成可靠率的统计保证。
-4. 加入轻量跨步骤队伍摘要：玩家当前建议、双方卡组方向、共同路线目标、资源预算和关键观察；行动合法性始终以最新状态为准。让 AI 在路线分歧、需要支援和关键战斗后给出简短、有依据的交流，不虚构队友行为。
-5. 基于失败分类修正提示词和元数据，优先减少信息缺失和错误决策；评估后再决定是否需要战斗规划器。暂不引入多 Agent 编排、向量库或训练管线。
+1. Fixed evaluation records: game/Mod version, character, difficulty, seed, model identifier, prompt version, parameters, and vision switch. Model backends may still be non-deterministic, so compare results by group and across multiple runs.
+2. Build two evaluation layers: state fixture replay validates legality, contracts, and recovery; live fixed scenarios and run tests validate real actions, flow, and strategy. Offline replay does not claim to fully simulate the game.
+3. First build 10-20 high-frequency/known-failure scenarios; accumulate at least 30 end-to-end sessions covering combat, rewards, events, shop, special choices, death settlement, unlocks, and continuing a save. 30 is only the RC sample threshold and gives no statistical guarantee of reliability.
+4. Add a lightweight cross-step team summary: the player's current suggestions, both decks' direction, shared route goals, resource budget, and key observations; action legality is always judged against the latest state. Have the AI give brief, grounded remarks at route disagreements, when support is needed, and after key fights, without inventing teammate behavior.
+5. Revise prompts and metadata based on failure classification, prioritizing fewer missing-information and wrong-decision cases; decide whether a combat planner is needed only after evaluation. Do not introduce multi-Agent orchestration, vector stores, or training pipelines for now.
 
-退出条件：新策略相对基线没有显著合法性/流程回退；胜率、楼层、耗时、请求数和 token 按相同实验条件记录；每项质量提升都有可复跑的样本。模型选型不依赖未经测试的排名。
+Exit criteria: the new strategy shows no significant legality/flow regression against the baseline; win rate, floors, duration, request count, and tokens are recorded under the same experimental conditions; every quality improvement has a re-runnable sample. Model selection does not rely on untested rankings.
 
-### M4：稳定交付，v1.0.0，1–2 周
+### M4: Stable Delivery, v1.0.0, 1-2 weeks
 
-交付目标：用户可以安装、升级、遇错恢复，维护者可以复现问题并交付修复。
+Delivery goal: users can install, upgrade, and recover from errors, and maintainers can reproduce problems and ship fixes.
 
-1. 对齐 GitHub 与 Workshop 的版本、功能和依赖说明；完成私有订阅、干净安装、升级及回退演练，检查重复安装冲突。现有打包能力直接复用。
-2. 明确支持矩阵：优先正式支持已验证的 Windows/游戏版本/本地双开联机流程；macOS/Linux 依据实测列为支持、实验或未验证。Windows 双开失败属于主流程缺陷，不能降为实验标签绕过验收。
-3. 提供兼容性状态、更新说明、问题报告模板和脱敏诊断包；更新检查如需联网应可配置，无需建设账户体系。
-4. 将常见故障的恢复步骤放进产品内；保留用户明确控制截图发送、暂停和运行预算的入口。
-5. 观察一个 RC 周期：建议 7 天，无未解决的 P0，再发布稳定版；出现游戏破坏性更新时重新验证相关场景。
+1. Align GitHub and Workshop on version, features, and dependency notes; complete private subscription, clean install, upgrade, and rollback drills, and check for duplicate-install conflicts. Reuse the existing packaging capability directly.
+2. Define a support matrix: officially support the validated Windows/game version/local dual-instance co-op flow first; list macOS/Linux as supported, experimental, or unverified based on real testing. A Windows dual-instance failure is a main-flow defect and cannot be downgraded to an experimental label to bypass acceptance.
+3. Provide compatibility status, release notes, an issue report template, and a redacted diagnostic bundle; if update checks need the network they should be configurable, and no account system needs to be built.
+4. Put recovery steps for common faults inside the product; keep user-controlled entry points for screenshot sending, pausing, and run budget.
+5. Observe one RC cycle: suggested 7 days with no unresolved P0 before publishing the stable release; re-validate the relevant scenarios after a breaking game update.
 
-退出条件：满足第 6 节发布门槛，且能从用户诊断包定位问题，不再要求普通玩家安装开发工具才能报错。
+Exit criteria: meets the release thresholds in Section 6, and problems can be located from a user's diagnostic bundle, so ordinary players no longer need to install development tools to report an error.
 
-## 6. 1.0 验收指标
+## 6. 1.0 Acceptance Metrics
 
-以下为建议目标，当前没有足够数据证明已经达到。
+The following are suggested targets; there is currently not enough data to show they have been reached.
 
-| 指标 | 定义与建议门槛 |
+| Metric | Definition and suggested threshold |
 | --- | --- |
-| 首次成功 | 5–8 名新用户中至少 80% 在 10 分钟内与 AI 成功组队并完成第一场协同战斗；记录每个失败原因 |
-| 流程可靠性 | 至少 30 次人机联机端到端会话，到达自然结束并完成双方结算的比例目标 ≥95%；正常输掉游戏计为流程完成，软件卡死、错误停止、未结算计失败 |
-| 交互真实有效 | 有证据证明玩家消息送达正确队友并进入后续决策，AI 回应回到主窗口；战术建议不得变成人类角色的自动操作；暂停期间可以交流 |
-| 一起玩的乐趣 | 新用户测试访谈记录“像队友还是像工具”、有趣/打断体验的具体时刻；目标至少 80% 愿意再次与该 AI 队友组队，记录样本数，不把模型胜率当有趣性的替代指标 |
-| 接管 | 所有暂停/取消场景中，确认暂停后不再派发新写动作；已经提交的动作可正常结算且有提示 |
-| 写操作安全 | 响应丢失/超时用例不重复执行；过期决策拒绝或刷新；存档/解锁回归中无已知数据损坏 |
-| 成本 | 每次模型调用记录 usage 或明确“未知”；预算触发后不发新请求；费用估算和实际账单不混淆 |
-| 诊断 | 测试中的每个异常都能关联到会话和决策，诊断导出不包含密钥和授权头 |
-| 策略质量 | 在固定模型/角色/难度/种子集下报告胜率、平均楼层、每局请求/token 和耗时；先建立基线，不预设未经论证的绝对胜率 |
-| 交付 | 干净安装、升级、回退演练完成；CI 全绿；已声明支持平台有实测证据；无未解决 P0 |
+| First success | At least 80% of 5-8 new users form a team with the AI within 10 minutes and complete the first co-op fight; record every failure reason |
+| Flow reliability | At least 30 end-to-end human-AI co-op sessions, with a target of >=95% reaching a natural end and completing both sides' settlement; a normal loss counts as flow completion, while a software hang, erroneous stop, or missing settlement counts as failure |
+| Real and effective interaction | Evidence that player messages reach the right teammate and enter later decisions, and that AI responses return to the main window; tactical suggestions must not turn into automatic operation of the human's character; chat works during a pause |
+| Fun of playing together | New-user test interviews record "teammate or tool", and concrete moments of fun or interruption; the goal is at least 80% willing to team up with this AI teammate again, with the sample size recorded; model win rate is not a substitute for fun |
+| Takeover | In every pause/cancel scenario, confirm that no new write action is dispatched after the pause; actions already submitted settle normally and are announced |
+| Write safety | Lost-response/timeout cases do not execute twice; stale decisions are rejected or refreshed; no known data corruption in save/unlock regression |
+| Cost | Every model call records usage or explicitly "unknown"; no new requests are sent after the budget triggers; cost estimates are not confused with actual bills |
+| Diagnostics | Every anomaly in testing can be linked to a session and decision; diagnostic export contains no keys or authorization headers |
+| Strategy quality | Report win rate, average floors, requests/tokens per run, and duration under a fixed model/character/difficulty/seed set; build a baseline first and do not preset an unjustified absolute win rate |
+| Delivery | Clean install, upgrade, and rollback drills complete; CI all green; the declared supported platforms have live evidence; no unresolved P0 |
 
-不在小样本下宣传“95% 产品可靠率”；上述目标用于内部 RC 判定，公开描述必须带样本数和测试条件。故障注入测试与正常对局样本分开统计，避免混淆指标。
+Do not advertise a "95% product reliability rate" on a small sample; the targets above are for internal RC decisions, and any public description must carry the sample size and test conditions. Fault injection tests and normal run samples are counted separately to avoid mixing up the metrics.
 
-## 7. 可直接拆为 issue 的首批任务
+## 7. First Batch of Tasks to Split Directly into Issues
 
-| ID | 优先级 | 交付项 | 主要位置 | 依赖与验收 |
+| ID | Priority | Deliverable | Main location | Dependencies and acceptance |
 | --- | --- | --- | --- | --- |
-| R01 | P0 | 修复端口保留区与自动选端口 | `Server/HttpServer.cs`、启动测试 | 对应 #55；含绑定竞争和显式端口失败 |
-| R02 | P0 | 原生结算/存档及写请求不确定性 | `GameActionService`、MCP client | 审查 #53；复验完整进度保存和不重放 |
-| R03 | P0 | 事件选项动态变量 | `GameStateService` | 审查 #54；多事件/中英文回归 |
-| R04 | P0 | profile 契约、失败传播与最小 CI | `scripts/`、`.github/workflows/` | 无前置；失败注入能阻止发布 |
-| R05 | P1 | 生命周期、错误分类与熔断暂停 | `AgentRuntime`、`AgentLoop` | R02 后明确执行结果语义；故障矩阵通过 |
-| R06 | P1 | 控制权与状态一致性 | Server、Game bridge、动作入口 | R02/R05；跨客户端竞争和手动干预测试 |
-| R07 | P1 | 会话记录与脱敏诊断导出 | Agent、LLM、UI | 与 R05 同期；关联现有 request_id |
-| R08 | P1 | 配置恢复与凭据存储 | `Config/`、设置 UI | 双实例保存、损坏恢复和旧版迁移 |
-| R09 | P1 | 模型能力检测与首次组队引导 | LLM、UI、Multiplayer | R05/R08；新用户双开测试验收 |
-| C01 | P0 | 主窗口到 AI 队友的双向通信与暂停/恢复 | Multiplayer、Router、Agent、UI | R01；匹配本次队友进程，消息与游戏写动作隔离 |
-| C02 | P1 | 玩家建议进入决策、AI 主动回应 | AgentLoop、队伍对话上下文 | C01；实机证明建议有效、只控制 AI 自己 |
-| C03 | P1 | 队友风格、共同目标、战后互动 | 设置、提示词、UI | C02/R12；有趣性访谈与低打扰验收 |
-| C04 | P0 | 双开完整验收与失联恢复 | Multiplayer、实机验证 | C01/C02；不能以单人测试替代 |
-| R10 | P1 | token、预算与增量展示 | LLM、Agent、UI | R07；usage 缺失、取消、预算边界测试 |
-| R11 | P1 | 依赖报告核查与修复 | 锁文件、打包流程 | #50/#51；核实实际发布面后定严重性 |
-| R12 | P1 | 场景夹具与实机质量基线 | 测试、验证脚本、评估文档 | R02/R03/R07；可复跑且保存版本条件 |
-| R13 | P2 | 对局摘要和策略改进 | Agent、提示词 | R12 后以数据决定策略复杂度 |
-| R14 | P1 | 双渠道安装/升级/回退验收 | 打包脚本、Workshop、文档 | R04 与 RC；支持矩阵有证据 |
+| R01 | P0 | Fix the reserved port range and automatic port selection | `Server/HttpServer.cs`, startup tests | Corresponds to #55; includes bind contention and explicit port failure |
+| R02 | P0 | Native settlement/save and write-request uncertainty | `GameActionService`, MCP client | Review #53; re-verify complete progress saving and no replay |
+| R03 | P0 | Event option dynamic variables | `GameStateService` | Review #54; multi-event and Chinese/English regression |
+| R04 | P0 | Profile contract, failure propagation, and a minimal CI | `scripts/`, `.github/workflows/` | No prerequisite; failure injection can block a release |
+| R05 | P1 | Lifecycle, error classification, and circuit-break pause | `AgentRuntime`, `AgentLoop` | After R02, clarify execution result semantics; the failure matrix passes |
+| R06 | P1 | Control ownership and state consistency | Server, Game bridge, action entry points | R02/R05; cross-client contention and manual intervention tests |
+| R07 | P1 | Session records and redacted diagnostic export | Agent, LLM, UI | Same period as R05; linked to the existing request_id |
+| R08 | P1 | Configuration recovery and credential storage | `Config/`, settings UI | Two-instance saving, corruption recovery, and old-version migration |
+| R09 | P1 | Model capability detection and first-run co-op guide | LLM, UI, Multiplayer | R05/R08; acceptance by new-user dual-instance testing |
+| C01 | P0 | Two-way communication from the main window to the AI teammate, and pause/resume | Multiplayer, Router, Agent, UI | R01; matches this launch's teammate process, with messages isolated from game write actions |
+| C02 | P1 | Player suggestions enter decisions, AI proactive responses | AgentLoop, team chat context | C01; live proof that suggestions take effect and that only the AI's own character is controlled |
+| C03 | P1 | Teammate style, shared goals, post-fight interaction | Settings, prompts, UI | C02/R12; fun interviews and low-interruption acceptance |
+| C04 | P0 | Full dual-instance acceptance and disconnect recovery | Multiplayer, live validation | C01/C02; cannot be replaced by solo testing |
+| R10 | P1 | Tokens, budget, and incremental display | LLM, Agent, UI | R07; tests for missing usage, cancellation, and budget boundaries |
+| R11 | P1 | Dependency report verification and fixes | Lock files, packaging flow | #50/#51; set severity after confirming the real release surface |
+| R12 | P1 | Scenario fixtures and live quality baseline | Tests, validation scripts, evaluation docs | R02/R03/R07; re-runnable and records version conditions |
+| R13 | P2 | Run summaries and strategy improvement | Agent, prompts | After R12, decide strategy complexity from data |
+| R14 | P1 | Dual-channel install/upgrade/rollback acceptance | Packaging scripts, Workshop, docs | R04 and RC; the support matrix has evidence |
 
-前两个迭代建议投入约 60% 稳定性和验证、25% 用户操作与诊断、15% 质量评估准备；不是按这些比例同时启动所有任务。
+For the first two iterations, put roughly 60% into stability and validation, 25% into user operation and diagnostics, and 15% into quality evaluation preparation; this does not mean starting all tasks at once in those proportions.
 
-## 8. 架构演进原则
+## 8. Architecture Evolution Principles
 
-当前 main 的 `GameStateService.cs` 约 7004 行、`GameActionService.cs` 约 4976 行、`AgentOverlayHost.cs` 约 1156 行。规模表明维护成本值得关注，但不据此发起全量重写。
+On current main, `GameStateService.cs` is about 7004 lines, `GameActionService.cs` about 4976 lines, and `AgentOverlayHost.cs` about 1156 lines. The size shows that maintenance cost deserves attention, but this is not grounds to start a full rewrite.
 
-- 在修复和增加契约测试时逐步抽出屏幕处理逻辑，先覆盖结算/解锁、事件和战斗等实际变更热点；保留现有 HTTP 接口作为兼容入口。
-- 把可脱离 Godot 的生命周期/恢复策略抽成独立单元，让现有核心测试能覆盖运行管理；Godot 适配继续负责游戏线程调用。
-- 逐步统一动作参数、可用性、状态元数据与工具描述的契约，先用跨层测试阻止漂移，再决定是否自动生成部分描述。
-- 为状态版本/签名和动作关联信息设计向后兼容字段；已有 request_id 是追踪标识，不把它直接当去重键。保持旧客户端可用，新客户端再启用更强校验。
-- 不修改“动作必须在 GameThread 执行”“状态转换带超时等待”“新字段向后兼容”等既有边界。
+- While fixing and adding contract tests, gradually extract screen handling logic, covering the real change hotspots first: settlement/unlocks, events, and combat; keep the existing HTTP interface as a compatibility entry point.
+- Extract the lifecycle/recovery policy that can be separated from Godot into independent units, so the existing core tests can cover run management; the Godot adapter remains responsible for game-thread calls.
+- Gradually unify the contract across action parameters, availability, state metadata, and tool descriptions, first using cross-layer tests to prevent drift, then deciding whether to auto-generate some descriptions.
+- Design backward-compatible fields for state version/signature and action correlation information; the existing request_id is a tracing identifier and is not used directly as a deduplication key. Keep old clients working and enable stronger validation only for new clients.
+- Do not change the existing boundaries such as "actions must run on the GameThread", "state transitions wait with a timeout", and "new fields are backward compatible".
 
-## 9. 暂缓项与后续决策
+## 9. Deferred Items and Follow-up Decisions
 
-1. 暂缓云托管、账户/订阅计费、社区模型市场和复杂插件平台；当前用户价值不依赖它们。
-2. 暂缓大规模多 Agent 编排、训练/微调和复杂长期记忆；先证明基础状态质量、恢复机制和轻量摘要的效果。
-3. 双开联机是主线，优先解决进程启动、设置竞争、控制权和完整联机流程。暂缓的是跨互联网托管和复杂语音系统，而不是人机一起玩的体验。
-4. 暂缓大量低频动作扩展；按用户失败记录和场景覆盖缺口排优先级。
+1. Defer cloud hosting, account/subscription billing, a community model marketplace, and a complex plugin platform; current user value does not depend on them.
+2. Defer large-scale multi-Agent orchestration, training/fine-tuning, and complex long-term memory; first prove the effect of basic state quality, recovery mechanisms, and lightweight summaries.
+3. Dual-instance co-op is the main line; first solve process launch, settings contention, control ownership, and the full co-op flow. What is deferred is cross-internet hosting and complex voice systems, not the experience of a human and an AI playing together.
+4. Defer large numbers of low-frequency action extensions; prioritize by user failure records and scenario coverage gaps.
 
-人力、测试预算和目标模型会影响排期；主线顺序为可靠组队 → 双向交流与协同 → 丰富队友个性 → 双开全流程稳定交付。原 8–12 周估算需随双开实机结果复估，不为沿用原排期缩减人机联机目标。
+Staffing, test budget, and the target model will affect the schedule; the main-line order is reliable team formation -> two-way communication and coordination -> richer teammate personality -> stable end-to-end dual-instance delivery. The original 8-12 week estimate needs to be re-estimated against the dual-instance live results, and the human-AI co-op goal is not reduced to keep the original schedule.

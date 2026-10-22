@@ -6,8 +6,8 @@
 
 > Dual-layer evidence, observability, and the small leaks. The decision log now records what each frame offered the executor and marks LLM fallbacks; the planner's input is always parseable and extreme frames degrade to a skeleton; the overlay marks fallback decisions, shows the session's Jev/fallback split, and serves the redacted diagnostics over HTTP; reasoning streaming and the screenshot path no longer leak work per frame or per failed capture; the width sentinel re-logs on change. Verified offline (882 C# tests, 423 Python tests, all gates), live on yesterday's dual-layer evidence, and smoke-checked today (invite reason, diagnostics route, invite failure feedback).
 
-- **双层决策的规划与证据。** Jev 无法提交而改由 LLM 决策时，回退提示词继承规划器的 `goal`、`posture`、`instructions` 和分类提示。规划器输入按字段优先级裁剪为可解析 JSON，极端大帧保留屏幕、回合及战斗骨架而非退化成 `{}`。决策日志记录 Jev 逐回合选项 ID（至多 48）、概率、危险度、策略更新时间；LLM 接手的行带 `jev_attempt=true`，覆盖层标注「Jev 未提交 → LLM 接手」，Jev 面板显示本局执行次数和回退次数。
-- **诊断与资源开销。** 新增仅 loopback 的 `GET /diagnostics`，返回与覆盖层导出按钮相同的脱敏文本。流式思考每次只生成前 600 字符的显示预览，最终完成体仍保留完整推理；截图等待绘制帧时显式断开信号，避免无法渲染时的连接积累；宽度诊断在超宽控件数量变化时再次报告。
+- **Planning and evidence for dual-layer decisions.** When Jev cannot submit and the LLM decides instead, the fallback prompt inherits the planner's `goal`, `posture`, `instructions`, and classification hints. The planner input is trimmed by field priority into parseable JSON, and an extreme frame keeps the screen, round, and combat skeleton instead of degrading to `{}`. The decision log records Jev's per-turn option IDs (at most 48), probabilities, danger levels, and strategy update time; rows taken over by the LLM carry `jev_attempt=true`, the overlay labels them "Jev did not submit -> LLM took over", and the Jev panel shows this run's execution count and fallback count.
+- **Diagnostics and resource overhead.** Added a loopback-only `GET /diagnostics` that returns the same redacted text as the overlay's export button. Streaming thinking generates only a display preview of the first 600 characters each time, while the final completion keeps the full reasoning; when a screenshot waits for a drawn frame it explicitly disconnects the signal, avoiding connection buildup when rendering is impossible; the width diagnostic reports again when the number of overwide controls changes.
 
 ## v0.16.1 - 2026-09-24
 
@@ -18,7 +18,7 @@
 > failing behavior and the fix in the same isolated game session (offline suite: 866 C# tests,
 > 423 Python tests, all gates).
 
-- **邀请队友失败现在有明确原因。** 在单人模式或自动游玩进行中调用 `invite_ai_teammate`/`continue_ai_teammate`，以前会一直挂在 `pending`：双开任务在第一道模式门就被无声拒绝，既不写状态也不写日志，`dual_launch_outcome` 永远停在 Idle。现在这类"玩家可修复"的前置失败会记录为 `Rejected` 并附可读的告知文本（切到多人模式 / 先暂停自动游玩），请求返回 409 指向原因；真正并发在途的尝试语义不变，仍是 `pending`。该缺陷在 `--force-steam off` 的隔离档实机中复现（邀请 8 分钟无任何反馈），已加离线回归。
+- **A failed teammate invite now has a clear reason.** Calling `invite_ai_teammate`/`continue_ai_teammate` in solo mode or while auto-play is running used to hang at `pending` forever: the dual-launch task was silently rejected at the first mode gate, writing neither state nor log, and `dual_launch_outcome` stayed at Idle forever. Now such "player-fixable" precondition failures are recorded as `Rejected` with a readable notice (switch to multiplayer mode / pause auto-play first), and the request returns 409 pointing at the cause; attempts truly in flight concurrently keep their semantics and stay `pending`. The defect was reproduced live on an isolated profile with `--force-steam off` (an invite got no feedback for 8 minutes), and an offline regression was added.
 
 ## v0.16.0 - 2026-09-24
 
@@ -37,11 +37,11 @@
 
 - **Review fixes from three independent read-only reviews.** A plan's screen and combat round are now actually recorded: the planner reads a compact state cut at 4,000 characters, which is not valid JSON on nearly every combat frame, so the provenance was always empty and Jev was never told a plan came from an earlier fight; it is now read from the head of the cut summary. An external strategy update is merged inside the store's lock, so a plan the in-game planner lands at the same moment is no longer reverted. `plan_screen` / `plan_round` are marked read-only in the OpenAPI schema. A single step or a proactive chat that fails mid-stream no longer leaves its "thinking" bubble on screen. The settings page's save status wraps, because a rejected budget input puts a sentence wider than the panel into it. A theme or language change during a screenshot keeps the overlay hidden until that capture restores it, and a capture that somehow resumes off the game thread answers `screenshot_unavailable` instead of a 500. Hints past the 64-entry cap are reported as dropped instead of silently ending the scan.
 
-- **外部规划器可以设定宏观目标；局部更新不再清空策略。** MCP `update_play_strategy`（原生与 Python 两面）和 `POST /strategy` 新增 `goal` 字段，外部 Agent 当规划层时也能写一句 Jev 每次选择都先读的宏观目标。修复：`POST /strategy`（Python sidecar 走的就是它）原本把省略字段重置为默认值，只调 `posture` 会顺手清空 `instructions` 与 `option_hints`；原生 MCP 的合并则会丢掉宏观目标。两面现在共用同一合并，省略字段保留原值，空更新返回 400 而不是重置。游玩 skill 同步：guided 工具清单为 17 个，新增「给游戏内自动游玩当规划层」的用法，说明 `play_running` 时外部 `act` 会与自动游玩抢操作，并在地图剧本里写明行进动画期间不要重发选点。
+- **An external planner can set the macro goal; a partial update no longer clears the strategy.** MCP `update_play_strategy` (both native and Python surfaces) and `POST /strategy` gain a `goal` field, so an external Agent acting as the planning layer can also write the one-sentence macro goal that Jev reads first on every choice. Fix: `POST /strategy` (which is what the Python sidecar uses) used to reset omitted fields to defaults, so adjusting only `posture` would clear `instructions` and `option_hints` along the way; the native MCP merge would drop the macro goal. Both surfaces now share the same merge, omitted fields keep their values, and an empty update returns 400 instead of resetting. The play skill was synced: the guided tool list is 17 tools, with a new "act as the planning layer for in-game auto-play" usage, a note that an external `act` competes with auto-play for control while `play_running`, and a note in the map playbook not to resend a node pick during the travel animation.
 
-- **双层决策与窄屏布局。** LLM 的宏观目标现在作为独立、长度受限的策略字段传给 Jev；`option_hints` 从动作类型映射到当前帧实际可选的动作 ID，过期提示不再误导选择。策略记录编写时的屏幕/战斗回合，执行端标明跨战斗复用的局限；保留原有 `instructions` 和低置信度回退。设置页删除提示与首次引导句子可换行，游玩页将 Token 指标移到独立的整行，避免模型删除或消耗增长后挤出面板。此前实机观察和复验记录见 [2026-09-23 部分验收报告](docs/live-validation-2026-09-23-results.md)：布局已于 2026-09-24 在新 DLL 上实机复验通过；双层决策的改动需要真实 Jev / 模型调用，尚未实机验收。
+- **Dual-layer decisions and narrow-screen layout.** The LLM's macro goal is now passed to Jev as an independent, length-limited strategy field; `option_hints` are mapped from action types to the action IDs actually selectable in the current frame, so stale hints no longer mislead the choice. The strategy records the screen/combat round it was written for, and the executor states the limits of reuse across combats; the original `instructions` and the low-confidence fallback are kept. The settings page's delete hint and the first-run guide sentences can wrap, and the play page moves the Token metric to its own full row, so the panel is not pushed out after a model is deleted or consumption grows. For the earlier live observations and re-verification records see the [2026-09-23 partial acceptance report](docs/live-validation-2026-09-23-results.md): the layout was re-verified live on the new DLL on 2026-09-24; the dual-layer decision changes need real Jev / model calls and have not been accepted live yet.
 
-- **截图实际绘制帧。** 截图隐藏覆盖层后等待渲染器已绘制的帧，而不是在绘制前的 `ProcessFrame` 立即读出旧画面；并发截图串行、超时/取消后恢复原有可见性。先前返回 200 但 JPEG 里仍含覆盖层的实机失败已记录；2026-09-24 在游戏内复验：连续两次截图均不含覆盖层，截图后覆盖层恢复可见。
+- **Screenshots of the actually drawn frame.** After a screenshot hides the overlay it waits for a frame the renderer has drawn, instead of immediately reading the stale picture in `ProcessFrame` before drawing; concurrent screenshots are serialized, and the original visibility is restored after a timeout/cancel. The earlier live failure that returned 200 while the JPEG still contained the overlay is recorded; re-verified in game on 2026-09-24: two consecutive screenshots both lacked the overlay, and the overlay became visible again after the screenshot.
 
 - **Live reasoning during auto-play.** A thinking model's reasoning now reaches the in-game conversation
   while the turn is still running instead of only after it lands. The LLM client reads a streamed body as
@@ -406,7 +406,7 @@
   the flag still `false`, and `strategy.md` tells a model to trust it. Both now report a risk row
   (`poison_next_turn`, `constrict_turn_end`) with the damage, the damage after block and the reason;
   the poison total is read from the live power so Accelerant and every damage modifier are already
-  folded in rather than guessed from the stack size. The glossary entry for 中毒 also said it
+  folded in rather than guessed from the stack size. The glossary entry for Poison also said it
   resolves at end of turn, which is not what the power does; it now matches.
 
 - **The MCP tool surface stops re-explaining the game on every request.** A client re-sends every
@@ -1067,11 +1067,11 @@
 ### Added
 
 - **The AI Teammate tab gains the two co-op controls that existed only through the API.** Above the Invite
-  button, **禁用自动选角** binds `companionAutoSelectCharacter` (ticked = `false`) and is saved on toggle,
+  button, **Disable automatic character pick** binds `companionAutoSelectCharacter` (ticked = `false`) and is saved on toggle,
   because the companion reads settings at launch and this tab has no separate Save; the line under it says
   what the second window will do either way: take the preselected character, or wait on the character
   screen for the AI driving it (or a person at that window) to choose and embark. Under the Invite button,
-  **继续上次联机对局** goes through the same runtime entry as `continue_ai_teammate`, chooses the co-op
+  **Continue the saved co-op run** goes through the same runtime entry as `continue_ai_teammate`, chooses the co-op
   route the way the API does, and is enabled only where that action is accepted: host main menu with a
   co-op save on disk. The game's own Load button opens a saved co-op run over Steam networking, rejects the
   local-connection player ids and renames the save as corrupt, so the way back into a saved run lives here.
@@ -1258,7 +1258,7 @@
 ### Fixed
 
 - The glossary recognised only the Chinese keyword spellings, so on an English client card text matched nothing and the glossary came back empty. English spellings now match as well.
-- Failure classification read Chinese wording only (`失败` / `请先` / `找不到`, `等待你`, `请求模型`, 认证失败 / 配置错误 / 超时), so on an English client a failed co-op invite, a teammate map wait and a configuration error were all misread as success or as a different kind of stop. These now key off explicit flags and English candidates.
+- Failure classification read Chinese wording only (`失败` / `请先` / `找不到`, `等待你`, `请求模型`, `认证失败` / `配置错误` / `超时`), so on an English client a failed co-op invite, a teammate map wait and a configuration error were all misread as success or as a different kind of stop. These now key off explicit flags and English candidates.
 - Text resolved while a field or a computed-once property is initialized used to freeze in whatever language was active at construction, so the overlay kept showing Chinese after the player switched the game to English. Idle wording is resolved on read now.
 
 ### Changed
@@ -1276,7 +1276,7 @@
 - Starting auto-play after a run that began while auto-play was paused no longer stops instantly as a run-identity change: the run boundary is reset per auto-play session.
 - Leaving the current run now stops auto-play again. The loop re-armed the run boundary at the top of every iteration and then checked it, so the "already entered a run" flag was always false and the stop never fired; the boundary is installed once per session now.
 - `POST /action` and `POST /session/control` answer malformed or oversized bodies with 400 `invalid_request`. Both used to surface `JsonException` as a 500 `internal_error`, and `/action` had no body size limit at all.
-- A failed decision is no longer reported as a budget stop. The retry hint appends the game's own error text, and the classifier matched bare words such as 上限 anywhere in that text, so the overlay advised resetting session stats; budget stops now carry their kind explicitly.
+- A failed decision is no longer reported as a budget stop. The retry hint appends the game's own error text, and the classifier matched bare words such as `上限` ("limit") anywhere in that text, so the overlay advised resetting session stats; budget stops now carry their kind explicitly.
 - The overlay's "teammate is acting" view is reachable again: a still-running session always matched the requesting-model branch first, so the player only ever saw "requesting the model", and a solo session showed "you can invite a teammate" while auto-play was running.
 - Writing settings from overlay toggles no longer throws into the UI callback when the file is locked or the disk is full; the failure is reported in the status line instead.
 
@@ -1302,7 +1302,7 @@
 
 - Simple card multi-select panels (the events and rewards that ask for N cards) now report the real `min_select` / `max_select` / `selected_count` and per-card `selected` flags, and advertise `confirm_selection`. `/state` used to report `1/1/0` for them, so an accepted pick looked unacknowledged: the agent re-clicked the same card, toggled it back off, and never left the screen (#81).
 - `select_deck_card` on a combat-hand multi-select reports `pending` until the pick is confirmed, matching the play contract and the sibling `use_potion` path; it used to report `completed` while the overlay was still open for more picks.
-- Three failed decisions in a row are no longer reported as a finished run. Stop-kind classification matched the bare word 当前局, which also appears in the retry hint, so the overlay claimed the run had ended and told the player to start a new one while the run was still live.
+- Three failed decisions in a row are no longer reported as a finished run. Stop-kind classification matched the bare word `当前局` ("current run"), which also appears in the retry hint, so the overlay claimed the run had ended and told the player to start a new one while the run was still live.
 - fastmcp 3.1.0 → 3.4.7 (CVE-2026-32871, fixed in 3.2.0) and fast-uri 3.1.0 → 3.1.7 (CVE-2026-13676, fixed in 3.1.6) via refreshed lockfiles; npm audit drops from 9 advisories to 0 (#50, #51).
 - The verification gates work in a fresh checkout, and the gate self-test is parseable under any Windows ANSI code page. Non-ASCII PowerShell scripts must now carry a UTF-8 BOM, enforced by a new `script-encoding` gate.
 
@@ -1411,7 +1411,7 @@
 
 ### Added
 
-- Same-PC AI teammate: from the main-menu overlay, invite a second windowed instance (`--force-steam off --clientId` + `-fastmp join`) into a Steam-hosted 4-player room (本地1人、1ai, two online seats remain).
+- Same-PC AI teammate: from the main-menu overlay, invite a second windowed instance (`--force-steam off --clientId` + `-fastmp join`) into a Steam-hosted 4-player room (1 local player, 1 AI, two online seats remain).
 - Companion bootstrap joins FastHost character select, writes lobby `max_players=4`, and only acts for its own character.
 - First-run overlay copy for OpenAI-compatible provider setup before inviting a teammate.
 - HTTP action `invite_ai_teammate` plus `/health` `process_id` / `instance_role` so the host can verify the companion process.
@@ -1464,7 +1464,7 @@
 ### Added
 
 - In-game agent overlay (F8 / right-edge AI tab): multi-endpoint and multi-model settings, chat, per-model thinking intensity, auto-play, optional screenshot vision, and local dual-instance launch.
-- Overlay **接入** tab: one-click HTTP MCP start/stop, copy API/MCP URLs, and connection notes for Cursor / Claude / Codex / raw HTTP.
+- Overlay **Connect** tab: one-click HTTP MCP start/stop, copy API/MCP URLs, and connection notes for Cursor / Claude / Codex / raw HTTP.
 - OpenAI-compatible LLM client with tool calling; optional vision model can caption screenshots for non-vision play models.
 - HTTP API auto-binds the next port when 8080 is taken. `/health` reports `api_port` and `instance_role`.
 - Compact `agent_view` now includes `multiplayer`, `multiplayer_lobby`, and `capstone` summaries.
@@ -1481,7 +1481,7 @@
 ### Notes
 
 - Overlay starts hidden (F8 / AI tab to open). Drag the title bar to move it; the position is saved.
-- Chat is read-only unless the player checks “允许代打” or clearly asks the model to play (`帮我打` / `play for me`).
+- Chat is read-only unless the player checks "Allow play-for-me" or clearly asks the model to play (`帮我打` / `play for me`).
 - Companion dual-instance no longer sets `STS2_ENABLE_DEBUG_ACTIONS`; lobby setup uses the internal console path only.
 - Auto-play uses compact state and tools (same contract as MCP) and does not require vision.
 - One-click MCP needs `uv` plus the `mcp_server` folder from the release zip (or a repo checkout).

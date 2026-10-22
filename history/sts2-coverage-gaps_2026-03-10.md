@@ -1,117 +1,117 @@
-# STS2 2代覆盖缺口清单
+# STS2 (Slay the Spire 2) Coverage Gap List
 
-> 历史快照：本文件是 2026-03-10 基于反编译结果整理的缺口清单，不代表当前状态。其中列出的
-> CHEST / EVENT / REST / SHOP / POTION / CHARACTER_SELECT / GAME_OVER 等"尚未覆盖"项，均已在此后
-> 落地到代码（动作与 payload 见 [API 文档](../docs/api.md) 的动作总表与 [当前状态页](../PRODUCT_PLAN_CURRENT.md)）。
-> 本文件只保留为当时的开发边界记录。
+> Historical snapshot: this file is a gap list compiled on 2026-03-10 from decompilation results and does not represent the current state. The
+> "not yet covered" items listed here (CHEST / EVENT / REST / SHOP / POTION / CHARACTER_SELECT / GAME_OVER and so on) have all since
+> landed in code (for the actions and payloads see the action table in the [API docs](../docs/api.md) and the [current status page](../PRODUCT_PLAN_CURRENT.md)).
+> This file is kept only as a record of the development boundary at that time.
 
-更新时间：`2026-03-10`
+Updated: `2026-03-10`
 
-> 下文引用反编译源码时写成 `extraction/decompiled/**` 路径而**不是链接**：那个目录已 gitignore，
-> 在 GitHub 与全新检出上并不存在。它们的作用是给出类名与命名空间的定位，点不开是本来就点不开——
-> 写成链接会是一句做不到的承诺，`doc-links` 闸门也会照直报红。
+> Below, decompiled source is referenced as `extraction/decompiled/**` paths and **not as links**: that directory is gitignored
+> and does not exist on GitHub or in a fresh checkout. Their purpose is to locate class names and namespaces, and they cannot be opened by design;
+> writing them as links would be a promise that cannot be kept, and the `doc-links` gate would flag them red as is.
 
-本文档只基于 **Slay the Spire 2** 的 `sts2.dll` 反编译结果整理，**不是 1 代**。
+This document is based only on the decompilation of the `sts2.dll` of **Slay the Spire 2** and is **not about the first game**.
 
-用途：
+Purpose:
 
-- 给 Claude 对照当前项目实现，补齐 2 代主流程覆盖
-- 明确哪些场景虽然不在当前主线里，但会实际卡住自动流程
-- 为后续 Phase 4B / 4C / 5 / 6 提供开发边界
+- Let Claude compare against the current project implementation and fill in the main-flow coverage of Slay the Spire 2
+- Make clear which scenarios are not in the current main line but would actually block the automatic flow
+- Provide a development boundary for the later Phase 4B / 4C / 5 / 6
 
 ---
 
-## 当前已覆盖到的主流程
+## Main Flows Covered So Far
 
-当前项目已经覆盖或部分覆盖：
+The current project already fully or partially covers:
 
-- 主菜单识别
-- 地图当前节点与下一步可达节点
-- 战斗状态读取
-- 战斗动作：
+- Main menu recognition
+- The current map node and the next reachable nodes
+- Combat state reading
+- Combat actions:
   - `end_turn`
   - `play_card`
-- 奖励结算：
+- Reward settlement:
   - `claim_reward`
   - `choose_reward_card`
   - `skip_reward_cards`
   - `collect_rewards_and_proceed`
-- 牌库选牌：
+- Deck card selection:
   - `select_deck_card`
-- 运行态信息：
+- Run state information:
   - `run.deck`
   - `run.relics`
   - `run.potions`
   - `run.gold`
-- 地图全图结构导出：
+- Full map structure export:
   - `map.nodes`
 
-但这些还不足以覆盖 **STS2 2代完整一局流程**。
+But these are still not enough to cover the **complete flow of one STS2 run**.
 
 ---
 
-## 仍未完整覆盖的关键系统
+## Key Systems Still Not Fully Covered
 
-### 1. 宝箱房 / relic 选择
+### 1. Treasure Room / Relic Selection
 
-当前状态：
+Current state:
 
-- `screen = "CHEST"` 已有识别
-- 但还没有真正覆盖宝箱打开后的 relic 选择子流程
+- `screen = "CHEST"` is already recognized
+- but the relic selection sub-flow after opening a chest is not yet truly covered
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Rooms/NTreasureRoom.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic/NTreasureRoomRelicCollection.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/TreasureRoomRelicSynchronizer.cs`
 
-关键事实：
+Key facts:
 
-- 开箱后会进入 `NTreasureRoomRelicCollection`
-- 需要等待 `RelicPickingFinished()`
-- relic 选择通过 `RunManager.Instance.TreasureRoomRelicSynchronizer.PickRelicLocally(holder.Index)` 驱动
-- 存在空箱分支：`CompleteWithNoRelics()`
+- After opening the chest it enters `NTreasureRoomRelicCollection`
+- It must wait for `RelicPickingFinished()`
+- Relic selection is driven through `RunManager.Instance.TreasureRoomRelicSynchronizer.PickRelicLocally(holder.Index)`
+- There is an empty-chest branch: `CompleteWithNoRelics()`
 
-建议补齐：
+Suggested additions:
 
 - `chest` payload
 - `chest.relic_options`
 - `choose_treasure_relic`
-- 空箱处理
+- Empty chest handling
 
-风险点：
+Risks:
 
-- 只做 `proceed` 不够，会卡在 relic 选择界面
-- 如果只假设“必有 relic”，会在空箱或特殊场景挂死
+- Doing only `proceed` is not enough; it gets stuck at the relic selection screen
+- If one assumes a relic is always present, it hangs on an empty chest or special scenarios
 
 ---
 
-### 2. 事件系统
+### 2. Event System
 
-当前状态：
+Current state:
 
-- `screen = "EVENT"` 已识别
-- `event` 仍为 `null`
+- `screen = "EVENT"` is already recognized
+- `event` is still `null`
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Rooms/NEventRoom.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Events/EventOption.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Events/NEventOptionButton.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/EventSynchronizer.cs`
 
-关键事实：
+Key facts:
 
-- 事件选项不仅有文字，还带这些语义：
+- Event options carry not only text but also these semantics:
   - `IsLocked`
   - `IsProceed`
   - `WillKillPlayer`
   - `Relic`
   - `HoverTips`
-- 事件完成后会自动变成 Proceed 按钮
-- 有 `EmbeddedCombatRoom`
+- After an event finishes it automatically turns into a Proceed button
+- There is an `EmbeddedCombatRoom`
 
-建议补齐：
+Suggested additions:
 
 - `event.event_id`
 - `event.title`
@@ -119,7 +119,7 @@
 - `event.options[]`
 - `choose_event_option`
 
-推荐 `event.options[]` 至少包含：
+`event.options[]` should at least contain:
 
 - `index`
 - `title`
@@ -129,81 +129,81 @@
 - `will_kill_player`
 - `has_relic_preview`
 
-风险点：
+Risks:
 
-- 事件不是简单按钮列表
-- 某些选项进入嵌套战斗，回来后还要继续事件或结算
+- An event is not a simple button list
+- Some options enter a nested combat, and after coming back the event or settlement must continue
 
 ---
 
-### 3. 事件嵌套战斗
+### 3. Event Nested Combat
 
-当前状态：
+Current state:
 
-- 当前项目只覆盖普通战斗房逻辑
-- 没有单独验证事件中的嵌套战斗切换
+- The current project covers only the ordinary combat room logic
+- The nested combat switch inside an event has not been validated separately
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Rooms/NEventRoom.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes/NRun.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext/ActiveScreenContext.cs`
 
-关键事实：
+Key facts:
 
-- `NEventRoom` 提供 `EmbeddedCombatRoom`
-- 当前 active screen 可能直接变成事件里的战斗房
-- 这意味着 `screen = "COMBAT"` 不一定来自普通战斗房
+- `NEventRoom` provides `EmbeddedCombatRoom`
+- The current active screen may directly become the combat room inside the event
+- This means `screen = "COMBAT"` does not necessarily come from an ordinary combat room
 
-建议补齐：
+Suggested additions:
 
-- 实机验证：
+- Live validation:
   - `EVENT -> COMBAT -> REWARD/MAP`
   - `EVENT -> COMBAT -> EVENT`
-- 状态机上避免把事件中的战斗误判成普通房间流程结束
+- In the state machine, avoid mistaking a combat inside an event for the end of an ordinary room flow
 
-风险点：
+Risks:
 
-- 如果只按普通战斗处理，事件链可能中途断掉
+- If it is handled only as an ordinary combat, the event chain may break midway
 
 ---
 
-### 4. 休息点系统
+### 4. Rest Site System
 
-当前状态：
+Current state:
 
-- `screen = "REST"` 已识别
-- `rest` 仍为 `null`
+- `screen = "REST"` is already recognized
+- `rest` is still `null`
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Rooms/NRestSiteRoom.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Entities.RestSite/RestSiteOption.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.RestSite/NRestSiteButton.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/RestSiteSynchronizer.cs`
 
-关键事实：
+Key facts:
 
-- 休息点不是固定两个选项
-- 默认就至少有：
+- A rest site does not have a fixed two options
+- By default there are at least:
   - `Heal`
   - `Smith`
-  - 多人时可能还有 `Mend`
-- 目录里还存在：
+  - In multiplayer there may also be `Mend`
+- The directory also contains:
   - `Cook`
   - `Dig`
   - `Hatch`
   - `Lift`
   - `Clone`
 
-建议补齐：
+Suggested additions:
 
 - `rest.options[]`
-- 通用动作：
+- Generic action:
   - `choose_rest_option`
-  - 或 `rest_site_action`
+  - or `rest_site_action`
 
-推荐 `rest.options[]` 至少包含：
+`rest.options[]` should at least contain:
 
 - `index`
 - `option_id`
@@ -211,50 +211,50 @@
 - `description`
 - `enabled`
 
-风险点：
+Risks:
 
-- 不能只硬编码“休息 / 锻造”
-- 2 代特有 rest option 很多，必须按通用 option 模型做
+- Do not hard-code only "Rest / Smith"
+- Slay the Spire 2 has many special rest options, so a generic option model is required
 
 ---
 
-### 5. 休息点锻造子流程
+### 5. Rest Site Smith Sub-flow
 
-当前状态：
+Current state:
 
-- `select_deck_card` 已存在
-- 但还没有确认它和休息点升级牌子流程真正打通
+- `select_deck_card` already exists
+- but it has not been confirmed that it is truly wired through to the rest site card upgrade sub-flow
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Entities.RestSite/SmithRestSiteOption.cs`
 
-关键事实：
+Key facts:
 
-- `Smith` 不是房间内立即完成
-- 它走的是 `CardSelectCmd.FromDeckForUpgrade(...)`
-- 需要手动确认，且可取消
+- `Smith` does not complete immediately inside the room
+- It goes through `CardSelectCmd.FromDeckForUpgrade(...)`
+- It needs manual confirmation and can be canceled
 
-建议补齐：
+Suggested additions:
 
-- 实机验证：
-  - `REST -> choose smith -> CARD_SELECTION -> select_deck_card -> confirm -> 回到 REST / proceed`
-- 如当前 `select_deck_card` 只适用于删牌，需要收紧或扩展其语义
+- Live validation:
+  - `REST -> choose smith -> CARD_SELECTION -> select_deck_card -> confirm -> back to REST / proceed`
+- If the current `select_deck_card` applies only to card removal, its semantics need to be tightened or extended
 
-风险点：
+Risks:
 
-- 如果只做 rest button 点击，不处理升级选牌，流程会卡住
+- If only the rest button click is done and the upgrade card selection is not handled, the flow gets stuck
 
 ---
 
-### 6. 商店系统
+### 6. Shop System
 
-当前状态：
+Current state:
 
-- `screen = "SHOP"` 已识别
-- `shop` 仍为 `null`
+- `screen = "SHOP"` is already recognized
+- `shop` is still `null`
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Rooms/NMerchantRoom.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.Shops/NMerchantInventory.cs`
@@ -262,20 +262,20 @@
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.Shops/NMerchantSlot.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.Shops/NMerchantCardRemoval.cs`
 
-关键事实：
+Key facts:
 
-- 商店是双层流程：
-  - 外层房间 `NMerchantRoom`
-  - 内层库存 `NMerchantInventory`
-- 库存里分为：
-  - 角色卡
-  - 无色卡
+- The shop is a two-layer flow:
+  - The outer room `NMerchantRoom`
+  - The inner inventory `NMerchantInventory`
+- The inventory is divided into:
+  - Character cards
+  - Colorless cards
   - relic
   - potion
-  - 删牌服务
-- `NMerchantInventory.IsOpen` 是关键状态
+  - Card removal service
+- `NMerchantInventory.IsOpen` is the key state
 
-建议补齐：
+Suggested additions:
 
 - `shop` payload
 - `shop.is_open`
@@ -283,7 +283,7 @@
 - `shop.relics`
 - `shop.potions`
 - `shop.card_removal`
-- 动作：
+- Actions:
   - `open_shop_inventory`
   - `close_shop_inventory`
   - `buy_card`
@@ -291,210 +291,210 @@
   - `buy_potion`
   - `remove_card_at_shop`
 
-风险点：
+Risks:
 
-- 如果只导商品列表，不导库存开关状态，AI 很难知道当前能不能买
-- 删牌服务不是普通商品 slot，需单独处理
+- If only the goods list is exported and the inventory open/closed state is not, the AI can hardly know whether it can buy right now
+- The card removal service is not an ordinary goods slot and needs separate handling
 
 ---
 
-### 7. 药水系统
+### 7. Potion System
 
-当前状态：
+Current state:
 
-- 只在 `run.potions` 里读到了药水槽
-- 没有动作支持
+- Potion slots are only read in `run.potions`
+- There is no action support
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Potions/NPotionHolder.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Potions/NPotionPopup.cs`
 
-关键事实：
+Key facts:
 
-- 药水至少支持：
-  - 使用
-  - 丢弃
-- 还区分：
+- Potions support at least:
+  - Use
+  - Discard
+- They also distinguish:
   - `CombatOnly`
   - `AnyTime`
   - `Automatic`
-- 受这些状态影响：
-  - 是否在战斗中
-  - 是否轮到玩家
+- They are affected by these states:
+  - Whether in combat
+  - Whether it is the player's turn
   - `PlayerActionsDisabled`
-  - 是否处于卡牌选择界面
-  - 是否需要目标
+  - Whether on the card selection screen
+  - Whether a target is needed
 
-建议补齐：
+Suggested additions:
 
 - `use_potion`
 - `discard_potion`
-- 必要时在状态里补：
+- Where necessary, add to the state:
   - `usable`
   - `discardable`
   - `requires_target`
 
-风险点：
+Risks:
 
-- 不支持药水的话，严格说战斗能力仍然不完整
-- 目标型药水和任意时机药水会带来额外分支
+- Without potion support, strictly speaking combat capability is still incomplete
+- Targeted potions and any-time potions bring extra branches
 
 ---
 
-### 8. 角色选择 / 开局
+### 8. Character Select / Run Start
 
-当前状态：
+Current state:
 
-- `screen = "CHARACTER_SELECT"` 已识别
-- 没有开局动作
+- `screen = "CHARACTER_SELECT"` is already recognized
+- There is no run start action
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect/NCharacterSelectScreen.cs`
 
-关键事实：
+Key facts:
 
-- 存在角色按钮
-- 存在 `OnEmbarkPressed`
-- 有 Ascension 面板
-- 有随机角色
-- 有 ready / unready 逻辑
+- There are character buttons
+- There is `OnEmbarkPressed`
+- There is an Ascension panel
+- There is a random character
+- There is ready / unready logic
 
-如果目标只是“从地牢中途开始接管”，这块可以后做。  
-如果目标是“从主菜单全自动打一整局”，这块必须补。
+If the goal is only "taking over midway through a dungeon run", this part can come later.  
+If the goal is "playing a whole run fully automatically from the main menu", this part must be added.
 
-建议补齐：
+Suggested additions:
 
 - `character_select` payload
-- 至少支持：
-  - 选角色
-  - 开始运行（Embark）
+- At least support:
+  - Select a character
+  - Start the run (Embark)
 
-风险点：
+Risks:
 
-- 不支持开局，就不能称为“从主菜单打完整局”
+- Without run start support, it cannot be called "finishing a whole run from the main menu"
 
 ---
 
-### 9. Game Over / 结算收尾
+### 9. Game Over / Settlement Wrap-up
 
-当前状态：
+Current state:
 
-- `screen = "GAME_OVER"` 已识别
-- `game_over` 仍为 `null`
+- `screen = "GAME_OVER"` is already recognized
+- `game_over` is still `null`
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen/NGameOverScreen.cs`
 
-关键事实：
+Key facts:
 
-- 结算界面至少有：
+- The settlement screen has at least:
   - continue
   - view run
   - main menu
   - leaderboard
   - timeline
 
-建议补齐：
+Suggested additions:
 
 - `game_over` payload
-- 至少包含：
+- At least include:
   - `win`
   - `score`
   - `floor`
   - `character`
-- 最小动作：
+- Minimal actions:
   - `return_to_main_menu`
-  - 或 `continue_from_game_over`
+  - or `continue_from_game_over`
 
-风险点：
+Risks:
 
-- 没有 game over 收尾，完整 run 闭环仍不成立
+- Without game over wrap-up, the full run closed loop still does not hold
 
 ---
 
-## 容易漏掉但会卡自动流程的暗线
+## Hidden Threads That Are Easy to Miss but Block the Automatic Flow
 
-### A. Overlay 层
+### A. Overlay Layer
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.Overlays/NOverlayStack.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext/ActiveScreenContext.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.AutoSlay/AutoSlayer.cs`
 
-关键事实：
+Key facts:
 
-- 当前 screen 可能优先来自 overlay，而不是房间本体
-- 奖励、选牌、某些事件后续、宝箱 relic 选择都可能跑在 overlay 上
+- The current screen may come first from an overlay rather than the room itself
+- Rewards, card selection, some event follow-ups, and chest relic selection may all run on an overlay
 
-建议：
+Suggestions:
 
-- 所有新功能都按“当前 active screen”而不是“当前 room 类型”来判断
-- 每个动作都验证 screen 切换后的稳定态
+- Judge every new feature by the "current active screen" rather than the "current room type"
+- Verify the stable state after the screen switch for every action
 
 ---
 
 ### B. Modal / FTUE
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/Properties/AssemblyInfo.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.AutoSlay/AutoSlayer.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Saves/SaveManager.cs`
 
-关键事实：
+Key facts:
 
-- FTUE 和各种确认弹窗会真实挡输入
-- 这些场景在战斗、地图、休息点、商店、洗牌、药水等地方都可能出现
+- FTUE and various confirmation popups really block input
+- These scenarios may appear in combat, the map, rest sites, the shop, shuffling, potions, and elsewhere
 
-建议二选一：
+Pick one of two:
 
-1. 运行前统一关闭 FTUE  
-2. 增加最小 `modal` / `confirm` 处理能力
+1. Turn off the FTUE uniformly before running  
+2. Add a minimal `modal` / `confirm` handling capability
 
-风险点：
+Risks:
 
-- 如果正式测试环境没关 FTUE，很容易出现“接口都对，但 AI 被弹窗卡死”
+- If the FTUE is not turned off in the official test environment, it is easy to get "the interfaces are all correct, but the AI is stuck by a popup"
 
 ---
 
-### C. 同步器入口
+### C. Synchronizer Entry Points
 
-反编译入口：
+Decompilation entry points:
 
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/EventSynchronizer.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/RestSiteSynchronizer.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/TreasureRoomRelicSynchronizer.cs`
 - `extraction/decompiled/MegaCrit.Sts2.Core.Multiplayer.Game/MapSelectionSynchronizer.cs`
 
-关键事实：
+Key facts:
 
-- 2 代很多非战斗动作最终都通过 synchronizer 驱动
-- 这往往是比“模拟点击某个按钮”更稳定的动作入口
+- In Slay the Spire 2 many non-combat actions are ultimately driven through a synchronizer
+- This is often a more stable action entry point than "simulating a click on some button"
 
-建议：
+Suggestions:
 
-- Claude 开发时优先找 synchronizer / action queue 入口
-- UI 点击只作为最后兜底
+- When developing, Claude should look for the synchronizer / action queue entry first
+- UI clicks should be only the last fallback
 
 ---
 
-## 对 Claude 的建议开发顺序
+## Suggested Development Order for Claude
 
-推荐顺序：
+Recommended order:
 
-1. 宝箱 relic 选择
-2. 事件
-3. 休息点
-4. 商店
-5. 药水
+1. Chest relic selection
+2. Events
+3. Rest sites
+4. Shop
+5. Potions
 6. Game Over
-7. 角色选择 / Embark
+7. Character select / Embark
 
-同时注意这三个交叉验证项：
+Also note these three cross-validation items:
 
 - `EVENT -> embedded combat -> reward/map`
 - `REST -> smith -> card selection -> confirm`
@@ -502,15 +502,15 @@
 
 ---
 
-## Phase 6 完整流程验收标准
+## Phase 6 Full-Flow Acceptance Criteria
 
-如果未来要宣布“Phase 6 完成”，至少应满足：
+If "Phase 6 complete" is to be declared in the future, at least the following must be met:
 
-- 能从主菜单开始进入一局
-- 能跨越地图、战斗、奖励、事件、休息点、商店、宝箱
-- 能使用或处理药水
-- 能处理结算与 game over
-- 不依赖人工点击临场补操作
-- 有端到端回归验证
+- Can start a run from the main menu
+- Can cross the map, combat, rewards, events, rest sites, shop, and chests
+- Can use or handle potions
+- Can handle settlement and game over
+- Does not depend on manual clicks to improvise operations
+- Has end-to-end regression validation
 
-否则只能算“主流程大部分已打通”，不能算真正完整覆盖。
+Otherwise it can only count as "most of the main flow is wired through", not truly full coverage.

@@ -1,86 +1,86 @@
-# 构建指纹索引（跨版本）
+# Build Fingerprint Index (Cross-Version)
 
-> 历史快照 + 持续索引：本页收集每个已发布构建的大小与哈希。表格里的行是历史记录，不代表当前状态；
-> 当前发布状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。
+> Historical snapshot + running index: this page collects the size and hash of every published build. The rows in the tables are historical records and do not represent the current state;
+> for the current release status see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md).
 
-## 这页存在的理由
+## Why This Page Exists
 
-`mod_version` 只在「一个版本号只发一次」时才能标识一个构建。这个项目不满足那个前提：**v0.12.3 与 v0.12.4
-各被同号重发两次**，于是有三个构建自称 `0.12.3`、另有三个自称 `0.12.4`，版本字符串永远分不开它们。
-每次出现这种情况，发布记录都只能写「请用大小或哈希区分」，而那些数字此前是上传之后手工补抓的。
+`mod_version` identifies a build only when "one version number is shipped only once". This project does not meet that premise: **v0.12.3 and v0.12.4
+were each re-released twice under the same number**, so three builds call themselves `0.12.3` and three more call themselves `0.12.4`, and the version string can never tell them apart.
+Each time this happened, the release record could only say "tell them apart by size or hash", and those numbers had been captured by hand after the upload.
 
-所以当一位玩家报告「我用的是 0.12.4，遇到 X」时，第一个问题不是「哪个版本」，而是
-**「哪个构建」**——本页就是回答它的地方。
+So when a player reports "I'm on 0.12.4 and hit X", the first question is not "which version" but
+**"which build"**; this page is where that gets answered.
 
-**v0.12.5 起的行是直接从 `build-fingerprint.json` 抄的，不再手工采集**；0.12.4 及更早的行是事后补抓的。
+**Rows from v0.12.5 on are copied directly from `build-fingerprint.json` and are no longer collected by hand**; rows for 0.12.4 and earlier were captured after the fact.
 
-自 2026-09-16 起，每次打包都会在产物旁边写一份 `build-fingerprint.json`
-（`scripts/lib-build-fingerprint.ps1`，由 `package-release.ps1` 与 `package-steam-workshop.ps1` 调用），
-内含逐文件 SHA256、Steam 用作 `file_size` 的字节总和、以及构建所用的提交与 working tree 是否干净。
-新版本的行应当直接从那份 JSON 抄过来，而不是再手工采集一次。
+Since 2026-09-16, every packaging run writes a `build-fingerprint.json` next to the artifact
+(`scripts/lib-build-fingerprint.ps1`, called by `package-release.ps1` and `package-steam-workshop.ps1`),
+containing the per-file SHA256, the byte sum Steam uses as `file_size`, and the commit used for the build and whether the working tree was clean.
+The row for a new version should be copied straight from that JSON instead of being collected by hand again.
 
-## Steam 工坊（物品 3796486050）
+## Steam Workshop (Item 3796486050)
 
-`file_size` 是 `content/` 目录的字节总和；每次上传后由 Steam Web API 复核，与本地字节和相等。
+`file_size` is the byte sum of the `content/` directory; after each upload it is re-checked against the Steam Web API and equals the local byte sum.
 
-| 版本 | 构建 | `time_updated` | `file_size` | 内容 id (`hcontent_file`) | DLL SHA256 | 源码提交 |
+| Version | Build | `time_updated` | `file_size` | Content id (`hcontent_file`) | DLL SHA256 | Source commit |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.16.1 | 唯一（**当前**） | 2026-09-24 11:54:48 | 1646567 | `1146374597091505946` | `CD9707AA463005977D885D1D5D6E206BA28B1CF82A69F67132F34019472E1553` | `a64e052` |
-| 0.16.0 | 唯一 | 2026-09-24 02:32:06 | 1645031 | `1458911249290867048` | `7935096C0E95D8B0195EA45BB3720FFE867C4AAB0CDB47B72AF3CFC8EF1F70FB` | `4beaabe`（PR #199） |
-| 0.15.0 | 唯一 | — | 1422823 | — | `20298101EAFCDCBA3B41191F21E272B78DCEF430A8E9E1706B4CD35C398B4129` | `7338b5f`（PR #179） |
-| 0.14.6 | 唯一 | — | 1386471 | — | `2B7C2DD547E8797470DCBE41CCC5806C2F1DE81490A4E45121D2C0919D94012A` | `c024142`（指纹记为**脏工作区**打包） |
-| 0.14.0 | 唯一 | 2026-09-21 10:44:20 | 1360359 | `5672199774606704499` | `F64F8C2AEBFFAC319FF3ADF2976C7C2323D6896E0B73EEB8980654DCECFFFDA3` | `5f9ea72`（PR #174） |
-| 0.13.0 | 唯一 | 2026-09-19 11:32:25 | 1252357 | `3840768014407368680` | `6B9D90C8C13998B2A5EEAA22D7B9D7543A466C5C6688214F73393A489A7FBE42` | `78b085f`（PR #161） |
-| 0.12.5 | 唯一 | 2026-09-17 09:36:37 | 1238533 | `2962740913650521121` | `1624BBF5CBAB50D415FAFCC59C354A6101616899F2FC00E9C8A76CAFF84CD4A7` | `f361bdb`（PR #145） |
-| 0.12.4 | 第三次 | 2026-09-16 00:42:43 | 1236997 | `6841790951225102097` | `0A8FBA678A363E23BA20225670C92E98296D741171FDEA037D6A5F9A6F49611C` | `d0c6fbd`（PR #136） |
-| 0.12.4 | 第二次（存活约 1 小时，已废弃） | 2026-09-15 23:34:57 | 1236997 | — | — | — |
-| 0.12.4 | 首发 | 2026-09-15 19:38:00 | 1233413 | — | `0134C8BC10A76F15C71CAFFEAC7D818D71744111A4045DDF52AA80A5AA51A5BF` | `4b8e7c5`（PR #133） |
-| 0.12.3 | 第三次 | 2026-09-14 02:17:15 | 1232901 | `6689158800196895712` | — | `c2630a8`（PR #123） |
-| 0.12.3 | 第二次 | 2026-09-14 00:09:26 | 1229829 | `6028841468497339213` | — | `0f60ec4`（PR #113） |
-| 0.12.3 | 首发 | 2026-09-13 22:31:22 | 1227269 | `5284257893537057643` | — | `b0217b0`（PR #108） |
-| 0.12.2 | 唯一 | 2026-09-13 16:51:04 | 1225733 | `8439947284938535648` | — | `72b2a81`（PR #104 合并提交） |
-| 0.12.1 | 唯一 | 2026-09-13 12:41:42 | 1213444 | — | — | `640c343`（PR #95 合并提交） |
-| 0.12.0 | 唯一 | 2026-09-13 02:25:02 | 1202181 | manifest `3382317012139913714` | — | `69887a3`（PR #86 合并提交） |
-| 0.11.0 | 唯一 | 2026-09-12 02:33:39 | 1135844 | — | — | `84631b9` |
+| 0.16.1 | Only one (**current**) | 2026-09-24 11:54:48 | 1646567 | `1146374597091505946` | `CD9707AA463005977D885D1D5D6E206BA28B1CF82A69F67132F34019472E1553` | `a64e052` |
+| 0.16.0 | Only one | 2026-09-24 02:32:06 | 1645031 | `1458911249290867048` | `7935096C0E95D8B0195EA45BB3720FFE867C4AAB0CDB47B72AF3CFC8EF1F70FB` | `4beaabe` (PR #199) |
+| 0.15.0 | Only one | — | 1422823 | — | `20298101EAFCDCBA3B41191F21E272B78DCEF430A8E9E1706B4CD35C398B4129` | `7338b5f` (PR #179) |
+| 0.14.6 | Only one | — | 1386471 | — | `2B7C2DD547E8797470DCBE41CCC5806C2F1DE81490A4E45121D2C0919D94012A` | `c024142` (the fingerprint records a package built from a **dirty working tree**) |
+| 0.14.0 | Only one | 2026-09-21 10:44:20 | 1360359 | `5672199774606704499` | `F64F8C2AEBFFAC319FF3ADF2976C7C2323D6896E0B73EEB8980654DCECFFFDA3` | `5f9ea72` (PR #174) |
+| 0.13.0 | Only one | 2026-09-19 11:32:25 | 1252357 | `3840768014407368680` | `6B9D90C8C13998B2A5EEAA22D7B9D7543A466C5C6688214F73393A489A7FBE42` | `78b085f` (PR #161) |
+| 0.12.5 | Only one | 2026-09-17 09:36:37 | 1238533 | `2962740913650521121` | `1624BBF5CBAB50D415FAFCC59C354A6101616899F2FC00E9C8A76CAFF84CD4A7` | `f361bdb` (PR #145) |
+| 0.12.4 | Third | 2026-09-16 00:42:43 | 1236997 | `6841790951225102097` | `0A8FBA678A363E23BA20225670C92E98296D741171FDEA037D6A5F9A6F49611C` | `d0c6fbd` (PR #136) |
+| 0.12.4 | Second (lived about 1 hour, abandoned) | 2026-09-15 23:34:57 | 1236997 | — | — | — |
+| 0.12.4 | First release | 2026-09-15 19:38:00 | 1233413 | — | `0134C8BC10A76F15C71CAFFEAC7D818D71744111A4045DDF52AA80A5AA51A5BF` | `4b8e7c5` (PR #133) |
+| 0.12.3 | Third | 2026-09-14 02:17:15 | 1232901 | `6689158800196895712` | — | `c2630a8` (PR #123) |
+| 0.12.3 | Second | 2026-09-14 00:09:26 | 1229829 | `6028841468497339213` | — | `0f60ec4` (PR #113) |
+| 0.12.3 | First release | 2026-09-13 22:31:22 | 1227269 | `5284257893537057643` | — | `b0217b0` (PR #108) |
+| 0.12.2 | Only one | 2026-09-13 16:51:04 | 1225733 | `8439947284938535648` | — | `72b2a81` (merge commit of PR #104) |
+| 0.12.1 | Only one | 2026-09-13 12:41:42 | 1213444 | — | — | `640c343` (merge commit of PR #95) |
+| 0.12.0 | Only one | 2026-09-13 02:25:02 | 1202181 | manifest `3382317012139913714` | — | `69887a3` (merge commit of PR #86) |
+| 0.11.0 | Only one | 2026-09-12 02:33:39 | 1135844 | — | — | `84631b9` |
 
-0.15.0 与 0.14.6 两行是 2026-09-24 从当时留在 `build/steam-workshop/` 的 `build-fingerprint.json` 补抄的：
-当时没有记录上传后的 `time_updated` 与内容 id（Web API 只返回物品当前的值），所以留 `—`。
+The 0.15.0 and 0.14.6 rows were copied on 2026-09-24 from the `build-fingerprint.json` that was still in `build/steam-workshop/` at the time:
+the post-upload `time_updated` and content id were not recorded then (the Web API only returns an item's current values), so they are left as `—`.
 
-**0.12.4 的第二与第三次构建字节数相同（都是 1236997），只能用 DLL 哈希或内容 id 区分。**
-第二次那份没有留下哈希记录——它在一小时内被替换，当时也还没有指纹文件；这正是加上
-`build-fingerprint.json` 的直接原因。空格 `—` 表示「当时没有记录」，不是「没有值」。
+**The second and third builds of 0.12.4 have the same byte count (both 1236997) and can only be told apart by DLL hash or content id.**
+No hash was kept for the second one: it was replaced within an hour and there was no fingerprint file yet; this is exactly why
+`build-fingerprint.json` was added. A blank `—` means "not recorded at the time", not "has no value".
 
 ## GitHub Release
 
-| 版本 | tag 指向 | 资产字节数 | 资产 SHA256 |
+| Version | Tag points at | Asset bytes | Asset SHA256 |
 | --- | --- | --- | --- |
-| v0.16.1 | `a64e052`（dev 上的 Release 提交） | 779153 | `835E22E871DD4A217766F5E02043312D2B144E9D81CEB00B75B32B49D37C7551` |
-| v0.16.0 | `4beaabe`（PR #199 的 dev→main 合并） | 777852 | `43A026B56DD77D9B51969E8720D96CEEC0374CADFE5C25744B70E8EAD172E75F` |
-| v0.13.0 | `78b085f`（PR #161 的 dev→main 合并） | 576033 | `8CFC0F451EE04D30C4F1708A5BF8553B5860FD1B61F99F249FEAAF87BAB18733` |
-| v0.12.5 | `f361bdb`（PR #145 的 dev→main 合并） | 562212 | `0E4A15184A679D95C5064247B2DB0FEFA25E3B68D743D9110A4F59DE0318CFED` |
-| v0.12.4 | `3a4ec95`（PR #139 的 dev→main 合并） | 557906 | `AD970DB1204A0DC37602A2751935E87E5B87FC502B21B00E47B2699C4A98EC57` |
-| v0.12.3（第三次重切） | `c2630a8` | 555061 | `E882B653B48B15EF278CFD9E20CC443FDCA3E5D69A51E362A40B934E29E167DF` |
-| v0.12.3（第二次） | `0f60ec4` | 552014 | `B7684C9F…` |
-| v0.12.3（首发） | `b0217b0` | 549933 | `B9DC1A07…` |
+| v0.16.1 | `a64e052` (Release commit on dev) | 779153 | `835E22E871DD4A217766F5E02043312D2B144E9D81CEB00B75B32B49D37C7551` |
+| v0.16.0 | `4beaabe` (dev->main merge of PR #199) | 777852 | `43A026B56DD77D9B51969E8720D96CEEC0374CADFE5C25744B70E8EAD172E75F` |
+| v0.13.0 | `78b085f` (dev->main merge of PR #161) | 576033 | `8CFC0F451EE04D30C4F1708A5BF8553B5860FD1B61F99F249FEAAF87BAB18733` |
+| v0.12.5 | `f361bdb` (dev->main merge of PR #145) | 562212 | `0E4A15184A679D95C5064247B2DB0FEFA25E3B68D743D9110A4F59DE0318CFED` |
+| v0.12.4 | `3a4ec95` (dev->main merge of PR #139) | 557906 | `AD970DB1204A0DC37602A2751935E87E5B87FC502B21B00E47B2699C4A98EC57` |
+| v0.12.3 (third re-cut) | `c2630a8` | 555061 | `E882B653B48B15EF278CFD9E20CC443FDCA3E5D69A51E362A40B934E29E167DF` |
+| v0.12.3 (second) | `0f60ec4` | 552014 | `B7684C9F…` |
+| v0.12.3 (first release) | `b0217b0` | 549933 | `B9DC1A07…` |
 | v0.12.2 | `72b2a81` | 549033 | `35C1F0FC0ED3C664C0F74A73B5759486E4CA2BE92295CC47062FCC65552B5D9D` |
 | v0.12.0 | `69887a3` | 533493 | `C2B1F3229D6CF8E7D757D571AAF717004DDBCAFD4F8AAE1276A86A54A3AFA685` |
 | v0.11.0 | `84631b9` | 677015 | — |
 | v0.10.5 | `04d2466` | — | `27da01401714347143244badfb9674e0e31932d03f1e5bebe1e4c67705fb12b8` |
 
-v0.10.7（`f9330ba`）只更新了工坊，没有 tag、没有 Release；该提交已包含在 `v0.11.0` 里。
+v0.10.7 (`f9330ba`) only updated the Workshop, with no tag and no Release; that commit is already included in `v0.11.0`.
 
-## 一次核对的做法
+## How to Check One Report
 
-1. 让报告者在游戏内 F8 窗口或 `GET /health` 读出 `mod_version`。
-2. 若该版本在上表里**只有一行**，到此为止。
-3. 若有多行，取订阅目录下的 `STS2AIAgent.dll` 算 SHA256
-   （`Get-FileHash -Algorithm SHA256`），对照 DLL 哈希列。
-4. 哈希不在表里，说明是本地构建或手工安装的旧文件，而不是工坊发的任何一份。
+1. Have the reporter read `mod_version` from the in-game F8 window or `GET /health`.
+2. If that version has **only one row** in the table above, you are done.
+3. If there are several rows, take `STS2AIAgent.dll` from the subscription directory and compute its SHA256
+   (`Get-FileHash -Algorithm SHA256`), then compare it against the DLL hash column.
+4. If the hash is not in the table, the file is a local build or a manually installed old file, not any copy the Workshop shipped.
 
-## 逐版本的完整记录
+## Full Per-Version Records
 
-上表只留用于识别构建的字段。每次上传的完整过程、复核字段与当时的实机 / 离线证据在各自的发布记录里：
-[v0.16.1](release-v0.16.1_2026-09-24.md)、[v0.16.0](release-v0.16.0_2026-09-24.md)、[v0.14.0](release-v0.14.0_2026-09-21.md)、[v0.13.0](release-v0.13.0_2026-09-19.md)、[v0.12.5](release-v0.12.5_2026-09-17.md)、[v0.12.4](workshop-upload-v0.12.4_2026-09-15.md)、[v0.12.3](release-v0.12.3_2026-09-13.md)、
-[v0.12.2](release-v0.12.2_2026-09-13.md)、[v0.12.1](release-v0.12.1_2026-09-13.md)、
-[v0.12.0](release-v0.12.0_2026-09-13.md)、[v0.11.0](release-v0.11.0_2026-09-12.md)、
-[v0.10.7](workshop-upload-v0.10.7_2026-09-12.md)。
+The table above keeps only the fields used to identify a build. The full process of each upload, the re-checked fields, and the live / offline evidence of the time are in the respective release records:
+[v0.16.1](release-v0.16.1_2026-09-24.md), [v0.16.0](release-v0.16.0_2026-09-24.md), [v0.14.0](release-v0.14.0_2026-09-21.md), [v0.13.0](release-v0.13.0_2026-09-19.md), [v0.12.5](release-v0.12.5_2026-09-17.md), [v0.12.4](workshop-upload-v0.12.4_2026-09-15.md), [v0.12.3](release-v0.12.3_2026-09-13.md),
+[v0.12.2](release-v0.12.2_2026-09-13.md), [v0.12.1](release-v0.12.1_2026-09-13.md),
+[v0.12.0](release-v0.12.0_2026-09-13.md), [v0.11.0](release-v0.11.0_2026-09-12.md),
+[v0.10.7](workshop-upload-v0.10.7_2026-09-12.md).

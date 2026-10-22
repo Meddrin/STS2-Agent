@@ -1,89 +1,89 @@
-# 主动发言闸门与端点契约验收（2026-09-11）
+# Proactive Speech Gate and Endpoint Contract Acceptance (2026-09-11)
 
-记录日期：2026-09-11。范围：v0.10.6 标签后主线未发布变更——主动发言音量上限与对局边界两处修复、`docs/api.md` 端点补登、状态页过期口径修正——在隔离游戏副本上的实机验收。全部证据目录：`build/validation-2026-09-11/`（已 gitignore）。
+Record date: 2026-09-11. Scope: live acceptance, on an isolated game copy, of the unreleased mainline changes after the v0.10.6 tag: two fixes (the proactive speech volume cap and the run boundary), the endpoint additions to `docs/api.md`, and the correction of stale wording on the status page. Evidence directory: `build/validation-2026-09-11/` (gitignored).
 
-## 1. 本轮修复
+## 1. Fixes in This Round
 
-| 提交 | 内容 | 离线证据 |
+| Commit | Content | Offline evidence |
 | --- | --- | --- |
-| deafa23 | 主动发言的 6 条上限改为随自动游玩会话开始重新发放（`ProactiveChatSession.BeginSession`，`AgentRuntime.StartAutoPlay` 调用）；75 秒间隔仍是跨会话全局约束 | `ProactiveChat.NewPlaySessionResetsCap` |
-| deafa23 | `StartAutoPlay` 重置 `CurrentRunBoundary`，使「暂停期间开始的新一局」属于新会话，而不是被判成对局标识变化 | `CurrentRun.FreshSessionAcceptsNewRun` |
-| e4c5797 | `docs/api.md` 补登 `/session/control`、`/events/stream`、`/companion/control`、`/companion/message`，补齐 `/health` 字段与 `stop_kind` 取值表 | `scripts/check_verification_gates.py` 四闸门 |
+| deafa23 | The proactive speech cap of 6 is now reissued each time an auto-play session starts (`ProactiveChatSession.BeginSession`, called by `AgentRuntime.StartAutoPlay`); the 75-second interval remains a global constraint across sessions | `ProactiveChat.NewPlaySessionResetsCap` |
+| deafa23 | `StartAutoPlay` resets `CurrentRunBoundary`, so "a new run started while paused" belongs to the new session instead of being judged a run identity change | `CurrentRun.FreshSessionAcceptsNewRun` |
+| e4c5797 | `docs/api.md` gains `/session/control`, `/events/stream`, `/companion/control`, `/companion/message`, and the `/health` fields and the `stop_kind` value table are filled in | `scripts/check_verification_gates.py` four gates |
 
-C# 核心测试：**217 PASS / 0 FAIL**（本轮新增 2 项）。
+C# core tests: **217 PASS / 0 FAIL** (2 added this round).
 
-## 2. 为什么改这两处
+## 2. Why These Two Things Were Changed
 
-- **上限不重置**：`AgentRuntime` 全进程只持有一个 `ProactiveChatSession`，而 `Reset()` 的唯一调用点是设置页的「重置本会话统计」。也就是说说完 6 句之后，主动发言在本次进程内永久沉默，与「每会话 6 句」的字面语义不符。改为每次自动游玩会话开始时归还额度。
-- **对局边界跨会话残留**：`CurrentRunBoundary` 的类注释写的是「scoped to one automatic session」，但它实际是 runtime 字段，只在自动游玩循环观察到主菜单时重置。若上一局在暂停状态下结束（例如自动游玩在 GAME_OVER 停止、玩家手动回到主菜单），旧边界会带着上一局的 run_id 留下；此时开始新一局再按「开始自动游玩」，循环第一次迭代就抛出「检测到对局标识变化」，而且只要停在局内就会一直失败。
+- **The cap was never reset**: `AgentRuntime` holds only one `ProactiveChatSession` for the whole process, and the only call site of `Reset()` is the settings page's "Reset this session's stats". That is, after 6 messages proactive speech stayed permanently silent for the rest of the process, which does not match the literal meaning of "6 per session". It now returns the quota each time an auto-play session starts.
+- **The run boundary leaked across sessions**: the class comment of `CurrentRunBoundary` says "scoped to one automatic session", but it is actually a runtime field that is reset only when the auto-play loop observes the main menu. If the previous run ended while paused (for example auto-play stopped at GAME_OVER and the player went back to the main menu by hand), the old boundary stayed behind with the previous run's run_id; starting a new run and then pressing "Start auto-play" made the loop's first iteration throw "run identity change detected", and it kept failing for as long as the player stayed in the run.
 
-实机复现（修复前的构建，证据 `gate-timeline.jsonl` 第一段）：
+Live reproduction (build before the fix, evidence in the first segment of `gate-timeline.jsonl`):
 
 ```
 {"at": "2026-09-11T20:19:11", "kind": "setup_run", "screen": "EVENT"}
 {"at": "2026-09-11T20:19:14", "kind": "setup_autoplay", "play_running": false, "phase": "paused"}
 ```
 
-同时段 `GET /health` 读数：`play_running=false, stop_kind=run_end`。由于 `StopKindPolicy` 现在只把两条对局边界文案归为 `run_end`，该读数即证明停在边界判定上。
+`GET /health` reading in the same period: `play_running=false, stop_kind=run_end`. Because `StopKindPolicy` now classifies only the two run-boundary messages as `run_end`, that reading proves it stopped on the boundary check.
 
-修复后的同一序列（新构建）：
+The same sequence after the fix (new build):
 
 ```
 {"at": "2026-09-11T20:21:38", "kind": "setup_autoplay", "play_running": true, "phase": "running"}
 ```
 
-## 3. 主动发言闸门实机验收
+## 3. Live Acceptance of the Proactive Speech Gate
 
-方法：隔离副本 + 本地零成本 OpenAI 兼容桩（`build/validation-2026-09-10/stub-model-server.py`，逐请求记账），配置 `settings.proactive-on.json` / `settings.proactive-off.json`（`supportsTools=false`，走 JSON 兜底路径）；自动游玩用 `POST /session/control {"running":true}` 启动，战斗用控制台 `fight NIBBITS_WEAK` / `win` 制造 COMBAT↔MAP 转移。驱动器：`build/validation-2026-09-11/proactive-gate-driver.py`。
+Method: isolated copy + a local zero-cost OpenAI-compatible stub (`build/validation-2026-09-10/stub-model-server.py`, accounting per request), configuration `settings.proactive-on.json` / `settings.proactive-off.json` (`supportsTools=false`, taking the JSON fallback path); auto-play was started with `POST /session/control {"running":true}`, and the console `fight NIBBITS_WEAK` / `win` produced COMBAT<->MAP transitions. Driver: `build/validation-2026-09-11/proactive-gate-driver.py`.
 
-| 边界 | 结果 | 证据 |
+| Boundary | Result | Evidence |
 | --- | --- | --- |
-| 开关关闭的负例 | 自动游玩跑满 50 次请求、期间进入并打完战斗，**0 条**主动发言 | `off-ledger.jsonl`（20:14:09–20:14:58），同时段 `/state` 为 COMBAT 且 `play_running=true` |
-| 战斗开始触发 | 触发，提示词为 `A fight just started…` | `on-ledger2.jsonl` 20:21:40、20:34:37 |
-| 战斗结束触发 | 触发 6 次，提示词为 `The fight just ended…` | `on-ledger2.jsonl` 20:23:09 / 20:24:38 / 20:26:06 / 20:27:34 / 20:29:04 / 20:31:21 |
-| 75 秒最小间隔 | 9 次发送间隔 88–137 秒；另做阻断测试：发送后 **12.2 秒**强制 COMBAT→MAP 与 MAP→COMBAT 转移，随后 63.4 秒内 0 条发送 | `gate-timeline.jsonl` 的 `block_*` 段（`refused=true`） |
-| 每会话 6 条上限 | 满 6 条后，第 7 个时刻（84 秒后的真实转移，自动游玩仍在跑）0 条发送 | `gate-timeline.jsonl` 的 `cap_result`（`refused=true`） |
-| 暂停/继续归还额度（本轮修复） | 暂停再继续自动游玩后，第 7 条被接受 | `gate-timeline.jsonl` 的 `reset_result`（`accepted=true`，20:31:21） |
-| 只读路径 | 主动发言请求只走对话模型，`act` 不在其工具集合内 | 离线 `ProactiveChat.ReadOnlyCannotAct`；本轮到 20:34:37 为止共 641 次请求，主动发言请求与游玩请求可在 `last_user_head` 上直接区分 |
+| Negative case with the switch off | Auto-play ran to 50 requests, entering and finishing a combat in the meantime, with **0** proactive messages | `off-ledger.jsonl` (20:14:09-20:14:58), with `/state` being COMBAT and `play_running=true` in the same period |
+| Combat start trigger | Triggered, with the prompt `A fight just started…` | `on-ledger2.jsonl` 20:21:40, 20:34:37 |
+| Combat end trigger | Triggered 6 times, with the prompt `The fight just ended…` | `on-ledger2.jsonl` 20:23:09 / 20:24:38 / 20:26:06 / 20:27:34 / 20:29:04 / 20:31:21 |
+| 75-second minimum interval | 9 send intervals of 88-137 seconds; plus a blocking test: **12.2 seconds** after a send, a forced COMBAT->MAP and MAP->COMBAT transition, followed by 0 sends within 63.4 seconds | the `block_*` segment of `gate-timeline.jsonl` (`refused=true`) |
+| Cap of 6 per session | After 6 were full, 0 were sent at the 7th moment (a real transition 84 seconds later, with auto-play still running) | `cap_result` of `gate-timeline.jsonl` (`refused=true`) |
+| Pause/resume returns the quota (this round's fix) | After pausing and resuming auto-play, the 7th was accepted | `reset_result` of `gate-timeline.jsonl` (`accepted=true`, 20:31:21) |
+| Read-only path | Proactive speech requests go only to the chat model, and `act` is not in its tool set | Offline `ProactiveChat.ReadOnlyCannotAct`; 641 requests in total up to 20:34:37 this round, and proactive speech requests can be told apart from play requests directly by `last_user_head` |
 
-观察：循环在每次迭代开头观察情境，因此发送可能比屏幕转移滞后十几到二十几秒（`cycle` 读到的 `sends_after` 有时比实际早一拍）。上表的间隔结论按记账时间戳计算，不受该滞后影响。
+Observation: the loop observes the situation at the start of each iteration, so a send can lag the screen transition by ten to twenty-odd seconds (the `sends_after` read by `cycle` is sometimes one beat earlier than reality). The interval conclusions in the table above are computed from the accounting timestamps and are unaffected by that lag.
 
-## 4. 端点契约与文档
+## 4. Endpoint Contract and Documentation
 
-`docs/api.md` 此前只登记 `/health`、`/state`、`/actions/available`、`/action`，而生产代码还实现了 `POST /session/control`（悬浮窗「开始自动游玩」的同一入口，也是本轮验收唯一可编程启动方式）与 `POST /companion/control`、`POST /companion/message`、`GET /events/stream`。本轮补齐，并把 `/health` 的字段说明与 `stop_kind` 取值表写进契约；示例值同步到当前 `0.10.6` / `v0.111.0`。
+`docs/api.md` previously registered only `/health`, `/state`, `/actions/available`, and `/action`, while production code also implemented `POST /session/control` (the same entry point as the floating window's "Start auto-play", and the only programmatic way to start in this round's acceptance), `POST /companion/control`, `POST /companion/message`, and `GET /events/stream`. This round filled them in, and wrote the `/health` field descriptions and the `stop_kind` value table into the contract; example values were synced to the current `0.10.6` / `v0.111.0`.
 
-同批修正的状态页口径：#82 修复后的选牌屏一行、宠物与球槽一行、停止原因分类一行；`docs/proactive-chat-review.md` 的「Not verified: real in-game behaviour」已过期，改为两轮实机结论加仍然未验的部分；`docs/mechanic-coverage-matrix.md` 的 Deck selection 行补上 #82 更正说明（保留历史快照标记）。
+Status-page wording corrected in the same batch: the card selection screen row after the #82 fix, the pets and orb slots row, and the stop reason classification row; the "Not verified: real in-game behaviour" in `docs/proactive-chat-review.md` was out of date and was changed to the two rounds of live conclusions plus the parts still unverified; the Deck selection row of `docs/mechanic-coverage-matrix.md` gained a #82 correction note (keeping the historical snapshot marker).
 
-## 5. 环境与真实存档
+## 5. Environment and Real Saves
 
-- 隔离副本：`build/validation-2026-09-08/game/`，本轮部署的 DLL SHA256 前 16 位 `1276E878E525D6BE`；档案 `--clientId 2026091012`；`STS2_AGENT_SETTINGS_PATH` 指向本轮 `settings.proactive-*.json`。
-- 真实存档保护快照复验（`build/validation-2026-09-10/protected-snapshot.json`，197 项）：**0 changed、0 missing**。真实 Steam 安装、真实存档、`%APPDATA%/STS2AIAgent` 配置均未被本轮改动的隔离副本触碰。
-- 正式安装目录当前仍是 v0.10.6 的 `47CE0F90…`，本轮未重新部署到正式安装。
+- Isolated copy: `build/validation-2026-09-08/game/`, deployed DLL SHA256 first 16 digits for this round `1276E878E525D6BE`; profile `--clientId 2026091012`; `STS2_AGENT_SETTINGS_PATH` pointed at this round's `settings.proactive-*.json`.
+- Re-check of the real-save protection snapshot (`build/validation-2026-09-10/protected-snapshot.json`, 197 entries): **0 changed, 0 missing**. The real Steam install, the real saves, and the `%APPDATA%/STS2AIAgent` configuration were not touched by this round's isolated copy.
+- The official install directory is still v0.10.6's `47CE0F90…`, and this round did not redeploy to the official install.
 
-## 6. 未覆盖项
-## 7. 第二轮：审计发现的缺陷与修复（同日稍后）
+## 6. Not Covered
+## 7. Second Round: Defects Found by the Audit and Their Fixes (Later the Same Day)
 
-对 HTTP 服务层、自动游玩停止/恢复、悬浮窗文案与 MCP 契约做了四份只读审计，发现并修复以下真实缺陷。
+Four read-only audits of the HTTP service layer, auto-play stop/resume, overlay text, and the MCP contract found and fixed the following real defects.
 
-| 缺陷 | 触发条件与后果 | 修复 | 验证 |
+| Defect | Trigger and consequence | Fix | Verification |
 | --- | --- | --- | --- |
-| `POST /action` 无 body 上限、无 JSON 容错 | 非 JSON 或字段类型错误（如 `card_index` 传字符串）抛 `JsonException`，被通用 catch 接成 **500 `internal_error`**，而契约要求 400 `invalid_request`；chunked body 还会无界读取 | `Router.RequireBoundedBody` + `ReadJsonBodyAsync`，两条路由统一走这两个助手 | 实机探针：not-json / wrong-type / empty / missing 全部 HTTP 400 `invalid_request`（此前为 500） |
-| `POST /session/control` 非 JSON body → 500 | 同上 | 同上 | 同上 |
-| 停止原因靠中文关键词匹配 | 决策失败的包裹文案会拼上游戏原始错误串；错误串含「上限」时被报成 `budget`，界面建议「重置本会话统计」而不是查看局面 | `AutoPlayStoppedException` 带可选 `Kind`；预算守卫与对局边界显式声明类型；`StopKindPolicy.Resolve` 让显式类型优先 | 离线 `StopKind.ExplicitKindWins`；`StopKind.RetryIsNotRunEnd` |
-| 预算关键词误判 | `Classify` 对整串做 `Contains("上限")`，普通失败文案可能命中 | 移除裸词匹配：预算停止只由 `SessionBudgetGuard` 的显式类型产生 | 同上（`Classify("手牌已达上限")` 现为 `failed`） |
-| 循环内重置对局边界 | `AutoPlayLoopAsync` 每轮看到菜单屏幕就换新的 `CurrentRunBoundary` 再立刻 `Check`，`_enteredRun` 为 false，**离开对局永不触发停止** | 删除循环内重置，边界只在 `StartAutoPlay` 安装 | 实机：`save_and_quit` 回主菜单后 `play_running=false`、`stop_kind=run_end` |
-| 悬浮窗写盘异常逃逸 | `PersistOverlayVisible` / `PersistOverlayPlacement` / `PersistChatAttachFlags` / `SetMcpEnabled` 直接调用会 rethrow 的 `SettingsStore.Save`，磁盘满或被占用时异常抛进 Godot 信号回调，开关显示与实际不一致 | 新增 `SaveSettingsQuietly`，捕获 `IOException` / `UnauthorizedAccessException` 并写入状态行 | 代码路径 + 既有设置页文案 |
-| 「队友正在行动」为死分支 | `Phase` 只有 paused/running/stopping，running 被上一分支的 `PlayPhase == "running"` 抢先命中，玩家只会看到「正在请求模型」 | 该分支收窄为 `s.RequestingModel` | 离线 `Session.RunningBranchReachable` |
-| 单人自动游玩显示「可以邀请 AI 队友」 | ready_to_invite 分支排在所有运行中分支之前且不判断 `PlayRunning` | 条件加 `!s.PlayRunning` | 同上 |
-| MCP 动作超时短于 Mod 等待 | `_DEFAULT_ACTION_TIMEOUT = 30s`，而 `continue_game_over` 最多等 60s 原生存档 → 正常慢路径被当成响应丢失 | 默认提升到 75s | 离线 `test_action_timeout_covers_the_longest_server_wait` |
-| 连接被拒报成 outcome_unknown | 拒绝连接意味着请求从未到达 Mod，却被报成「可能已完成，不要重放」 | 仅 `ConnectionRefusedError` / `gaierror` 归为 `connection_error`（可重试）；已发出后丢失仍为 uncertain | 离线 `test_refused_connection_is_retryable_connection_error`、`test_lost_response_after_send_stays_uncertain` |
-| `status="failed"` 被当成功 | 契约允许该取值，客户端只看 `ok` | `_decode_action_success` 对该取值抛 `action_failed` | 离线 `test_failed_status_is_not_reported_as_success` |
-| 文档缺口 | `/data/{collection}` 与 `/mcp` 从未登记；7 个错误码未登记；README 的超时环境变量名不存在 | 补 `GET /data/{collection}`、`POST /mcp` 章节与错误码表；README 改为 `STS2_API_READ_TIMEOUT` / `STS2_API_ACTION_TIMEOUT` / `STS2_API_MAX_RETRIES` | 四闸门通过 |
-| 工具文案指向 compact 视图不存在的字段 | `act` 说明要求读 `requires_target` / `target_index_space` / `valid_target_indices`，但 `agent_view` 只有 `target` / `targets`（仅 `rest.options` 是三件套） | 文案改为按 compact 视图描述，并说明全量状态里的对应名字 | 对照 `GameStateService` 的 compact 构建代码 |
-| `full` profile 缺 9 个动作工具 | 文档称 full 暴露「每个动作的独立工具」，实际 55 个动作里只有 45 个有 legacy 工具，其余只能走 `act` | 补 `switch_profile`、`dismiss_game_over_wait`、`confirm_unlock`、`close_cards_view`、四个 multiplayer-lobby 动作与 `invite_ai_teammate`，并补对应 client 方法 | 离线 `test_legacy_action_coverage`（覆盖度与 client 方法双断言） |
-| 「单步」不计入会话预算 | `StepOnceCoreAsync` → `ApplyPlayResult` 只累加展示用的 `_sessionRequests`，不喂 `SessionBudgetGuard`，因此守卫的请求计数永不增长，反复单步可越过 `MaxSessionRequests`；`AgentLoop` 的前置检查形同虚设 | 单步路径记录该轮并检查预算，越限时以 `budget` 类型停止并在状态行说明 | 源码契约测试 `Session.StepOnceRecordsBudget` |
+| `POST /action` has no body limit and no JSON tolerance | A non-JSON body or a wrongly typed field (such as passing a string for `card_index`) throws `JsonException`, which the generic catch turned into a **500 `internal_error`**, while the contract requires 400 `invalid_request`; a chunked body would also be read without bound | `Router.RequireBoundedBody` + `ReadJsonBodyAsync`, with both routes going through these two helpers | Live probe: not-json / wrong-type / empty / missing all return HTTP 400 `invalid_request` (previously 500) |
+| `POST /session/control` with a non-JSON body -> 500 | Same as above | Same as above | Same as above |
+| The stop reason was decided by Chinese keyword matching | The wrapper message for a decision failure was concatenated with the game's raw error string; when the error string contained the Chinese word for "limit", it was reported as `budget`, and the UI suggested "Reset this session's stats" instead of checking the game state | `AutoPlayStoppedException` carries an optional `Kind`; the budget guard and run boundary declare their type explicitly; `StopKindPolicy.Resolve` lets the explicit type win | Offline `StopKind.ExplicitKindWins`; `StopKind.RetryIsNotRunEnd` |
+| Budget keyword misjudgment | `Classify` did `Contains("上限")` on the whole string, so an ordinary failure message could hit it | Bare-word matching was removed: a budget stop is produced only by the explicit type from `SessionBudgetGuard` | Same as above (`Classify("手牌已达上限")` is now `failed`) |
+| Run boundary reset inside the loop | `AutoPlayLoopAsync` swapped in a fresh `CurrentRunBoundary` every round it saw a menu screen and then immediately called `Check`, with `_enteredRun` false, so **leaving a run never triggered a stop** | Removed the reset inside the loop; the boundary is installed only in `StartAutoPlay` | Live: after `save_and_quit` back to the main menu, `play_running=false`, `stop_kind=run_end` |
+| Overlay disk write exceptions escaped | `PersistOverlayVisible` / `PersistOverlayPlacement` / `PersistChatAttachFlags` / `SetMcpEnabled` called `SettingsStore.Save` directly, which rethrows, so on a full or locked disk the exception was thrown into a Godot signal callback and the switch display disagreed with reality | Added `SaveSettingsQuietly`, which catches `IOException` / `UnauthorizedAccessException` and writes to the status line | Code path + existing settings page text |
+| "Teammate is acting" was a dead branch | `Phase` has only paused/running/stopping, and running was hit first by `PlayPhase == "running"` in the previous branch, so players only ever saw "requesting model" | That branch was narrowed to `s.RequestingModel` | Offline `Session.RunningBranchReachable` |
+| Solo auto-play showed "you can invite an AI teammate" | The ready_to_invite branch was ordered before all running branches and did not check `PlayRunning` | Added `!s.PlayRunning` to the condition | Same as above |
+| MCP action timeout shorter than the Mod's wait | `_DEFAULT_ACTION_TIMEOUT = 30s`, while `continue_game_over` waits up to 60s for a native save -> a normal slow path was treated as a lost response | The default was raised to 75s | Offline `test_action_timeout_covers_the_longest_server_wait` |
+| A refused connection was reported as outcome_unknown | A refused connection means the request never reached the Mod, yet it was reported as "may have completed, do not replay" | Only `ConnectionRefusedError` / `gaierror` are classed as `connection_error` (retryable); a loss after the request was sent stays uncertain | Offline `test_refused_connection_is_retryable_connection_error`, `test_lost_response_after_send_stays_uncertain` |
+| `status="failed"` was treated as success | The contract allows that value, and clients looked only at `ok` | `_decode_action_success` raises `action_failed` for that value | Offline `test_failed_status_is_not_reported_as_success` |
+| Documentation gaps | `/data/{collection}` and `/mcp` were never registered; 7 error codes were unregistered; the README's timeout environment variable names did not exist | Added the `GET /data/{collection}` and `POST /mcp` sections and the error code table; the README now says `STS2_API_READ_TIMEOUT` / `STS2_API_ACTION_TIMEOUT` / `STS2_API_MAX_RETRIES` | Four gates passed |
+| Tool text pointed at fields that do not exist in the compact view | The `act` description told readers to read `requires_target` / `target_index_space` / `valid_target_indices`, but `agent_view` has only `target` / `targets` (only `rest.options` has the trio) | The text now describes the compact view and states the corresponding names in the full state | Checked against the compact-build code of `GameStateService` |
+| The `full` profile lacked 9 action tools | The documentation says full exposes "an independent tool for every action", but of 55 actions only 45 had legacy tools, and the rest could only go through `act` | Added `switch_profile`, `dismiss_game_over_wait`, `confirm_unlock`, `close_cards_view`, four multiplayer-lobby actions, and `invite_ai_teammate`, plus the matching client methods | Offline `test_legacy_action_coverage` (asserting both coverage and client methods) |
+| "Single step" did not count toward the session budget | `StepOnceCoreAsync` -> `ApplyPlayResult` only accumulated the display-only `_sessionRequests` and did not feed `SessionBudgetGuard`, so the guard's request count never grew and repeated single steps could exceed `MaxSessionRequests`; the pre-check in `AgentLoop` was ineffective | The single-step path records the turn and checks the budget, stopping with the `budget` type when over the limit and explaining in the status line | Source contract test `Session.StepOnceRecordsBudget` |
 
-实机验证（隔离副本，DLL `315ED550…` 之后重建为最终构建）：
+Live validation (isolated copy, DLL `315ED550…`, then rebuilt as the final build):
 
 ```
 action: not json         HTTP 400 ok=False code=invalid_request
@@ -97,23 +97,23 @@ session: missing field   HTTP 400 ok=False code=invalid_request
 data: unknown            HTTP 404 ok=False code=collection_not_found
 ```
 
-对局边界实机序列（本轮修复的核心证据）：
+Live run-boundary sequence (the core evidence for this round's fix):
 
-1. `continue_run` → REWARD（在局内）
-2. `POST /session/control {"running":true}` → `play_running=true`、`stop_kind=null`（此前该场景会立刻以 `run_end` 停止）
-3. 在自动游玩进行中执行 `save_and_quit` → 回到 MAIN_MENU
-4. 8 秒后：`play_running=false`、`stop_kind=run_end` —— 离开对局的停止判定仍然有效
+1. `continue_run` -> REWARD (inside a run)
+2. `POST /session/control {"running":true}` -> `play_running=true`, `stop_kind=null` (this scenario used to stop immediately with `run_end`)
+3. Run `save_and_quit` while auto-play is in progress -> back to MAIN_MENU
+4. After 8 seconds: `play_running=false`, `stop_kind=run_end`: the stop check for leaving a run is still effective
 
-测试计数：C# 核心 **219 PASS / 0 FAIL**（本轮新增 3 项）；MCP **53 项**通过（本轮新增 4 项）。
+Test counts: C# core **219 PASS / 0 FAIL** (3 added this round); MCP **53** passed (4 added this round).
 
-证据文件：`build/validation-2026-09-11/http-contract-probe.py`、`boundary-ledger.jsonl`、本轮 `/health` 读数。
+Evidence files: `build/validation-2026-09-11/http-contract-probe.py`, `boundary-ledger.jsonl`, this round's `/health` readings.
 
 
-- 真实模型连通与发言质量：本轮仍用本地桩，未调用真实上游、未消耗预算。
-- 6 条上限的跨会话语义只在单进程内验证；未测「长时间多局游玩后是否仍会给出 6 条」的实际体感。
-- 阻断测试依赖控制台 `fight` / `win` 制造转移，未覆盖玩家正常推进节奏下的间隔表现。
-- `/companion/control` 与 `/companion/message` 本轮只按源码与既有契约测试登记，未新增实机调用证据（`/events/stream` 的实机帧捕获见第 4 节）。
-- 第二轮修复中，「错误文案含关键词导致误分类」只在离线测试里构造，未在真实对局中制造该类错误文案。
-- `/mcp` 原生 MCP 端点本轮未实机调用，沿用 2026-09-08 的 Origin 契约与实机探测结论。
-- 审计提出的 `NativeMcpServer` body 上限只判 `> 1_000_000`、未判 `ContentLength64 == -1`（chunked）：未做改动。原因是拒绝 `-1` 可能直接破坏使用 chunked 传输的正常 MCP 客户端，而当前暴露面仅限本机 loopback；若要收紧，正确做法是改成有界读取（读满 1 MB + 1 字节即拒绝），而不是简单加一个比较。记录待后续判断。
-- 审计提出的 `McpPort` / `McpServerPath` 设置项在悬浮窗没有控件（写盘但不显示）、保存时 `ThinkingIntensity` 会被对话模型的取值覆盖：均为低危可用性问题，本轮未改。
+- Real model connectivity and speech quality: this round still used the local stub, called no real upstream, and consumed no budget.
+- The cross-session semantics of the cap of 6 were verified only within a single process; the actual feel of "does it still give 6 after long multi-run play" was not tested.
+- The blocking test relies on the console `fight` / `win` to produce transitions, and does not cover interval behavior under a player's normal pacing.
+- `/companion/control` and `/companion/message` were registered this round only from source and existing contract tests, with no new live call evidence (the live frame capture of `/events/stream` is in Section 4).
+- Among the second-round fixes, "an error message containing a keyword causing misclassification" was constructed only in offline tests, and such an error message was not produced in a real run.
+- The `/mcp` native MCP endpoint was not called live this round; the Origin contract and live probe conclusions of 2026-09-08 stand.
+- The audit noted that the `NativeMcpServer` body limit only checks `> 1_000_000` and does not check `ContentLength64 == -1` (chunked): no change was made. The reason is that rejecting `-1` could directly break normal MCP clients that use chunked transfer, while the current exposure is limited to the local loopback; if it is to be tightened, the right way is a bounded read (reject once 1 MB + 1 byte has been read) rather than simply adding a comparison. Recorded for later judgment.
+- The audit noted that the `McpPort` / `McpServerPath` settings have no controls in the overlay (written to disk but not shown), and that on save `ThinkingIntensity` is overwritten by the chat model's value: both are low-severity usability issues and were not changed this round.
