@@ -628,6 +628,10 @@ internal static class TestRunner
         yield return ("CardPlayCounter.StillInHand", () => Task.Run(CardPlayCounterPolicyTests.APlayStillInHandRollsBack));
         yield return ("CardPlayCounter.Settled", () => Task.Run(CardPlayCounterPolicyTests.ASettledPlayKeepsTheCounters));
         yield return ("CardPlayCounter.LeftHand", () => Task.Run(CardPlayCounterPolicyTests.LeftHandOrEndedCombatKeepsTheCounters));
+        yield return ("LocalCancel.CoopNever", () => Task.Run(LocalCancelPolicyTests.CoopNeverCancelsLocally));
+        yield return ("LocalCancel.SoloStuckOnly", () => Task.Run(LocalCancelPolicyTests.SoloCancelsOnlyAStuckAction));
+        yield return ("LocalCancel.ChoiceNotRecovered", () => Task.Run(LocalCancelPolicyTests.ACardWaitingForAChoiceIsNotRecovered));
+        yield return ("LocalCancel.PathsAskPolicy", () => Task.Run(LocalCancelPolicyTests.BothCancelPathsAskThePolicy));
         yield return ("ActionTrust.NoRewardFallback", () => Task.Run(GameActionTrustContractTests.RewardConsumeNeverFallsBackToTheFirstOption));
         yield return ("ActionTrust.RewardRequestValidation", () => Task.Run(GameActionTrustContractTests.RewardRequestRejectsAnOutOfRangeIndexBeforeClicking));
         yield return ("ActionTrust.ShopRemovalFailure", () => Task.Run(GameActionTrustContractTests.ShopRemovalPurchaseFailureSurfaces));

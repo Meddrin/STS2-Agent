@@ -380,7 +380,9 @@ internal static partial class GameActionService
         else if (cardType == "Skill") SkillsPlayedThisTurn++;
 
         var stable = await WaitForPlayCardTransitionAsync(card, TimeSpan.FromSeconds(12));
-        if (!stable)
+        // A card waiting for a choice (Dagger Throw's discard, Survivor ...) is not a hang: the next
+        // select action answers it. Cancelling here used to drop whatever ran next on this client.
+        if (LocalCancelPolicy.ShouldRecoverStuckPlay(stable, IsPlayCardAwaitingPlayerInput()))
         {
             for (var attempt = 0; attempt < 8; attempt++)
             {
@@ -545,9 +547,17 @@ internal static partial class GameActionService
 
         // Nested player choice is a legitimate wait. Cancelling it drops the other
         // player's selection UI. The hang we recover from is ExecuteAction never
-        // finishing while the hand is still in Play mode.
-        if (running.State is GameActionState.GatheringPlayerChoice or GameActionState.ReadyToResumeExecuting)
+        // finishing while the hand is still in Play mode. In co-op the running action is
+        // often a partner's, and a cancel on this client alone desyncs the run.
+        var awaitingChoice = running.State is GameActionState.GatheringPlayerChoice or GameActionState.ReadyToResumeExecuting;
+        var isMultiplayer = RunManager.Instance.NetService is { } netService && netService.Type.IsMultiplayer();
+        if (!LocalCancelPolicy.MayCancelRunningAction(isMultiplayer, awaitingChoice))
         {
+            if (isMultiplayer && !awaitingChoice)
+            {
+                Log.Warn($"[STS2AIAgent] TryCancelRunningPlayerAction: not cancelling {running} in a co-op run; a local cancel would diverge from the host.");
+            }
+
             return false;
         }
 
