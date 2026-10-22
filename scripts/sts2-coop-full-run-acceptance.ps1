@@ -401,7 +401,7 @@ function Set-VerifiedRoleTests {
             modelName = $settings.models[0].model
             fingerprint = $fp
             testedAt = $now
-            nextStep = '连通成功。工具/视觉能力仍为未验证。'
+            nextStep = 'Connectivity OK. Tool and vision capabilities are still unverified.'
         }
     }
     $settings | Add-Member -NotePropertyName roleTests -NotePropertyValue @(& $mk conversation; & $mk play) -Force

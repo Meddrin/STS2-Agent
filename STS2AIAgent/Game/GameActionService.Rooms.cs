@@ -1056,7 +1056,7 @@ internal static partial class GameActionService
 
     /// <summary>
     /// Waits for rest site state to change after choosing an option.
-    /// Detects: screen change (SMITH 闂?card selection), ProceedButton appearance
+    /// Detects: screen change (SMITH -> card selection), ProceedButton appearance
     /// (HEAL), or options list change.
     /// </summary>
     private static async Task<bool> WaitForRestOptionTransitionAsync(TimeSpan timeout)
