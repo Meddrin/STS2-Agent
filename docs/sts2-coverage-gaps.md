@@ -1,10 +1,10 @@
-# STS2 2代覆盖缺口清单（历史记录入口）
+# STS2 coverage gap list (history entry)
 
-2026-03-10 的覆盖缺口清单已归档至 [历史原文](../history/sts2-coverage-gaps_2026-03-10.md)。
+The 2026-03-10 coverage gap list has been archived to the [original record](../history/sts2-coverage-gaps_2026-03-10.md).
 
-归档原因：该清单把 CHEST、EVENT、REST、SHOP、POTION、CHARACTER_SELECT、GAME_OVER 等场景列为“尚未覆盖”，
-而这些能力此后都已落地到代码。原文只应作为当时的开发边界记录，其中的“待补齐”不再代表当前缺口。
+Reason for archiving: the list marked scenes such as CHEST, EVENT, REST, SHOP, POTION, CHARACTER_SELECT, and GAME_OVER as "not yet covered",
+but these capabilities have since landed in the code. The original should be read only as a record of the development boundary at the time; its "to be completed" items no longer describe current gaps.
 
-当前状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)，动作与接口以 [API 文档](api.md) 的动作总表为准。
-保留本路径供旧链接使用。
+Current status: see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md). For actions and interfaces, the Action summary table in the [API doc](api.md) is authoritative.
+This path is kept for old links.
 

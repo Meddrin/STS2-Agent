@@ -1,89 +1,89 @@
-# ADR 0001：动作面只保留一份判断
+# ADR 0001: Keep one judgment for the action surface
 
-状态：**已实施**（2026-09-17，实机回放对照通过）
-日期：2026-09-16，实施于 2026-09-17
+Status: **Implemented** (2026-09-17, verified against a live-game replay)
+Date: 2026-09-16, implemented 2026-09-17
 
-## 背景
+## Background
 
-`/state` 的 `available_actions` 由 `GameStateService.BuildAvailableActionNames` 产出；
-`/actions/available` 的描述符由 `GameStateService.BuildAvailableActionsPayload` 产出。
+`available_actions` in `/state` is produced by `GameStateService.BuildAvailableActionNames`;
+the descriptors in `/actions/available` are produced by `GameStateService.BuildAvailableActionsPayload`.
 
-两者是**同一个判断的两份手写实现**。2026-09-16 对源码的机械比对：
+The two are **two hand-written implementations of the same judgment**. A mechanical comparison of the source on 2026-09-16:
 
-| | 行数 | 查询的 `Can*` 谓词 | 产出的动作名 |
+| | Lines | `Can*` predicates queried | Action names emitted |
 | --- | --- | --- | --- |
 | `BuildAvailableActionNames` | 301 | 50 | 55 |
 | `BuildAvailableActionsPayload` | 609 | 50 | 55 |
-| 交集 | — | **50（完全相同）** | **55（完全相同）** |
+| Intersection | n/a | **50 (identical)** | **55 (identical)** |
 
-集合完全一致，只有发射顺序在第 28 项之后开始不同。也就是说：**910 行代码在回答同一个问题**，
-而它们今天一致纯属人工维护得当，没有任何机制保证。
+The sets are identical; only the emission order starts to differ after item 28. In other words, **910 lines of code answer the same question**,
+and that they agree today is purely the result of careful manual upkeep, with no mechanism guaranteeing it.
 
-代价是具体的：
+The cost is concrete:
 
-- 新增一个动作要改两处，顺序、谓词、参数都要对上。`AGENTS.md` 与
-  `.trellis/spec/mod/game-actions.md` 都把「两处都要加」写成了步骤——**文档在教人维护重复**。
-- 已经为此写过一次局部契约：`CombatGate.ActionsAskTheSharedGate` 存在的唯一理由，就是防止这两个
-  方法在三个战斗谓词上走岔。那是在给重复打补丁，不是在消除重复。
-- 一旦走岔，后果是客户端在一个端点上被告知某动作可用、在另一个端点上不可用。这正是 v0.12.4
-  被迫同号重发的那类缺陷（当时是同一份响应内部自相矛盾）。
+- Adding an action means editing two places, and the order, predicates, and parameters must all match. `AGENTS.md` and
+  `.trellis/spec/mod/game-actions.md` both spell out "add it in both places" as a step: **the docs teach people to maintain the duplication**.
+- A local contract was already written once for this: the only reason `CombatGate.ActionsAskTheSharedGate` exists is to keep these two
+  methods from diverging on three combat predicates. That patches the duplication instead of removing it.
+- Once they diverge, a client is told on one endpoint that an action is available and on the other that it is not. This is exactly the kind of defect that
+  forced the same-number re-release of v0.12.4 (there, one response contradicted itself).
 
-## 决定
+## Decision
 
-把这个判断收敛成一处：一个按屏幕产出「动作 + 参数要求」序列的方法，
-`available_actions` 取它的名字投影，`/actions/available` 取它的完整描述符。
+Collapse the judgment into one place: a method that produces, per screen, a sequence of "action + parameter requirements".
+`available_actions` takes its name projection, and `/actions/available` takes its full descriptors.
 
-## 实施结果（2026-09-17）
+## Result of the implementation (2026-09-17)
 
-`EnumerateAvailableActions` 成为唯一的判断处。`BuildAvailableActionNames` 从 301 行变成 12 行的
-纯投影，`BuildAvailableActionsPayload` 变成 14 行的端点包装；`GameStateService.cs` 8559 → 8295 行。
+`EnumerateAvailableActions` became the only place that decides. `BuildAvailableActionNames` went from 301 lines to a 12-line
+pure projection, and `BuildAvailableActionsPayload` became a 14-line endpoint wrapper; `GameStateService.cs` went from 8559 to 8295 lines.
 
-**实机回放对照**（ADR 第 3 步，隔离主机 `--clientId 2026091701`）：45 对背靠背采样、走遍基线覆盖的
-全部 12 块屏。
+**Live replay comparison** (ADR step 3, isolated host `--clientId 2026091701`): 45 back-to-back sample pairs that walked all 12
+screen types covered by the baseline.
 
-- **两个表面 0 分歧**，`screen` 与 `descriptor_screen` 0 次不符。
-- **12 个动作集与基线逐个精确一致**，包括 `PAUSE_MENU` 的**空集**边界（两侧都是空数组）。
-- 唯一差异是 `CARD_SELECTION` 少一个 `discard_potion`——本局药水槽 3 个全空，基线那局身上有药水。
-  从实况 `run.potions` 核实，是局面差异不是代码差异。
-- `GAME_OVER` 的两个集合基线里没有，因为基线早于 #142 的修复；其动作集
-  （`[continue_game_over]` / `[return_to_main_menu]`）与基线当时记在 `COMBAT` 名下的完全相同。
+- **0 divergences between the two surfaces**, and 0 mismatches between `screen` and `descriptor_screen`.
+- **All 12 action sets match the baseline exactly**, including the **empty set** edge case of `PAUSE_MENU` (both sides are empty arrays).
+- The only difference is that `CARD_SELECTION` lacks one `discard_potion`: in this run all 3 potion slots were empty, while the baseline run held potions.
+  Checked against the live `run.potions`: a difference in game state, not in code.
+- The baseline has no sets for `GAME_OVER`, because it predates the #142 fix; its action sets
+  (`[continue_game_over]` / `[return_to_main_menu]`) are identical to what the baseline recorded at the time under `COMBAT`.
 
-发射顺序按计划改为描述符侧的顺序（`crystal_*` 的位置变了）。集合不变，且无客户端依赖顺序——
-skill 与 `state-invariants` 都只判断成员资格。
+As planned, the emission order is now the descriptor side's order (the position of `crystal_*` changed). The sets are unchanged, and no client depends on order:
+the skill and `state-invariants` only check membership.
 
-契约随之重写：`ActionSurface.*` 从「两份实现保持一致」改成「两者出自同一次遍历、各自都无处安放
-自己的谓词或动作名」，这是严格更强的承诺——旧版只能在有人写出分歧之后才发现，而且只覆盖它知道
-去比对的那些谓词和名字。
+The contract was rewritten accordingly: `ActionSurface.*` went from "two implementations stay consistent" to "both come from the same traversal, and neither has anywhere to put
+its own predicates or action names". This is a strictly stronger promise: the old version could only discover a divergence after someone wrote one, and it covered only the predicates and names
+it knew to compare.
 
-## 当初为什么没在 2026-09-16 就做
+## Why it was not done on 2026-09-16
 
-这 910 行决定了 agent 被允许做什么。改错了不是某个功能坏掉，而是**整个 agent 失去正确的动作面**，
-而这个项目的实机验证只能在装了游戏的机器上人工进行——没有自动化实机回归。
+These 910 lines decide what the agent is allowed to do. A mistake does not break one feature; it means **the whole agent loses the correct action surface**,
+and this project's live validation can only be done by hand on a machine with the game installed: there is no automated live regression.
 
-在只有离线证据的情况下重写它，就是在重复 v0.12.4 的错误：那次也是一次「显然正确」的重构，
-离线 408 条测试与九道闸门全绿，结果主菜单上每个 `/state` 都 500。
+Rewriting it with offline evidence alone would repeat the v0.12.4 mistake: that was also an "obviously correct" refactor,
+with 408 offline tests and all nine gates green, and the result was a 500 on every `/state` on the main menu.
 
-所以这件事的门槛不是「想清楚」，是**能连实机跑一遍**。
+So the bar for this work was not "think it through" but **"be able to run it against the live game"**.
 
-## 在那之前做了什么
+## What was done in the meantime
 
-`ActionSurface.SameActionsOnBothSurfaces` 与 `ActionSurface.SamePredicatesOnBothSurfaces`
-两条源码契约把两个表面的动作名集合与谓词集合钉成相等。它**不消除重复，只是让重复变响**：
-只给一个表面加动作，测试立刻转红并点名被遗漏的那个。
+Two source contracts, `ActionSurface.SameActionsOnBothSurfaces` and `ActionSurface.SamePredicatesOnBothSurfaces`,
+pin the action-name set and the predicate set of the two surfaces to be equal. It **does not remove the duplication, it only makes it loud**:
+add an action to one surface only and the test immediately turns red and names the one that was missed.
 
-发射顺序**故意不比对**。两者今天就不同，也没有客户端依赖它（skill 与 `state-invariants`
-都只判断成员资格）。把顺序钉死只会把一个巧合记录成契约。
+The emission order is **deliberately not compared**. The two differ today, and no client depends on it (the skill and `state-invariants`
+only check membership). Pinning the order would only record a coincidence as a contract.
 
-## 实施时的做法
+## How it was done
 
-1. 先在实机上抓一份基线：逐屏（战斗 / 地图 / 商店 / 休息 / 事件 / 宝箱 / 选角 / 大厅 / 结算 /
-   暂停页 / 时间线）记录 `available_actions` 与 `/actions/available` 的完整内容。
-2. 抽出统一的枚举方法，两个表面都改为读它。
-3. 在同一台机器上重放第 1 步，逐屏比对——集合必须一致；顺序变化要显式确认没有客户端依赖。
-4. `ActionSurface.*` 两条契约随之改写成「两个表面出自同一个来源」，而不是「两份实现保持一致」。
-5. `AGENTS.md` 与 `.trellis/spec/mod/game-actions.md` 的「新增动作」步骤从两处改成一处。
+1. First capture a baseline on the live game: for each screen (combat / map / shop / rest / event / chest / character select / lobby / results /
+   pause menu / timeline), record the full contents of `available_actions` and `/actions/available`.
+2. Extract the unified enumeration method and make both surfaces read it.
+3. Replay step 1 on the same machine and compare screen by screen. The sets must match; for any order change, explicitly confirm that no client depends on it.
+4. Rewrite the two `ActionSurface.*` contracts as "both surfaces come from one source" instead of "two implementations stay consistent".
+5. Change the "add an action" step in `AGENTS.md` and `.trellis/spec/mod/game-actions.md` from two places to one.
 
-## 相关
+## Related
 
-- 体量棘轮：`STS2AIAgent.Tests/SourceShapeContractTests.cs`（两个文件占了本 mod C# 代码的 49%）
-- 架构债记录：`.trellis/spec/mod/architecture.md` 的「Code shape and its known debts」一节
+- Size ratchet: `STS2AIAgent.Tests/SourceShapeContractTests.cs` (the two files made up 49% of this mod's C# code)
+- Architecture debt record: the "Code shape and its known debts" section of `.trellis/spec/mod/architecture.md`

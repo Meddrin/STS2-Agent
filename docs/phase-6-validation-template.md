@@ -1,120 +1,120 @@
-# Phase 6 实机验证记录模板
+# Phase 6 live validation record template
 
-把这份模板复制成一次真实验证记录，用来沉淀“是否达到可发布”的最终证据。
-
----
-
-## 基本信息
-
-- 验证日期：
-- 验证人：
-- Git commit：
-- 游戏版本：
-- Mod 构建配置：`Release`
-- MCP 启动方式：
-- 备注：
+Copy this template into a real validation record, to accumulate the final evidence for "is it ready to release".
 
 ---
 
-## 静态预检
+## Basic information
 
-- [ ] `preflight-release.ps1` 通过
-- [ ] `build-mod.ps1 -Configuration Release` 通过
-- [ ] `test-mod-load.ps1 -DeepCheck` 通过
+- Validation date:
+- Validated by:
+- Git commit:
+- Game version:
+- Mod build configuration: `Release`
+- MCP start method:
+- Notes:
 
-输出摘要：
+---
+
+## Static preflight
+
+- [ ] `preflight-release.ps1` passes
+- [ ] `build-mod.ps1 -Configuration Release` passes
+- [ ] `test-mod-load.ps1 -DeepCheck` passes
+
+Output summary:
 
 ```text
-粘贴关键输出
+Paste the key output
 ```
 
 ---
 
-## 链路验证
+## Flow validation
 
-### 1. 开局链路
+### 1. Run start flow
 
-- [ ] 如存在存档：`continue_run` 或 `abandon_run`
+- [ ] If a save exists: `continue_run` or `abandon_run`
 - [ ] `MAIN_MENU -> open_character_select`
-- [ ] 如单人入口被时间线门控：`open_timeline -> close_main_menu_submenu -> open_character_select`
-- [ ] 如时间线存在可解锁 epoch：`choose_timeline_epoch -> confirm_timeline_overlay`
-- [ ] `CHARACTER_SELECT` 可读取
+- [ ] If the single-player entry is gated by the timeline: `open_timeline -> close_main_menu_submenu -> open_character_select`
+- [ ] If the timeline has an unlockable epoch: `choose_timeline_epoch -> confirm_timeline_overlay`
+- [ ] `CHARACTER_SELECT` is readable
 - [ ] `select_character`
 - [ ] `embark`
-- [ ] `MODAL` / FTUE 可处理
-- [ ] 成功进入 `MAP`
+- [ ] `MODAL` / FTUE can be handled
+- [ ] Successfully enters `MAP`
 
-结果：
+Result:
 
 ```text
-记录 screen 变化、available_actions、异常情况
+Record screen changes, available_actions, and anomalies
 ```
 
-### 2. 地图与战斗链路
+### 2. Map and combat flow
 
 - [ ] `choose_map_node`
 - [ ] `play_card`
 - [ ] `end_turn`
-- [ ] `use_potion` 或 `discard_potion`
-- [ ] 成功结束战斗
+- [ ] `use_potion` or `discard_potion`
+- [ ] Combat ends successfully
 
-结果：
+Result:
 
 ```text
-记录战斗对象索引、药水行为、是否有 pending 状态
+Record combat target indices, potion behavior, and whether any pending state remains
 ```
 
-### 3. 奖励链路
+### 3. Reward flow
 
 - [ ] `claim_reward`
 - [ ] `choose_reward_card`
 - [ ] `skip_reward_cards`
 - [ ] `collect_rewards_and_proceed`
 
-结果：
+Result:
 
 ```text
-记录奖励子流程切换是否稳定
+Record whether switching between reward sub-flows is stable
 ```
 
-### 4. 宝箱链路
+### 4. Chest flow
 
 - [ ] `open_chest`
 - [ ] `choose_treasure_relic`
 - [ ] `proceed`
 
-结果：
+Result:
 
 ```text
-记录 relic 选择后状态变化
+Record the state change after relic selection
 ```
 
-### 5. 事件链路
+### 5. Event flow
 
-- [ ] 普通事件选项
-- [ ] `event.is_finished=true` 后离开
-- [ ] 事件嵌套战斗
+- [ ] Normal event options
+- [ ] Leave after `event.is_finished=true`
+- [ ] Event with a nested combat
 
-结果：
+Result:
 
 ```text
-记录事件切换、嵌套战斗、是否残留旧状态
+Record event transitions, nested combat, and whether stale state remains
 ```
 
-### 6. 休息点链路
+### 6. Rest site flow
 
 - [ ] `choose_rest_option` -> `HEAL`
 - [ ] `choose_rest_option` -> `SMITH`
 - [ ] `select_deck_card`
 - [ ] `proceed`
 
-结果：
+Result:
 
 ```text
-记录 smith 进入选牌后是否顺利返回
+Record whether smith returns smoothly after entering card selection
 ```
 
-### 7. 商店链路
+### 7. Shop flow
 
 - [ ] `open_shop_inventory`
 - [ ] `buy_card`
@@ -124,42 +124,42 @@
 - [ ] `close_shop_inventory`
 - [ ] `proceed`
 
-结果：
+Result:
 
 ```text
-记录内外层状态、价格变化、删牌返回路径
+Record inner and outer state, price changes, and the return path after card removal
 ```
 
-### 8. 收尾链路
+### 8. Wrap-up flow
 
-- [ ] 进入 `GAME_OVER`
-- [ ] `game_over` 字段完整
+- [ ] Enters `GAME_OVER`
+- [ ] `game_over` fields are complete
 - [ ] `return_to_main_menu`
 
-结果：
+Result:
 
 ```text
-记录退出是否稳定，是否卡总结页
+Record whether exit is stable and whether it gets stuck on the summary page
 ```
 
 ---
 
-## 问题清单
+## Issue list
 
-| 严重度 | 场景 | 现象 | 复现步骤 | 预估根因 |
+| Severity | Scenario | Symptom | Repro steps | Suspected root cause |
 | --- | --- | --- | --- | --- |
 | P0/P1/P2 |  |  |  |  |
 
 ---
 
-## 结论
+## Conclusion
 
-- [ ] 可以发布
-- [ ] 可以灰度试用，但仍有已知限制
-- [ ] 不能发布，需继续修复
+- [ ] Can release
+- [ ] Can go to a limited trial, but known limitations remain
+- [ ] Cannot release, fixes needed
 
-结论说明：
+Conclusion notes:
 
 ```text
-写清楚阻塞项，不要只写“基本可用”
+List the blocking items clearly; do not just write "mostly usable"
 ```

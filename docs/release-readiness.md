@@ -1,20 +1,20 @@
-# 发布验收入口
+# Release acceptance entry
 
-2026-04-30 的 v0.7.0 清单已归档至 [历史原文](../history/release-readiness_v0.7.0_2026-04-30.md)。旧版本清单不再作为当前发布门槛。
+The 2026-04-30 v0.7.0 checklist has been archived to the [original record](../history/release-readiness_v0.7.0_2026-04-30.md). Old version checklists are no longer the current release bar.
 
-发布前按以下入口核对：
+Before a release, check against these entries:
 
-1. [当前状态与验收边界](../PRODUCT_PLAN_CURRENT.md)：确认候选版本、已有证据和剩余缺口，不能将历史测试结果视为新候选已通过。
-2. [发布与验证规范](../.trellis/spec/operations/validation-and-release.md)：核对版本来源、命令及副作用。
-3. [发布预检](../scripts/preflight-release.ps1)：运行静态门槛；预检通过不等于实机加载或游玩通过。
-4. [发布打包](../scripts/package-release.ps1)：生成并检查发布产物。
-5. [创意工坊说明](../steam-workshop/README.md)：按目标渠道检查物品、可见性、订阅版本和实际加载；上传成功不能替代订阅加载验收。
+1. [Current status and acceptance boundary](../PRODUCT_PLAN_CURRENT.md): confirm the candidate version, the existing evidence, and the remaining gaps; historical test results must not be treated as passing for a new candidate.
+2. [Release and validation spec](../.trellis/spec/operations/validation-and-release.md): check the version source, commands, and side effects.
+3. [Release preflight](../scripts/preflight-release.ps1): run the static gates; passing preflight does not mean live loading or play has passed.
+4. [Release packaging](../scripts/package-release.ps1): build and check the release artifacts.
+5. [Workshop notes](../steam-workshop/README.md): check the item, visibility, subscribed version, and actual loading for the target channel; a successful upload cannot replace subscription loading acceptance.
 
-实机验收至少区分 Mod 加载、目标单人或多人流程、原生结算与存档，以及安装渠道验证；逐项记录候选版本、证据和未通过项，具体范围以当前状态页为准。
+Live acceptance should distinguish at least mod loading, the target single-player or multiplayer flow, native results and saves, and install channel verification; record the candidate version, evidence, and failed items one by one, with the exact scope defined by the current status page.
 
-## 历史实机证据
+## Historical live evidence
 
-要判断「某件事以前是怎么验的」时，先看这些定点记录。它们各自属于当时那个构建，不代表当前状态：
+To judge "how something was verified before", look at these pinned records first. Each belongs to the build of its time and does not describe the current state:
 
-- [原生 GAME_OVER 结算与解锁屏分类](evidence/native-game-over-progression/README.md)：2026-08-31 的真机回归（PR #53），含存档哈希与当时的屏幕分类结论。
-- [PR #56 原生档案切换实机测试](pr56-live-test/README.md)：2026-09-05 的档案切换验收。
+- [Native GAME_OVER results and unlock screen classification](evidence/native-game-over-progression/README.md): the 2026-08-31 real-machine regression (PR #53), with the save hash and the screen classification conclusions of that time.
+- [PR #56 native profile switch live test](pr56-live-test/README.md): the 2026-09-05 profile switch acceptance.

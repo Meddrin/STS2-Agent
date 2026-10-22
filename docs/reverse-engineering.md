@@ -1,115 +1,115 @@
-# STS2 AI Agent Mod - 逆向工程笔记
+# STS2 AI Agent Mod - Reverse engineering notes
 
-## 目的
+## Purpose
 
-记录已确认的游戏运行时事实、后续逆向目标和待验证问题，确保实现阶段建立在真实类型与真实入口之上。
+Records the confirmed game runtime facts, the next reverse-engineering targets, and the questions still to verify, so the implementation phase is built on real types and real entry points.
 
-更新时间：2026-03-10
+Last updated: 2026-03-10
 
 ---
 
-## 已确认事实
+## Confirmed facts
 
-### 游戏与程序集
+### Game and assemblies
 
-- 游戏目录：`C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2`
-- 程序集目录：`C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64`
-- 主程序集：`sts2.dll`
-- 版本信息来源：
+- Game directory: `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2`
+- Assembly directory: `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64`
+- Main assembly: `sts2.dll`
+- Version information source:
   - `release_info.json`
   - `sts2.runtimeconfig.json`
 
-### 已确认运行时信息
+### Confirmed runtime information
 
-| 项目 | 值 |
+| Item | Value |
 |------|----|
-| 游戏版本 | `v0.98.2` |
-| 发布提交 | `f4eeecc6` |
-| 发布日期 | `2026-03-06T15:52:37-08:00` |
-| 目标框架 | `net9.0` |
-| 内置运行时 | `Microsoft.NETCore.App 9.0.7` |
+| Game version | `v0.98.2` |
+| Release commit | `f4eeecc6` |
+| Release date | `2026-03-06T15:52:37-08:00` |
+| Target framework | `net9.0` |
+| Bundled runtime | `Microsoft.NETCore.App 9.0.7` |
 | Harmony | `0Harmony.dll 2.4.2.0` |
-| Godot C# 绑定 | `GodotSharp.dll 4.5.1.0` |
+| Godot C# bindings | `GodotSharp.dll 4.5.1.0` |
 
-### 已确认实现层面的推论
+### Confirmed implementation-level inferences
 
-- 游戏不是 Unity + BepInEx 方案，而是 Godot 4.5.1 + C# 运行时
-- 使用 Harmony patch 是可行路线，因为游戏目录内已有 `0Harmony.dll`
-- 使用本地 HTTP API 也是可行路线，因为游戏目录内已有 `System.Net.HttpListener.dll`
-- Mod 的准确加载机制仍需通过实际示例或反编译入口确认
+- The game is not a Unity + BepInEx setup; it runs on Godot 4.5.1 + the C# runtime
+- Harmony patching is a viable route, because `0Harmony.dll` is already in the game directory
+- A local HTTP API is also viable, because `System.Net.HttpListener.dll` is already in the game directory
+- The exact mod loading mechanism still has to be confirmed through a real example or the decompiled entry point
 
 ---
 
-## 正式反编译已确认的关键事实
+## Key facts confirmed by formal decompilation
 
-以下内容来自 `ilspycmd` 对 `sts2.dll` 的正式反编译，可信度高于之前的字符串扫描。
+The following comes from the formal decompilation of `sts2.dll` with `ilspycmd`, and is more trustworthy than the earlier string scan.
 
-### Mod 加载机制
+### Mod loading mechanism
 
-| 事实 | 说明 |
+| Fact | Description |
 |------|------|
-| 扫描目录 | `Path.Combine(directoryName, "mods")` |
-| 扫描方式 | 递归遍历目录，寻找 `.pck` 文件 |
-| DLL 位置 | 与 `.pck` 同目录、同名，如 `STS2AIAgent.pck` 对应 `STS2AIAgent.dll` |
-| 包内要求 | 必须包含 `res://mod_manifest.json` |
-| 清单字段 | `pck_name`、`name`、`author`、`description`、`version` |
-| 名称约束 | `mod_manifest.json` 中的 `pck_name` 必须和 `.pck` 文件名一致 |
-| 加载方式 | `ProjectSettings.LoadResourcePack(...)` 加载 `.pck` |
-| 程序集装载 | 先通过 `AssemblyLoadContext.LoadFromAssemblyPath(...)` 加载同名 `.dll`，再加载 `.pck` |
-| 用户门槛 | `SaveManager.Instance.SettingsSave.ModSettings?.PlayerAgreedToModLoading` 必须为 `true`，否则跳过加载 |
+| Scan directory | `Path.Combine(directoryName, "mods")` |
+| Scan method | Recursively walks the directory looking for `.pck` files |
+| DLL location | Same directory and same name as the `.pck`, such as `STS2AIAgent.pck` with `STS2AIAgent.dll` |
+| Package requirement | Must contain `res://mod_manifest.json` |
+| Manifest fields | `pck_name`, `name`, `author`, `description`, `version` |
+| Name constraint | `pck_name` in `mod_manifest.json` must match the `.pck` file name |
+| Load method | `.pck` is loaded with `ProjectSettings.LoadResourcePack(...)` |
+| Assembly loading | The same-named `.dll` is loaded first through `AssemblyLoadContext.LoadFromAssemblyPath(...)`, then the `.pck` |
+| User gate | `SaveManager.Instance.SettingsSave.ModSettings?.PlayerAgreedToModLoading` must be `true`, otherwise loading is skipped |
 
-### Mod 设置持久化
+### Mod settings persistence
 
-| 事实 | 说明 |
+| Fact | Description |
 |------|------|
-| 设置文件 | `%APPDATA%/SlayTheSpire2/default/1/settings.save` |
-| 文件格式 | 明文 JSON |
-| 对应字段 | `mod_settings.mods_enabled` |
-| 对应属性 | `ModSettings.PlayerAgreedToModLoading` |
+| Settings file | `%APPDATA%/SlayTheSpire2/default/1/settings.save` |
+| File format | Plain-text JSON |
+| Matching field | `mod_settings.mods_enabled` |
+| Matching property | `ModSettings.PlayerAgreedToModLoading` |
 
-### Mod 初始化机制
+### Mod initialization mechanism
 
-| 事实 | 说明 |
+| Fact | Description |
 |------|------|
-| 属性类型 | `MegaCrit.Sts2.Core.Modding.ModInitializerAttribute` |
-| 作用目标 | 加在类上，不是加在方法上 |
-| 传入参数 | 初始化方法名字符串 |
-| 方法要求 | `static`，允许 `public` 或 `non-public` |
-| 回退路径 | 如果程序集里没有 `ModInitializerAttribute`，则对整个程序集执行 `Harmony.PatchAll(assembly)` |
+| Attribute type | `MegaCrit.Sts2.Core.Modding.ModInitializerAttribute` |
+| Target | Applied to a class, not to a method |
+| Argument | The name string of the initialization method |
+| Method requirement | `static`, either `public` or `non-public` |
+| Fallback path | If the assembly has no `ModInitializerAttribute`, `Harmony.PatchAll(assembly)` is run on the whole assembly |
 
-### 战斗动作机制
+### Combat action mechanism
 
-| 事实 | 说明 |
+| Fact | Description |
 |------|------|
-| 最小出牌入口 | `CardModel.TryManualPlay(Creature? target)` |
-| 实际入队 | `CardModel.EnqueueManualPlay(Creature? target)` |
-| 入队实现 | `RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(new PlayCardAction(this, target))` |
-| 状态稳定候选点 | `CombatManager.WaitUntilQueueIsEmptyOrWaitingOnNonPlayerDrivenAction()` |
-| 等待机制 | 监听 `ActionExecutor.AfterActionExecuted`，直到没有 ready 的 player-driven action |
+| Minimal card play entry | `CardModel.TryManualPlay(Creature? target)` |
+| Actual enqueue | `CardModel.EnqueueManualPlay(Creature? target)` |
+| Enqueue implementation | `RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(new PlayCardAction(this, target))` |
+| Candidate stable-state point | `CombatManager.WaitUntilQueueIsEmptyOrWaitingOnNonPlayerDrivenAction()` |
+| Wait mechanism | Listens to `ActionExecutor.AfterActionExecuted` until no player-driven action is ready |
 
-### 地图与奖励推进
+### Map and reward progression
 
-| 事实 | 说明 |
+| Fact | Description |
 |------|------|
-| 地图动作类 | `MoveToMapCoordAction(Player player, MapCoord destination)` |
-| 地图推进方式 | 非测试模式下调用 `NMapScreen.Instance.TravelToMapCoord(_destination)` |
-| 奖励后推进 | `RunManager.ProceedFromTerminalRewardsScreen()` |
-| 奖励后行为 | 打开地图，或在战斗事件中恢复上一个房间 |
+| Map action class | `MoveToMapCoordAction(Player player, MapCoord destination)` |
+| Map progression | Outside test mode, calls `NMapScreen.Instance.TravelToMapCoord(_destination)` |
+| Progression after rewards | `RunManager.ProceedFromTerminalRewardsScreen()` |
+| Behavior after rewards | Opens the map, or resumes the previous room in a combat event |
 
-### 当前 screen 来源
+### Where the current screen comes from
 
-`NetScreenType` 更像多人同步屏幕类型，不足以覆盖完整单机逻辑。  
-当前更适合作为 `/state.screen` 识别入口的是：
+`NetScreenType` looks more like a multiplayer sync screen type and does not cover the full single-player logic.  
+The better entry for identifying `/state.screen` is:
 
 - `MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext.ActiveScreenContext`
 - `ActiveScreenContext.GetCurrentScreen()`
 
-该方法会按顺序检查：
+This method checks, in order:
 
 1. `FeedbackScreen`
 2. `OpenModal`
-3. 检视卡牌/遗物屏幕
-4. 主菜单及子菜单
+3. Card/relic inspection screens
+4. Main menu and submenus
 5. `NMapScreen`
 6. `NOverlayStack`
 7. `EventRoom`
@@ -119,81 +119,81 @@
 11. `MapRoom`
 12. `MerchantRoom`
 
-这说明 `/state.screen` 最好建立在 `ActiveScreenContext + NRun` 房间对象上，而不是只靠一个简化枚举。
+This shows that `/state.screen` is best built on `ActiveScreenContext + NRun` room objects, not on a single simplified enum.
 
-### 已完成运行验证
+### Completed runtime validation
 
-- 游戏日志已确认识别 `mods/STS2AIAgent.pck`
-- 在设置未放行前，会记录：
+- The game log confirmed that `mods/STS2AIAgent.pck` is recognized
+- Before the setting is enabled, it logs:
   - `Skipping loading mod STS2AIAgent.pck, user has not yet seen the mods warning`
-- 将 `settings.save` 中的 `mod_settings.mods_enabled` 置为 `true` 后，日志确认出现：
-  - Mod 程序集加载
-  - 初始化方法调用
-  - `STS2AIAgent` HTTP 服务启动
-- 已在真实游戏进程中收到 `/health` 响应
+- After setting `mod_settings.mods_enabled` to `true` in `settings.save`, the log confirmed:
+  - Mod assembly loaded
+  - Initialization method called
+  - `STS2AIAgent` HTTP server started
+- A `/health` response was received in the real game process
 
 ---
 
-## 当前已发现的真实符号
+## Real symbols found so far
 
-以下内容来自对 `sts2.dll` 的字符串扫描，虽然不等同于正式反编译，但已经足以证明一批关键命名和入口确实存在。
+The following comes from a string scan of `sts2.dll`. It is not equivalent to formal decompilation, but it is enough to prove that a batch of key names and entry points really exist.
 
-### Modding 相关
+### Modding related
 
-| 符号 | 说明 |
+| Symbol | Description |
 |------|------|
-| `MegaCrit.Sts2.Core.Modding.ModManifest` | 已确认存在 Mod 清单类型 |
-| `MegaCrit.Sts2.Core.Modding.ModManager` | 已确认存在 Mod 管理器 |
-| `ModInitializerAttribute` | 已确认存在 Mod 初始化属性 |
-| `CallModInitializer` | 已确认存在调用初始化逻辑 |
-| `MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen.NModdingScreen` | 已确认存在 Modding UI |
+| `MegaCrit.Sts2.Core.Modding.ModManifest` | Confirmed: a mod manifest type exists |
+| `MegaCrit.Sts2.Core.Modding.ModManager` | Confirmed: a mod manager exists |
+| `ModInitializerAttribute` | Confirmed: a mod initialization attribute exists |
+| `CallModInitializer` | Confirmed: initializer-calling logic exists |
+| `MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen.NModdingScreen` | Confirmed: a Modding UI exists |
 
-### 战斗与动作相关
+### Combat and action related
 
-| 符号 | 说明 |
+| Symbol | Description |
 |------|------|
-| `MegaCrit.Sts2.Core.Combat.CombatManager` | 已确认真实命名空间在 `Core.Combat` |
-| `MegaCrit.Sts2.Core.Runs.RunManager` | 已确认真实命名空间在 `Core.Runs` |
-| `MegaCrit.Sts2.Core.Entities.Creatures.Creature` | 已确认生物基类存在 |
-| `EnqueueManualPlay` | 已确认存在手动出牌入口名 |
-| `TryPlayCard` | 已确认存在出牌相关逻辑 |
-| `UsePotion` | 已确认存在药水使用逻辑 |
-| `MegaCrit.Sts2.Core.GameActions.PlayCardAction` | 已确认存在出牌动作对象 |
-| `MegaCrit.Sts2.Core.GameActions.UsePotionAction` | 已确认存在药水动作对象 |
-| `ActionQueue` | 已确认存在动作队列 |
-| `ActionQueueSynchronizer` | 已确认存在动作队列同步器 |
-| `WaitUntilQueueIsEmptyOrWaitingOnNonPlayerDrivenAction` | 很可能是“状态稳定”候选等待点 |
+| `MegaCrit.Sts2.Core.Combat.CombatManager` | Confirmed: the real namespace is `Core.Combat` |
+| `MegaCrit.Sts2.Core.Runs.RunManager` | Confirmed: the real namespace is `Core.Runs` |
+| `MegaCrit.Sts2.Core.Entities.Creatures.Creature` | Confirmed: the creature base class exists |
+| `EnqueueManualPlay` | Confirmed: the manual card play entry name exists |
+| `TryPlayCard` | Confirmed: card play logic exists |
+| `UsePotion` | Confirmed: potion use logic exists |
+| `MegaCrit.Sts2.Core.GameActions.PlayCardAction` | Confirmed: a card play action object exists |
+| `MegaCrit.Sts2.Core.GameActions.UsePotionAction` | Confirmed: a potion action object exists |
+| `ActionQueue` | Confirmed: an action queue exists |
+| `ActionQueueSynchronizer` | Confirmed: an action queue synchronizer exists |
+| `WaitUntilQueueIsEmptyOrWaitingOnNonPlayerDrivenAction` | Very likely a candidate wait point for "state is stable" |
 
-### 场景与节点相关
+### Scene and node related
 
-| 符号 | 说明 |
+| Symbol | Description |
 |------|------|
-| `MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen` | 地图屏幕节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rooms.NMapRoom` | 地图房间节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rooms.NEventRoom` | 事件房间节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rooms.NMerchantRoom` | 商店房间节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rooms.NRestSiteRoom` | 休息点房间节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rooms.NTreasureRoom` | 宝箱房间节点 |
-| `MegaCrit.Sts2.Core.Nodes.Screens.NRewardsScreen` | 奖励屏幕节点 |
-| `MegaCrit.Sts2.Core.Nodes.Rewards.NRewardButton` | 奖励按钮节点 |
-| `MegaCrit.Sts2.Core.Nodes.Combat.NIntent` | 战斗意图 UI 节点 |
+| `MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen` | Map screen node |
+| `MegaCrit.Sts2.Core.Nodes.Rooms.NMapRoom` | Map room node |
+| `MegaCrit.Sts2.Core.Nodes.Rooms.NEventRoom` | Event room node |
+| `MegaCrit.Sts2.Core.Nodes.Rooms.NMerchantRoom` | Shop room node |
+| `MegaCrit.Sts2.Core.Nodes.Rooms.NRestSiteRoom` | Rest site room node |
+| `MegaCrit.Sts2.Core.Nodes.Rooms.NTreasureRoom` | Chest room node |
+| `MegaCrit.Sts2.Core.Nodes.Screens.NRewardsScreen` | Rewards screen node |
+| `MegaCrit.Sts2.Core.Nodes.Rewards.NRewardButton` | Reward button node |
+| `MegaCrit.Sts2.Core.Nodes.Combat.NIntent` | Combat intent UI node |
 
-### 流程候选点
+### Flow candidate points
 
-| 符号 | 说明 |
+| Symbol | Description |
 |------|------|
-| `RunManager.<EnterMapPointInternal>d__180` | 地图推进候选入口 |
-| `RunManager.<ProceedFromTerminalRewardsScreen>d__198` | 奖励结束后继续流程候选入口 |
-| `RunManager.<EnterRoomInternal>d__190` | 房间进入候选入口 |
-| `CombatManager.<StartTurn>d__92` | 玩家回合开始候选点 |
-| `CombatManager.<DoTurnEnd>d__116` | 回合结束候选点 |
-| `CombatManager.<EndCombatInternal>d__108` | 战斗结束候选点 |
+| `RunManager.<EnterMapPointInternal>d__180` | Candidate entry for map progression |
+| `RunManager.<ProceedFromTerminalRewardsScreen>d__198` | Candidate entry for continuing the flow after rewards end |
+| `RunManager.<EnterRoomInternal>d__190` | Candidate entry for entering a room |
+| `CombatManager.<StartTurn>d__92` | Candidate point for the start of the player turn |
+| `CombatManager.<DoTurnEnd>d__116` | Candidate point for turn end |
+| `CombatManager.<EndCombatInternal>d__108` | Candidate point for combat end |
 
-### 备注
+### Notes
 
-- `CombatManager` 的真实命名空间与原计划中的 `MegaCrit.Sts2.Core` 不完全一致，当前扫描结果更支持 `MegaCrit.Sts2.Core.Combat.CombatManager`
-- 这说明正式反编译前，不能继续把旧需求文档里的类型名当成事实
-- 当前最值得优先验证的四个符号是：
+- The real namespace of `CombatManager` does not fully match the `MegaCrit.Sts2.Core` in the original plan; the current scan results better support `MegaCrit.Sts2.Core.Combat.CombatManager`
+- This means that, before formal decompilation, type names in the old requirements doc cannot keep being treated as facts
+- The four symbols most worth verifying first are:
   - `ModInitializerAttribute`
   - `CallModInitializer`
   - `EnqueueManualPlay`
@@ -201,81 +201,81 @@
 
 ---
 
-## 当前阻塞
+## Current blockers
 
-虽然已经完成第一轮正式反编译，但以下内容仍需继续确认：
+Although the first round of formal decompilation is done, the following still needs to be confirmed:
 
-- 最小可运行 Mod 的完整目录结构在更复杂资源场景下是否仍成立
-- 非战斗场景的动作执行入口
-- 休息点、商店、事件各自对应的具体执行方法
-- 玩家、敌人、牌堆状态提取的最短访问链
-
----
-
-## 逆向目标清单
-
-### 一级目标
-
-这些对象是最小纵切必须确认的：
-
-| 目标 | 用途 |
-|------|------|
-| `RunManager` | 运行状态、动作队列、全局上下文 |
-| `CombatManager` | 战斗开始、战斗状态入口 |
-| `Player` | 玩家状态、资源、牌组 |
-| `Creature` | 敌人与玩家共享属性 |
-| `CardModel` | 出牌入口与卡牌元数据 |
-| `ModelDb` | 模型数据库与 ID 解析 |
-| screen 枚举或场景对象 | `/state.screen` 的真实来源 |
-
-### 二级目标
-
-这些对象是主线推进和 Phase 4 所需：
-
-| 目标 | 用途 |
-|------|------|
-| 地图节点类型 | 地图导航 |
-| 奖励界面对象 | 奖励状态与选择 |
-| 事件对象 | 事件选项 |
-| 商店对象 | 商店商品与购买行为 |
-| 休息点对象 | 休息、升级等操作 |
-| 怪物 Intent 类型 | 战斗意图与伤害预览 |
+- Whether the full directory structure of a minimal runnable mod still holds in more complex resource scenarios
+- Action execution entry points in non-combat scenes
+- The concrete execution methods for rest site, shop, and event
+- The shortest access chains for extracting player, enemy, and pile state
 
 ---
 
-## 计划输出格式
+## Reverse-engineering target list
 
-正式反编译后，本文件至少补齐以下内容：
+### Tier 1 targets
 
-### 类型索引表
+These objects must be confirmed for the minimal vertical slice:
 
-| 逻辑名称 | 真实类型名 | 命名空间 | 访问方式 | 备注 |
+| Target | Purpose |
+|------|------|
+| `RunManager` | Run state, action queue, global context |
+| `CombatManager` | Combat start, combat state entry |
+| `Player` | Player state, resources, deck |
+| `Creature` | Properties shared by enemies and the player |
+| `CardModel` | Card play entry and card metadata |
+| `ModelDb` | Model database and ID resolution |
+| screen enum or scene object | The real source of `/state.screen` |
+
+### Tier 2 targets
+
+These objects are needed for main-line progression and Phase 4:
+
+| Target | Purpose |
+|------|------|
+| Map node types | Map navigation |
+| Reward screen objects | Reward state and choices |
+| Event objects | Event options |
+| Shop objects | Shop items and purchase behavior |
+| Rest site objects | Rest, upgrade, and similar operations |
+| Monster Intent types | Combat intent and damage preview |
+
+---
+
+## Planned output format
+
+After formal decompilation, this file should at least gain the following:
+
+### Type index table
+
+| Logical name | Real type name | Namespace | Access method | Notes |
 |----------|------------|----------|----------|------|
-| 运行管理 | 待补充 | 待补充 | 待补充 | 待补充 |
+| Run management | TBD | TBD | TBD | TBD |
 
-### 关键入口表
+### Key entry table
 
-| 逻辑动作 | 类型 | 方法/字段 | 说明 |
+| Logical action | Type | Method/field | Description |
 |----------|------|-----------|------|
-| 获取当前运行 | 待补充 | 待补充 | 待补充 |
+| Get the current run | TBD | TBD | TBD |
 
-### Patch 候选点
+### Patch candidate points
 
-| 位置 | 目的 | 类型 |
+| Location | Purpose | Type |
 |------|------|------|
-| `CombatManager.SetUpCombat` | 缓存战斗引用 | Postfix 候选 |
+| `CombatManager.SetUpCombat` | Cache the combat reference | Postfix candidate |
 
 ---
 
-## 建议的反编译步骤
+## Suggested decompilation steps
 
-1. 执行以下命令：
+1. Run the following command:
 
 ```powershell
 ilspycmd -p -o "<repo-root>/extraction/decompiled" "C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64/sts2.dll"
 ```
 
-2. 重点搜索以下关键词：
+2. Search mainly for the following keywords:
    - `ModInitializer`
    - `RunManager`
    - `CombatManager`
@@ -287,38 +287,38 @@ ilspycmd -p -o "<repo-root>/extraction/decompiled" "C:/Program Files (x86)/Steam
    - `Shop`
    - `Map`
 
-3. 将确认结果按“类型索引表”和“关键入口表”补入本文件
+3. Add the confirmed results to this file according to the "Type index table" and "Key entry table"
 
-### 临时替代方案
+### Temporary workarounds
 
-在需要快速补充符号时，可使用仓库脚本进行字符串扫描：
+When symbols need to be added quickly, the repository script can be used for a string scan:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/scan-assembly-strings.ps1" -AssemblyPath "C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64/sts2.dll" -Patterns ModManager,ModInitializerAttribute,CombatManager,RunManager,EnqueueManualPlay,UsePotion
 ```
 
-该脚本只能用于快速发现符号，不能替代正式反编译。
+This script can only be used to discover symbols quickly and cannot replace formal decompilation.
 
 ---
 
-## 第一轮重点验证问题
+## First-round key validation questions
 
-1. Mod 的入口属性或接口到底是什么
-2. `screen` 如何从 `ActiveScreenContext` 映射为稳定 API 值
-3. `end_turn` 是否应直接借助 `CombatManager` 内部流程，而不是模拟按钮输入
-4. 地图节点选择是否应优先复用 `MoveToMapCoordAction`
-5. 奖励、商店、休息点分别应该以房间对象还是屏幕对象为入口
-6. `/state` 最小实现先从哪些对象读取最稳
+1. What exactly is the mod entry attribute or interface
+2. How `screen` is mapped from `ActiveScreenContext` to a stable API value
+3. Whether `end_turn` should directly use the internal `CombatManager` flow instead of simulating button input
+4. Whether map node selection should preferably reuse `MoveToMapCoordAction`
+5. Whether reward, shop, and rest site should be entered through room objects or screen objects
+6. Which objects are the most stable to read from first for the minimal `/state` implementation
 
 ---
 
-## 与实现阶段的衔接
+## Connection to the implementation phase
 
-在 `Phase 1B` 开工前，最少要先确认以下事项：
+Before `Phase 1B` starts, at least the following must be confirmed:
 
-- Mod 入口
-- 最小可用 patch 点
-- 状态读取入口
-- 最小动作入口
+- Mod entry
+- Minimal usable patch point
+- State reading entry
+- Minimal action entry
 
-如果以上四项中有任意一项未确认，Mod 骨架可以先搭，但业务实现不应继续扩展。
+If any one of these four is unconfirmed, the mod skeleton can be built first, but business implementation should not keep expanding.

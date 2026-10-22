@@ -1,6 +1,6 @@
 # Mechanic Coverage Matrix
 
-> 历史快照（Historical snapshot）：本矩阵记录的是 2026-03-11 对 `v0.98.3` 的一次覆盖度盘点，其中的 `release candidate` 结论与 `Remaining gap` 只属于当时，不代表当前状态。当前能力与验收状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)；本文件只作为"机制覆盖度"这一视角的历史证据保留。
+> Historical snapshot: this matrix records a coverage inventory of `v0.98.3` taken on 2026-03-11. Its `release candidate` conclusions and `Remaining gap` entries apply only to that time and do not describe the current state. For current capabilities and acceptance status, see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md); this file is kept only as historical evidence for the "mechanic coverage" view.
 
 Last updated: `2026-03-11`
 

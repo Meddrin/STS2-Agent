@@ -1,5 +1,5 @@
-# 商店阶段历史记录入口
+# Shop phase history entry
 
-2026-03-10 的商店实现说明已归档至 [历史原文](../history/phase-4c-shop_2026-03-10.md)。
+The 2026-03-10 shop implementation notes have been archived to the [original record](../history/phase-4c-shop_2026-03-10.md).
 
-当前接口说明见 [API 文档](api.md)，能力与验收状态见 [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md)。保留本路径供旧链接和发布预检使用。
+For the current interface, see the [API doc](api.md). For capabilities and acceptance status, see [PRODUCT_PLAN_CURRENT.md](../PRODUCT_PLAN_CURRENT.md). This path is kept for old links and release preflight.

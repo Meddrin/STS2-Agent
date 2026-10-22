@@ -1,79 +1,79 @@
-# STS2 AI Agent Mod - 环境与运行准备
+# STS2 AI Agent Mod - Environment and runtime setup
 
-## 目的
+## Purpose
 
-记录当前开发机上已确认的环境事实、缺失依赖和建议安装步骤，避免后续实现阶段基于错误前提推进。
+Records the environment facts confirmed on the current development machine, the missing dependencies, and the suggested install steps, so later implementation phases do not proceed on wrong assumptions.
 
-更新时间：2026-03-10
+Last updated: 2026-03-10
 
 ---
 
-## 已确认的本机事实
+## Confirmed facts on this machine
 
-### 工作区
+### Workspace
 
-- 项目根目录：`<repo-root>`
-- 当前仓库已初始化 Git，但尚未有代码骨架
+- Project root: `<repo-root>`
+- Git is initialized in the repository, but there is no code skeleton yet
 
-### 游戏安装
+### Game installation
 
-- 游戏目录：`C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2`
-- 程序集目录：`C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64`
-- 主程序集：`sts2.dll`
-- `sts2.dll` 大小：`8,870,912` bytes
-- 游戏版本：`v0.98.2`
-- 发布提交：`f4eeecc6`
-- 发布日期：`2026-03-06T15:52:37-08:00`
+- Game directory: `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2`
+- Assembly directory: `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/data_sts2_windows_x86_64`
+- Main assembly: `sts2.dll`
+- `sts2.dll` size: `8,870,912` bytes
+- Game version: `v0.98.2`
+- Release commit: `f4eeecc6`
+- Release date: `2026-03-06T15:52:37-08:00`
 
-### 运行时与依赖
+### Runtime and dependencies
 
-- `sts2.runtimeconfig.json` 指向 `net9.0`
-- 游戏自带 `Microsoft.NETCore.App 9.0.7`
-- 游戏目录内已确认存在：
+- `sts2.runtimeconfig.json` points to `net9.0`
+- The game ships `Microsoft.NETCore.App 9.0.7`
+- The following are confirmed to exist in the game directory:
   - `0Harmony.dll` `2.4.2.0`
   - `GodotSharp.dll` `4.5.1.0`
   - `System.Net.HttpListener.dll`
 
-### 当前开发机工具状态
+### Current development machine tool status
 
-| 工具 | 状态 | 说明 |
+| Tool | Status | Notes |
 |------|------|------|
-| `.NET Runtime` | 已安装 | 主机上存在 `6.0.16` 和 `8.0.14` 运行时 |
-| `.NET SDK` | 已安装 | `9.0.311` |
-| `python` | 已安装 | 解释器位于 `<python-install>/python.exe` |
-| `py` | 已安装 | `py -3.11 --version` 返回 `Python 3.11.9` |
-| `uv` | 已安装 | `0.10.9` |
-| `ilspycmd` | 已安装 | `9.1.0.7988` |
-| `godot` CLI | 已安装 | `Godot 4.5.1 Mono`，当前通过显式路径调用 |
+| `.NET Runtime` | Installed | Runtimes `6.0.16` and `8.0.14` exist on the host |
+| `.NET SDK` | Installed | `9.0.311` |
+| `python` | Installed | Interpreter at `<python-install>/python.exe` |
+| `py` | Installed | `py -3.11 --version` returns `Python 3.11.9` |
+| `uv` | Installed | `0.10.9` |
+| `ilspycmd` | Installed | `9.1.0.7988` |
+| `godot` CLI | Installed | `Godot 4.5.1 Mono`, currently invoked through an explicit path |
 
-### Mod 目录现状
+### Mod directory status
 
-- 游戏根目录下当前未发现现成的 `mods/` 目录
-- 通过正式反编译已确认 ModManager 会扫描 `Path.Combine(directoryName, "mods")`
-- 也就是说最终目录就是：`C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/mods`
-- 若目录不存在，可在后续安装最小 Mod 时手动创建
-
----
-
-## 当前阻塞项
-
-以下项目仍会阻塞完整联调阶段：
-
-1. 把 `/state` 和 `/action` 的最小实现补进 Mod
-2. 在真实游戏运行中验证更多路由，而不只是 `/health`
-3. 为后续 `.pck` 资源扩展建立稳定的 Godot 打包流程
+- No existing `mods/` directory was found in the game root
+- Formal decompilation confirmed that ModManager scans `Path.Combine(directoryName, "mods")`
+- That is, the final directory is: `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/mods`
+- If the directory does not exist, create it manually when installing the minimal mod later
 
 ---
 
-## 建议安装顺序
+## Current blockers
 
-1. 安装 `.NET 9 SDK`
-2. 安装 `Python 3.11+`
-3. 安装 `uv`
-4. 安装 `ilspycmd`
-5. 安装 `Godot 4.5.1 Mono` 编辑器
+The following items still block the full integration phase:
 
-建议完成后执行以下检查：
+1. Add the minimal implementation of `/state` and `/action` to the mod
+2. Validate more routes in a real running game, not just `/health`
+3. Establish a stable Godot packaging flow for later `.pck` resource extensions
+
+---
+
+## Suggested install order
+
+1. Install the `.NET 9 SDK`
+2. Install `Python 3.11+`
+3. Install `uv`
+4. Install `ilspycmd`
+5. Install the `Godot 4.5.1 Mono` editor
+
+After that, run the following checks:
 
 ```powershell
 dotnet --list-sdks
@@ -85,77 +85,77 @@ godot --version
 
 ---
 
-## 建议的目录约定
+## Suggested directory conventions
 
-### 项目目录
+### Project directories
 
-- `STS2AIAgent/`：C# Mod 项目
-- `mcp_server/`：Python MCP Server
-- `docs/`：协议、逆向和运行文档
-- `extraction/`：反编译产物和临时分析结果
+- `STS2AIAgent/`: C# mod project
+- `mcp_server/`: Python MCP server
+- `docs/`: protocol, reverse engineering, and runtime docs
+- `extraction/`: decompilation output and temporary analysis results
 
-### 逆向输出目录
+### Reverse-engineering output directory
 
-推荐将反编译结果输出到：
+Decompilation results are recommended to go to:
 
 `<repo-root>/extraction/decompiled`
 
 ---
 
-## 首次验证清单
+## First validation checklist
 
-### 环境验证
+### Environment validation
 
-- `dotnet --list-sdks` 能看到 `9.0.311`
-- `py -3.11 --version` 能返回 `Python 3.11.9`
-- `uv --version` 能返回 `0.10.9`
-- `ilspycmd --version` 能返回 `9.1.0.7988`
-- `"<godot-console-exe>" --version` 能返回 `4.5.1`
+- `dotnet --list-sdks` shows `9.0.311`
+- `py -3.11 --version` returns `Python 3.11.9`
+- `uv --version` returns `0.10.9`
+- `ilspycmd --version` returns `9.1.0.7988`
+- `"<godot-console-exe>" --version` returns `4.5.1`
 
-### 游戏事实验证
+### Game fact validation
 
-- `release_info.json` 仍为 `v0.98.2`
-- `sts2.runtimeconfig.json` 仍声明 `net9.0`
-- `0Harmony.dll` 和 `GodotSharp.dll` 仍存在
+- `release_info.json` is still `v0.98.2`
+- `sts2.runtimeconfig.json` still declares `net9.0`
+- `0Harmony.dll` and `GodotSharp.dll` still exist
 
-### Mod 安装验证
+### Mod install validation
 
-- 已确认 `mods/` 最终目录为游戏根目录下的 `mods/`
-- `.dll` 与 `.pck` 需要同目录、同名并列放置
-- 可将一个最小 Mod 放入目录并被游戏识别
-- 若日志出现 `user has not yet seen the mods warning`，需要在 `settings.save` 中启用：
+- Confirmed that the final `mods/` directory is `mods/` under the game root
+- The `.dll` and `.pck` must sit side by side in the same directory with the same name
+- A minimal mod can be placed in the directory and is recognized by the game
+- If the log shows `user has not yet seen the mods warning`, enable it in `settings.save`:
   - `"mod_settings": { "mods_enabled": true }`
 
-### 当前可用构建命令
+### Currently available build commands
 
 ```powershell
 dotnet build "<repo-root>/STS2AIAgent/STS2AIAgent.csproj"
 ```
 
-### 当前可用自动化脚本
+### Currently available automation scripts
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/build-mod.ps1"
 powershell -ExecutionPolicy Bypass -File "<repo-root>/scripts/test-mod-load.ps1"
 ```
 
-- 运行 `build-mod.ps1` 前，请先通过 `-GodotExe` 传入 Godot 控制台可执行文件，或设置 `GODOT_BIN` 环境变量
-- `build-mod.ps1` 会构建 DLL、打包最小 `.pck`，并安装到游戏 `mods/` 目录
-- `test-mod-load.ps1` 会短启动游戏并轮询 `http://127.0.0.1:8080/health`
+- Before running `build-mod.ps1`, pass the Godot console executable via `-GodotExe`, or set the `GODOT_BIN` environment variable
+- `build-mod.ps1` builds the DLL, packs a minimal `.pck`, and installs it into the game `mods/` directory
+- `test-mod-load.ps1` starts the game briefly and polls `http://127.0.0.1:8080/health`
 
-### 已完成验证
+### Completed validation
 
-- 已生成并安装：
+- Generated and installed:
   - `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/mods/STS2AIAgent.dll`
   - `C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2/mods/STS2AIAgent.pck`
-- 已通过短启动验证 `/health` 返回 200
-- 已确认游戏日志中存在 Mod 扫描、初始化和 HTTP 服务启动记录
+- The short-start validation confirmed `/health` returns 200
+- Confirmed that the game log contains the mod scan, initialization, and HTTP server start records
 
 ---
 
-## 下一步
+## Next steps
 
-1. 实现 `GET /state` 的最小字段
-2. 实现一个最小 `POST /action`
-3. 为 Mod 增加更细日志和错误返回
-4. 开始准备 MCP 端最小客户端联调
+1. Implement the minimal fields of `GET /state`
+2. Implement a minimal `POST /action`
+3. Add finer-grained logging and error returns to the mod
+4. Start preparing minimal client integration on the MCP side

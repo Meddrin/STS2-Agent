@@ -110,7 +110,7 @@ game v0.111.0, in the isolated profile `default\2026092014` (`--windowed --force
 Provider `CommandCode` (`https://api.commandcode.ai/provider/v1`), model
 `deepseek/deepseek-v4.1-flash`, configured through an isolated agent settings file
 (`STS2_AGENT_SETTINGS_PATH`) so the player's own agent settings were untouched. The overlay's
-**Test Connection** button was pressed for real: 对话模型 and 游玩模型 both reported **连通成功**.
+**Test Connection** button was pressed for real: the chat model (`对话模型`) and the play model (`游玩模型`) both reported **连通成功** ("Connected").
 
 Autoplay was then started from the main menu and ran a real run unattended:
 
@@ -124,9 +124,9 @@ Autoplay was then started from the main menu and ran a real run unattended:
   `total_tokens` and `run_id`.
 - `/events/stream` published `decision_made` live (75 frames observed in a 40 s window alongside
   `screen_changed`, `combat_started` and the action-window events).
-- The overlay's 决策日志 tab showed the newest-first log with the per-step token count and the
+- The overlay's decision log tab (`决策日志`) showed the newest-first log with the per-step token count and the
   per-run total, and reported the budget stop: *"已达到会话 Token 预算上限（622,864/600,000
-  tokens），已自动停止游玩"* — the session budget guard stopped the loop at the configured cap
+  tokens），已自动停止游玩"* (session token budget cap reached, play stopped automatically) — the session budget guard stopped the loop at the configured cap
   rather than running on.
 
 Session cost, as reported by the mod: **52 requests / 622,864 tokens** (prompt 585,244,
@@ -486,8 +486,8 @@ invite was a real call, not a resumed session.
   (`LaunchDualInstanceAsync` is `Task.Run` and does not wait). Watch host `GET /health` for
   `companion_process_alive`, `dual_status`, then the `companion` block until the second process
   is up; on 2026-09-13 that was `role=companion` on `18081`, and its message no longer promises auto-play:
-  「第二实例已就绪…本机已创建 4 人大厅，请选角色后 Ready 开局。你打自己的角色；AI 会自动加入并点开局，
-  然后停在原地等待外部接管，不会自己出牌。」 The model gate is what the route switch drops, not the launch.
+  "第二实例已就绪…本机已创建 4 人大厅，请选角色后 Ready 开局。你打自己的角色；AI 会自动加入并点开局，
+  然后停在原地等待外部接管，不会自己出牌。" (second instance ready, a 4-player lobby was created on this machine, pick a character and Ready up; you play your own character, the AI joins and starts the run by itself, then waits in place for an external takeover and does not play cards on its own). The model gate is what the route switch drops, not the launch.
 - **The host discovers the companion API.** `GET /health` on the host carried
   `"companion": {"api_host":"127.0.0.1","api_port":18081,"process_id":64872,"auto_play":false}`, and that port
   answered `role=companion` / `status=ready`. No session token appears anywhere in the response.
@@ -566,7 +566,7 @@ the raw `/action` endpoint. Evidence: `external-agent-log.jsonl` (84 lines), `ex
   FUZZY_WURM_CRAWLER` reported `min_hp=55 / max_hp=57`, while the live enemy was `121/121`. The skill
   already says to trust live state; this is a concrete case where the metadata alone would mislead.
 - **On the companion instance, `/health`'s `dual_status` and `team_control_status` still read
-  「尚未启动双开」/「队友控制尚未连接」.** Those two fields describe the *host's* dual-launch bookkeeping, so
+  "尚未启动双开" / "队友控制尚未连接" (dual launch not started / teammate control not connected).** Those two fields describe the *host's* dual-launch bookkeeping, so
   they are inert on a companion; the fields that matter there (`instance_role`, `play_running`,
   `play_phase`, `session_requests`) are correct.
   **Current code changes these host-only health keys (including companion process/discovery and launch outcome)
@@ -917,97 +917,97 @@ mod-side action.
 - The English strings are machine-translated and have never been read by a native speaker; only
   Chinese and English have been exercised.
 
-## 2026-09-18 — 兼容性探测与两轮大重构（游戏 v0.111.0）
+## 2026-09-18 — Compatibility probe and two big refactors (game v0.111.0)
 
-隔离实例（`--windowed --force-steam off`，clientId `2026091801` / `2026091802`，API 18080），
-分支 `feat/upstream-break-visibility`。
+Isolated instance (`--windowed --force-steam off`, clientId `2026091801` / `2026091802`, API 18080),
+branch `feat/upstream-break-visibility`.
 
-**探测在第一次实机运行就抓到一个真 bug。** `/health` 返回 `degraded`，点名
-`NEndTurnLongPressBar._longPressDuration` 缺失。根因不是探测误报：该字段是**静态**的，
-而注册表把它登记成实例成员——`GameActionService.Combat.cs` 里真正读它的代码
-**用的也是实例标志**，所以自这行写下来起就从未读到过真值，一直用写死的 `0.45` 兜底，
-而游戏的实际值是 `0.5`。长按等待每次少 50ms，没有任何地方会说。
+**The probe caught a real bug on the very first live run.** `/health` returned `degraded`, naming
+`NEndTurnLongPressBar._longPressDuration` as missing. The root cause was not a false alarm from the probe: the field is **static**,
+while the registry registered it as an instance member. The code in `GameActionService.Combat.cs` that actually reads it
+**also used the instance flag**, so since the day that line was written it never read a real value and always fell back to the hardcoded `0.45`,
+while the game's actual value is `0.5`. The long-press wait was 50 ms short every time, and nothing anywhere said so.
 
-离线读元数据得出的「22 个全部存在」是**对名字而言正确、对问题而言无关**：
-一个成员的名字在不在，说明不了绑定标志够不够得着它。这是实机唯一能给出的结论。
+The offline metadata read that concluded "all 22 exist" was **right about the names and irrelevant to the question**:
+whether a member's name exists says nothing about whether the binding flags can reach it. Only a live run can answer that.
 
-修复后（`6771b0e`）复验：`status: ready`、`reflected_members_checked: 22`、
-`reflected_members_missing: 0`、`missing_members: []`。
+Re-verified after the fix (`6771b0e`): `status: ready`, `reflected_members_checked: 22`,
+`reflected_members_missing: 0`, `missing_members: []`.
 
-**注入故障验证**：把 `_saveAndQuitButton` 改名为一个不存在的名字、重建重启，
-`/health` 精确点名 `NPauseMenu._saveAndQuitButtonFixtureGone`（feature `save_and_quit`）
-并报 `degraded`。随后按字节还原。
+**Injected-fault check**: rename `_saveAndQuitButton` to a name that does not exist, rebuild and restart;
+`/health` names exactly `NPauseMenu._saveAndQuitButtonFixtureGone` (feature `save_and_quit`)
+and reports `degraded`. Then restore byte for byte.
 
-**两轮大重构首次有实机证据**（PR #148 / #150 的 partial 拆分此前只有源码级证明）：
-主菜单 `/state` 200 且 `screen: MAIN_MENU`——v0.12.4 那次「主菜单每个 `/state` 都 500」的
-回归未复现；`/actions/available` 非空；`open_character_select → select_character → embark
-→ MAP → choose_map_node → COMBAT` 全链路走通（途中一次性 FTUE 弹窗，`dismiss_modal` 后继续）；
-`end_turn` 返回 `completed` / `stable: true`，`turn` 由 1 推进到 2。
+**First live evidence for the two big refactors** (the partial split in PR #148 / #150 previously had source-level proof only):
+main menu `/state` returned 200 with `screen: MAIN_MENU`; the regression behind v0.12.4 ("every `/state` on the main menu returns 500")
+did not reproduce; `/actions/available` was non-empty; the full chain `open_character_select → select_character → embark
+→ MAP → choose_map_node → COMBAT` ran through (one one-time FTUE modal on the way, continued after `dismiss_modal`);
+`end_turn` returned `completed` / `stable: true`, and `turn` advanced from 1 to 2.
 
-**未验证**：长按时长是否真的用上了 0.5——这个数字在 HTTP 面上看不出来，没有勉强去证。
+**Not verified**: whether the long-press duration really uses 0.5. That number cannot be seen on the HTTP surface, and no attempt was made to force a proof.
 
-玩家真实存档两轮前后各哈希一次：`default/1`、`default/2`、`default/1001` **逐文件一致**；
-差异全部落在两个新建的隔离 clientId 目录、Godot 日志滚动与 Sentry 运行记录。
-`mods/` 三个文件已按字节还原到已发布的 v0.12.5（DLL `1624BBF5…D4A7`）。
-证据：`build/validation-2026-09-18/`（gitignore）。
+The player's real saves were hashed once before and once after the two rounds: `default/1`, `default/2`, `default/1001` are **identical file by file**;
+all differences fall in the two newly created isolated clientId directories, Godot log rotation, and Sentry run records.
+The three files in `mods/` were restored byte for byte to the published v0.12.5 (DLL `1624BBF5…D4A7`).
+Evidence: `build/validation-2026-09-18/` (gitignored).
 
-**第三轮（`d3e0d47`，clientId `2026091803`）——统一查找之后。** 调用点改为只向注册表要成员、
-注册表 23 条（新增 `NEndTurnButton.CanTurnBeEnded`）、探测改为加载时运行并写日志、删除 4 处死反射之后：
+**Round 3 (`d3e0d47`, clientId `2026091803`), after the unified lookup.** After call sites were changed to ask only the registry for members,
+the registry grew to 23 entries (adding `NEndTurnButton.CanTurnBeEnded`), the probe was changed to run at load time and write to the log, and 4 dead reflections were removed:
 
-- `/health`：`ready`，23 检查 / 0 缺失；`godot.log` 出现 `Compatibility: all 23 reflected game members resolved.`
-- 注入故障：`/health` `degraded`、缺失**恰为 1** 并点名 `NPauseMenu._saveAndQuitButtonFixtureGone`；日志同步出现两行 `WARN`
-- 读取改了路径的功能逐一走通，**零 500 / 零 `internal_error`**：`combat.action_readiness`（`CanTurnBeEnded`）、
-  `end_turn`（回合 1→2）、`run_console_command help`（`_devConsole`）、`save_and_quit`（`_saveAndQuitButton`）
-  → `continue_run`（`_standardButton`）回到同一局，以及 `die` → `GAME_OVER` → `continue_game_over`
-  → `return_to_main_menu`——删掉三个死查找后结算流程照常推进（**更正，同日稍晚**：当时归功于
-  「pressed 信号那一半」，是错的。`NButton` 是 `Control` 而非 Godot `BaseButton`，没有 pressed 信号，
-  那一发什么也没做；推动流程的是紧随其后的 `ForceClick()`。该信号与 `Set("disabled")` 已一并删除）
-- 日志 `error|exception|fatal` 扫描：只有三处 Godot 引擎自身的 `Invalid Task ID`，无源自本 mod 的异常
+- `/health`: `ready`, 23 checks / 0 missing; `godot.log` shows `Compatibility: all 23 reflected game members resolved.`
+- Injected fault: `/health` `degraded`, **exactly 1** missing, naming `NPauseMenu._saveAndQuitButtonFixtureGone`; the log shows two matching `WARN` lines
+- The features whose read path changed all ran through, with **zero 500 / zero `internal_error`**: `combat.action_readiness` (`CanTurnBeEnded`),
+  `end_turn` (turn 1→2), `run_console_command help` (`_devConsole`), `save_and_quit` (`_saveAndQuitButton`)
+  → `continue_run` (`_standardButton`) back to the same run, and `die` → `GAME_OVER` → `continue_game_over`
+  → `return_to_main_menu`; after the three dead lookups were deleted, the results flow still advanced as usual (**correction, later the same day**: at the time this was credited to
+  "the pressed-signal half", which was wrong. `NButton` is a `Control`, not a Godot `BaseButton`, and has no pressed signal,
+  so that call did nothing; what moved the flow was the `ForceClick()` right after it. The signal and `Set("disabled")` have both been deleted)
+- Log `error|exception|fatal` scan: only three `Invalid Task ID` lines from the Godot engine itself, no exception originating in this mod
 
-玩家档案 `default/1`、`default/2`、`default/1001` 逐文件一致；`mods/` 还原到发布版 v0.12.5。
+Player profiles `default/1`, `default/2`, `default/1001` identical file by file; `mods/` restored to the released v0.12.5.
 
-**第四至六轮（`fix/monster-moves-export`，clientId `2026091804`–`2026091806`）——怪物招式导出。**
-`GET /data/monsters` 的 `moves` 在装着的游戏上一直是空数组（`MonsterModel.MoveNames` 已不存在）。
+**Rounds 4 to 6 (`fix/monster-moves-export`, clientId `2026091804`–`2026091806`): monster move export.**
+`moves` in `GET /data/monsters` had always been an empty array on the installed game (`MonsterModel.MoveNames` no longer exists).
 
-| 轮次 | 提交 | 有招式 / 总数 | 含重复 id 的怪物 | 发现 |
+| Round | Commit | With moves / total | Monsters with duplicate ids | Finding |
 | --- | --- | --- | --- | --- |
-| 4 | `67f01ee` 直接调本地化 API | 104 / 107 | 9 | 同一前缀下还有台词 key，`FAKE_MERCHANT_MONSTER` 的 ENRAGE 出现三次、名字是台词 |
-| 5 | `4f1ab94` 只取 `.title` | 104 / 107 | 0 | 三个 `DECIMILLIPEDE_SEGMENT_*` 仍空：它们共用一套文案，key 不是自己的 id |
-| 6 | `f7208fd` 前缀取自 Title key | **107 / 107** | **0** | 三个分段各得 BULK / CONSTRICT / DEAD / REATTACH / WRITHE；其余 104 个与第五轮逐条（id + name + 顺序）一致 |
+| 4 | `67f01ee` call the localization API directly | 104 / 107 | 9 | Dialogue keys also sit under the same prefix; `FAKE_MERCHANT_MONSTER` shows ENRAGE three times, with dialogue lines as names |
+| 5 | `4f1ab94` take only `.title` | 104 / 107 | 0 | Three `DECIMILLIPEDE_SEGMENT_*` are still empty: they share one set of text, and the key is not their own id |
+| 6 | `f7208fd` prefix taken from the Title key | **107 / 107** | **0** | The three segments each get BULK / CONSTRICT / DEAD / REATTACH / WRITHE; the other 104 match round 5 entry by entry (id + name + order) |
 
-三轮 `/health` 均为 `ready`、23 / 0。玩家档案 `default/1`、`default/2`、`default/1001` 逐文件一致；
-`mods/` 三个文件还原到发布版哈希。
+`/health` was `ready` in all three rounds, 23 / 0. Player profiles `default/1`, `default/2`, `default/1001` identical file by file;
+the three files in `mods/` restored to the released hashes.
 
-**第七轮（`bc6ada6`，clientId `2026091807`）——失败，而且是离线看不出来的那种。** 注册表补登
-`NMultiplayerTest.StartHost` / `ReadyButtonPressed` / `Disconnect` 与 `NPauseMenu.CloseToMenu` 后，
-mod 加载即崩：注册表连基类一起搜，`NMultiplayerTest` 的私有 `Disconnect(NetError)` 与 Godot
-`GodotObject` 的公开 `Disconnect(StringName, Callable)` 同名，`GetMethod` 抛 `AmbiguousMatchException`。
-27 条在同一个 `Lazy` 里解析，异常被缓存，于是加载时自检、`/health` 与一切查注册表的动作都 500——
-连毫不相干的 `open_character_select` 也是。离线读元数据只证明了「这个名字在这个类型上」，
-证明不了「按这组标志找只找到一个」。
+**Round 7 (`bc6ada6`, clientId `2026091807`): failed, in a way offline review could not see.** After the registry gained
+`NMultiplayerTest.StartHost` / `ReadyButtonPressed` / `Disconnect` and `NPauseMenu.CloseToMenu`,
+the mod crashed on load: the registry searches base classes too, and the private `Disconnect(NetError)` of `NMultiplayerTest` has the same name as the public `Disconnect(StringName, Callable)` of Godot
+`GodotObject`, so `GetMethod` threw `AmbiguousMatchException`.
+All 27 entries resolve inside one `Lazy`, the exception was cached, and so the load-time self-check, `/health`, and every action that consults the registry returned 500,
+even the unrelated `open_character_select`. Reading metadata offline only proved "this name is on this type",
+not "searching with this set of flags finds exactly one".
 
-**第七轮 b（`d9b9c02`，clientId `2026091808`）——通过。** 查找改为只看声明类型（27 条逐一核对均声明在所登记的类型上），
-解析器永不抛异常且离线用同形状的假类型复现了该异常：
+**Round 7b (`d9b9c02`, clientId `2026091808`): passed.** The lookup now looks only at the declaring type (all 27 entries checked one by one to be declared on the registered type),
+the resolver never throws, and the exception was reproduced offline with a fake type of the same shape:
 
-- `/health`：`ready`，27 / 0；日志 `Compatibility: all 27 reflected game members resolved.`，全会话 `Ambiguous` 0 处
-- `save_and_quit`（经注册表调 `CloseToMenu`）→ `continue_run` 回到同一局
-- `win` 进奖励页 → `collect_rewards_and_proceed` 回地图
-- `die` → `continue_game_over`（现在只靠 `ForceClick`）→ `return_to_main_menu`
-- 联机测试大厅 `host` / `ready` / `disconnect` 全部 `completed`——正是第七轮崩在的那条路径
-- `Completed 500` 0 次（第七轮 282 次）
+- `/health`: `ready`, 27 / 0; log `Compatibility: all 27 reflected game members resolved.`, 0 `Ambiguous` in the whole session
+- `save_and_quit` (calls `CloseToMenu` through the registry) → `continue_run` back to the same run
+- `win` into the rewards page → `collect_rewards_and_proceed` back to the map
+- `die` → `continue_game_over` (now relying on `ForceClick` alone) → `return_to_main_menu`
+- Multiplayer test lobby `host` / `ready` / `disconnect` all `completed`: exactly the path round 7 crashed on
+- `Completed 500` 0 times (282 in round 7)
 
-玩家档案 `default/1`、`default/2`、`default/1001` 逐文件一致；`mods/` 还原到发布版哈希。
+Player profiles `default/1`, `default/2`, `default/1001` identical file by file; `mods/` restored to the released hashes.
 
-**第八轮（`6dc592b`，clientId `2026091809`）——按类型读取、行为契约与构建计时，通过。** 用调试命令构造局面后查 `/state`：
+**Round 8 (`6dc592b`, clientId `2026091809`): typed reads, behavior contracts, and build timing, passed.** After building situations with debug commands, `/state` was queried:
 
-- 能力：玩家 `STRENGTH_POWER` 3（`is_debuff: false`）、敌人 `VULNERABLE_POWER` 2（`is_debuff: true`）
-- 遗物计数：`PEN_NIB` 的 `stack` 为 `0`、起始遗物 `BURNING_BLOOD` 为 `null`——此前所有遗物恒为 `null`
-- 药水：`BLOCK_POTION` 的 `rarity: "Common"`，`description` 非空
-- 关键词与附魔：`SECOND_WIND` 的术语匹配含「消耗」；`enchant SHARP` 后该牌 `mods` 为 `["Enchantment","锋利"]`、术语匹配含「附魔」——此前所有卡恒为空
-- 抽/弃/消耗堆 5 / 0 / 0，与手牌 6 张合计等于牌组 10 张；`act_id: "0"`，`boss_id: "VANTOM_BOSS"`
-- `discard_potion`、`use_potion`、`end_turn` 均 `completed`；`Completed 500` 0 次
-- `/health` 的 `state_build`：3,049 次构建，p50 2.8 ms、p95 16.8 ms，只有 1 次过阈（113.8 ms，`MAIN_MENU`），
-  日志恰好一条对应的 `WARN`。这是第一份真实分布：100 ms 的阈值在常态下不会误报
+- Powers: player `STRENGTH_POWER` 3 (`is_debuff: false`), enemy `VULNERABLE_POWER` 2 (`is_debuff: true`)
+- Relic counters: `PEN_NIB` has `stack` `0`, the starting relic `BURNING_BLOOD` has `null`; previously every relic was always `null`
+- Potions: `BLOCK_POTION` has `rarity: "Common"` and a non-empty `description`
+- Keywords and enchantments: the term match of `SECOND_WIND` includes `消耗` (Exhaust); after `enchant SHARP`, the card's `mods` is `["Enchantment","锋利"]` and its term match includes `附魔` (Enchant); previously every card was always empty
+- Draw/discard/exhaust piles 5 / 0 / 0, which with the 6 cards in hand add up to the 10-card deck; `act_id: "0"`, `boss_id: "VANTOM_BOSS"`
+- `discard_potion`, `use_potion`, and `end_turn` all `completed`; `Completed 500` 0 times
+- `state_build` in `/health`: 3,049 builds, p50 2.8 ms, p95 16.8 ms, only 1 over the threshold (113.8 ms, `MAIN_MENU`),
+  with exactly one matching `WARN` in the log. This is the first real distribution: the 100 ms threshold does not false-alarm in normal operation
 
-未验证：`open_character_select` 拿不到界面时的 503（未能构造）、`crystal_set_tool` 的前置检查（未进水晶球事件）。
-玩家档案 `default/1`、`default/2`、`default/1001` 逐文件一致；`mods/` 还原到发布版哈希。
+Not verified: the 503 when `open_character_select` cannot get the screen (could not be constructed), and the precondition check of `crystal_set_tool` (the crystal ball event was not reached).
+Player profiles `default/1`, `default/2`, `default/1001` identical file by file; `mods/` restored to the released hashes.
