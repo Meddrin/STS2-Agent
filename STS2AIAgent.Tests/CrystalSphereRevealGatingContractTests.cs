@@ -142,12 +142,12 @@ internal static class CrystalSphereRevealGatingContractTests
             api,
             "docs/api.md must document `is_good` as a nullable boolean on crystal_sphere.items[].");
         AssertContains(
-            "在 `revealed` 变为 `true` 之前，`kind` 与 `is_good`",
+            "until `revealed` becomes `true`, `kind` and `is_good`",
             api,
             "docs/api.md must say the identity fields are null until the item is revealed, not merely "
             + "that they exist.");
         AssertContains(
-            "键仍在，值不泄露身份",
+            "the keys stay, the values do not reveal the identity",
             api,
             "docs/api.md must keep the key-presence promise: null, never a missing key.");
 

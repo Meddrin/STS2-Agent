@@ -1277,7 +1277,7 @@ def dismiss_blocking_modal(client: ApiClient, state: dict[str, Any] | None = Non
 # Screen coverage for the run-progression helpers below.
 #
 # GameStateService.ResolveNonModalScreen is the single producer of state["screen"] (the docs/api.md
-# "Screen 枚举" table mirrors it, and the api-facts gate keeps the two in step). This block records how
+# "Screen enum" table mirrors it, and the api-facts gate keeps the two in step). This block records how
 # each one is reached, so a screen without a branch here reads as a deliberate choice, not a gap.
 #
 # Consumed through the Mod API by the helpers below and the suites that call them:

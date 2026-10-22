@@ -341,7 +341,7 @@ def parse_default_port(source: str) -> int:
 
 
 def parse_doc_error_codes(api_doc: str) -> list[str]:
-    section = markdown_section(api_doc, "## 错误码", API_DOC_PATH.as_posix())
+    section = markdown_section(api_doc, "## Error codes", API_DOC_PATH.as_posix())
     codes = DOC_ERROR_ROW.findall(section)
     if len(codes) < 15:
         raise SchemaError(f"{API_DOC_PATH} error table yielded {len(codes)} codes, below the 15 expected")
@@ -349,7 +349,7 @@ def parse_doc_error_codes(api_doc: str) -> list[str]:
 
 
 def parse_doc_screens(api_doc: str) -> list[str]:
-    section = markdown_section(api_doc, "## Screen 枚举", API_DOC_PATH.as_posix())
+    section = markdown_section(api_doc, "## Screen enum", API_DOC_PATH.as_posix())
     screens = DOC_SCREEN_ROW.findall(section)
     if len(screens) < 20:
         raise SchemaError(f"{API_DOC_PATH} Screen enum yielded {len(screens)} entries, below the 20 expected")

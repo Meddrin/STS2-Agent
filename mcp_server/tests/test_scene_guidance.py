@@ -449,7 +449,7 @@ class DocsIndexContractTests(unittest.TestCase):
         # is that every such example in the runtime-fields table is a real row somewhere, so the
         # table cannot drift back to a fabricated key.
         text = self.API_DOC.read_text(encoding="utf-8")
-        section = text.split("#### compact 在 v11 移除的冗余键", 1)[0]
+        section = text.split("#### Redundant keys removed from compact in v11", 1)[0]
         carried = {
             row["option"]
             for event in parse_event_option_index(EVENTS_PATH.read_text(encoding="utf-8"))[0].values()
@@ -467,7 +467,7 @@ class DocsIndexContractTests(unittest.TestCase):
         # The recipe the docs state, executed literally against the committed index: take the live
         # event id and the live text_key, strip `<EVENT>.pages.`, and land on a real row.
         text = self.API_DOC.read_text(encoding="utf-8")
-        self.assertIn("Slugify(事件类名).pages.<PAGE>.options.<OPTION>", text)
+        self.assertIn("Slugify(EventClassName).pages.<PAGE>.options.<OPTION>", text)
 
         live_key = LIVE_NEOW_ARCANE_SCROLL
         prefix = f"{canonical_event_id(LIVE_NEOW_EVENT_ID)}.pages."

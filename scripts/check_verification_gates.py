@@ -100,8 +100,8 @@ API_CONTRACT_END = "<!-- END ACTION CONTRACT -->"
 MOD_VERSION_PATTERN = re.compile(r'"mod_version"\s*:\s*"([^"]+)"')
 MANIFEST_VERSION_PATH = "STS2AIAgent/mod_manifest.json"
 
-# The "## Screen 枚举" table is the client-facing screen vocabulary.
-SCREEN_SECTION_HEADING = "## Screen 枚举"
+# The "## Screen enum" table is the client-facing screen vocabulary.
+SCREEN_SECTION_HEADING = "## Screen enum"
 DOC_SCREEN_ROW = re.compile(r"^\|\s*\`([A-Z][A-Z0-9_]*)\`", re.MULTILINE)
 
 # GameStateService.ResolveNonModalScreen is the single producer of these names: early
@@ -114,7 +114,7 @@ CODE_SCREEN_EARLY_RETURN = re.compile(r'return\s+"([A-Z][A-Z0-9_]*)"')
 MIN_CODE_SCREENS = 20
 
 CODE_DEFAULT_PORT = re.compile(r"private\s+const\s+int\s+DefaultPort\s*=\s*(\d+)\s*;")
-DOC_DEFAULT_PORT = re.compile(r"默认[^\n]*127\.0\.0\.1:(\d+)")
+DOC_DEFAULT_PORT = re.compile(r"[Dd]efault[^\n]*127\.0\.0\.1:(\d+)")
 HTTP_SERVER_PATH = "STS2AIAgent/Server/HttpServer.cs"
 
 # The /state combat payload is the surface an agent reads before every decision, and it is also
@@ -142,21 +142,21 @@ CSHARP_PAYLOAD_PROPERTY = re.compile(
 )
 DOC_FIELD_ROW = re.compile(r"^\|\s*\`([a-z][a-z0-9_]*)\`\s*\|", re.MULTILINE)
 COMBAT_PAYLOAD_TABLES = (
-    ("internal sealed class CombatPayload", "#### `combat` 顶层字段"),
+    ("internal sealed class CombatPayload", "#### `combat` top-level fields"),
     ("internal sealed class CombatActionReadinessPayload", "#### `combat.action_readiness`"),
     ("internal sealed class CombatLethalRiskPayload", "#### `combat.lethal_risks[]`"),
-    ("internal sealed class GameStatePayload", "### 顶层字段"),
-    ("internal sealed class SessionPayload", "### `session` 子结构"),
-    ("internal sealed class MultiplayerPayload", "### `multiplayer` 子结构"),
-    ("internal sealed class MultiplayerLobbyPayload", "### `multiplayer_lobby` 子结构"),
-    ("internal sealed class CharacterSelectPayload", "### `character_select` 子结构"),
+    ("internal sealed class GameStatePayload", "### Top-level fields"),
+    ("internal sealed class SessionPayload", "### `session` object"),
+    ("internal sealed class MultiplayerPayload", "### `multiplayer` object"),
+    ("internal sealed class MultiplayerLobbyPayload", "### `multiplayer_lobby` object"),
+    ("internal sealed class CharacterSelectPayload", "### `character_select` object"),
     ("internal sealed class CharacterSelectOptionPayload", "#### `character_select.characters[]`"),
     ("internal sealed class CharacterSelectPlayerPayload", "#### `character_select.players[]`"),
-    ("internal sealed class TimelinePayload", "### `timeline` 子结构"),
+    ("internal sealed class TimelinePayload", "### `timeline` object"),
     ("internal sealed class TimelineSlotPayload", "#### `timeline.slots[]`"),
-    ("internal sealed class UnlockPayload", "### `unlock` 子结构"),
-    ("internal sealed class ModalPayload", "### `modal` 子结构"),
-    ("internal sealed class GameOverPayload", "### `game_over` 子结构"),
+    ("internal sealed class UnlockPayload", "### `unlock` object"),
+    ("internal sealed class ModalPayload", "### `modal` object"),
+    ("internal sealed class GameOverPayload", "### `game_over` object"),
     ("internal sealed class MapPlayerVotePayload", "#### `map.player_votes[]`"),
 )
 
@@ -180,7 +180,7 @@ MIN_STATE_PAYLOAD_RECORDS = 40
 # The compact agent_view renames roughly sixty keys, and that view is what MCP get_game_state
 # returns by default. The mapping lives in the BuildAgent*Payload methods and nowhere else.
 AGENT_BUILDER_SIGNATURE = re.compile(r"private static [^\n(]*\sBuildAgent\w*\(")
-COMPACT_RENAME_HEADING = "#### compact 的字段改名对照表"
+COMPACT_RENAME_HEADING = "#### compact field rename table"
 DOC_RENAME_ROW = re.compile(r"^\|[^|]*\|([^|]*)\|([^|]*)\|\s*$", re.MULTILINE)
 DOC_CODE_NAME = re.compile(r"`([a-z_][a-z0-9_]*)`")
 MIN_COMPACT_RENAMES = 35
@@ -617,12 +617,12 @@ def parse_code_screens(repo_root: Path) -> set[str]:
 
 
 def parse_doc_screens(api_doc: str) -> set[str]:
-    """Screen names declared in the docs/api.md '## Screen 枚举' table."""
+    """Screen names declared in the docs/api.md '## Screen enum' table."""
     section = slice_section(api_doc, SCREEN_SECTION_HEADING, "docs/api.md")
     screens = set(DOC_SCREEN_ROW.findall(section))
     if not screens:
         raise GateError(
-            "the docs/api.md '## Screen 枚举' table lists no screens, so the documented screen "
+            "the docs/api.md '## Screen enum' table lists no screens, so the documented screen "
             "vocabulary cannot be checked."
         )
     return screens
@@ -912,7 +912,7 @@ def check_health_payload_docs(repo_root: Path, api_doc: str) -> list[str]:
 # anything -- and a 500 `listener_error`, a 405 `method_not_allowed` and a 413 `payload_too_large`
 # had already slipped out of the table, each one a response an agent can receive and cannot look up.
 
-ERROR_CODE_HEADING = "## 错误码"
+ERROR_CODE_HEADING = "## Error codes"
 # Three ways the mod answers with an error code. The status is captured loosely because it is
 # sometimes a variable (`WriteErrorAsync(response, statusCode, "not_found", ...)`), and a literal
 # is the only form worth comparing against the documented column.
@@ -1141,7 +1141,7 @@ def check_api_facts(repo_root: Path) -> list[str]:
     if missing:
         raise GateError(
             "GameStateService.ResolveNonModalScreen can emit screens missing from the docs/api.md "
-            "'## Screen 枚举' table: " + ", ".join(missing) + ". Add them so clients can branch on "
+            "'## Screen enum' table: " + ", ".join(missing) + ". Add them so clients can branch on "
             "the documented vocabulary."
         )
     notes.append(
@@ -1268,7 +1268,7 @@ def check_docs_tracked(repo_root: Path) -> list[str]:
             "these files exist under docs/ but git does not track them: "
             + ", ".join(untracked)
             + ". docs/ is no longer gitignored, so run 'git add' on them "
-            "(docs/ 已不再被忽略，请 git add) -- a fresh checkout, and therefore CI, "
+            "-- a fresh checkout, and therefore CI, "
             "would not contain them."
         )
     return [f"all {len(on_disk)} Markdown pages under docs/ are tracked by git"]
