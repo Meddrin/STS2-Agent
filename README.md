@@ -1,5 +1,13 @@
 # STS2 AI Agent
 
+> **This is a fork** of [CharTyr/STS2-Agent](https://github.com/CharTyr/STS2-Agent) by CharTyr, under the same AGPL-3.0 license. Changes in this fork:
+>
+> - **Co-op desync fix:** the mod no longer cancels a synchronized game action on one client only. Before, the AI teammate was kicked with `StateDivergence` when it played a card that asks for a choice (Dagger Throw, Survivor) while a partner's card was running.
+> - **Party decks:** every `run.players[]` entry in `/state` and the compact `agent_view` carries that player's deck, relics and potions.
+> - **English translation** of the docs, release records and developer notes. The in-game Chinese UI and [README.zh-CN.md](./README.zh-CN.md) are unchanged.
+>
+> All credit for the mod goes to CharTyr. Please report problems with these changes to this fork, not upstream.
+
 <div align="center">
 
 https://github.com/user-attachments/assets/89353468-a299-4315-9516-e520bcbfbd4b
