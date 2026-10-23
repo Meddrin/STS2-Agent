@@ -100,6 +100,7 @@
     <Compile Include="..\STS2AIAgent\Game\BackgroundTaskOutcome.cs" Link="Game\BackgroundTaskOutcome.cs" />
     <Compile Include="..\STS2AIAgent\Game\CardPlayCounterPolicy.cs" Link="Game\CardPlayCounterPolicy.cs" />
     <Compile Include="..\STS2AIAgent\Game\LocalCancelPolicy.cs" Link="Game\LocalCancelPolicy.cs" />
+    <Compile Include="..\STS2AIAgent\Game\MapOverlayPolicy.cs" Link="Game\MapOverlayPolicy.cs" />
     <Compile Include="..\STS2AIAgent\Game\GameTaskWaitPolicy.cs" Link="Game\GameTaskWaitPolicy.cs" />
     <Compile Include="..\STS2AIAgent\Game\CombatTurnReadinessPolicy.cs" Link="Game\CombatTurnReadinessPolicy.cs" />
     <Compile Include="..\STS2AIAgent\Game\ProgressSaveVerification.cs" Link="Game\ProgressSaveVerification.cs" />

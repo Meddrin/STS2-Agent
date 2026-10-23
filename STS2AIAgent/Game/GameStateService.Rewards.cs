@@ -399,7 +399,8 @@ internal static partial class GameStateService
             index = index,
             relic_id = relic.Id.Entry,
             name = relic.Title.GetFormattedText(),
-            rarity = relic.Rarity.ToString()
+            rarity = relic.Rarity.ToString(),
+            description = RawTextOrNull(() => relic.DynamicDescription)
         }).ToArray();
     }
 
@@ -552,16 +553,26 @@ internal static partial class GameStateService
             cards = cards.Select((holder, index) => BuildSelectionCardPayload(
                 holder.CardModel!,
                 index,
-                IsCardSelected(currentScreen, holder.CardModel!))).ToArray()
+                IsCardSelected(currentScreen, holder.CardModel!),
+                IsUpgradeSelection(currentScreen))).ToArray()
         };
     }
 
-    private static SelectionCardPayload BuildSelectionCardPayload(CardModel card, int index, bool selected)
+    private static bool IsUpgradeSelection(IScreenContext? currentScreen)
+    {
+        return currentScreen is NDeckUpgradeSelectScreen
+            || (TryGetCombatHandSelection(currentScreen, out var hand) && hand!.CurrentMode == NPlayerHand.Mode.UpgradeSelect);
+    }
+
+    private static SelectionCardPayload BuildSelectionCardPayload(CardModel card, int index, bool selected, bool upgradeSelection)
     {
         var resolvedRulesText = GetResolvedCardRulesText(card);
         var dynamicValues = BuildCardDynamicValuePayloads(card);
+        var upgrade = upgradeSelection ? CardUpgradePreview.For(card, NormalizeCardRulesText) : null;
         return new SelectionCardPayload
         {
+            upgrade_rules_text = upgrade?.RulesText,
+            upgrade_energy_cost = upgrade?.EnergyCost,
             index = index,
             selected = selected,
             card_id = card.Id.Entry,

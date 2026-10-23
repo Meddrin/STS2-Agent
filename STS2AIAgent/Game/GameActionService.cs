@@ -148,6 +148,7 @@ internal static partial class GameActionService
             "choose_timeline_epoch" => ExecuteChooseTimelineEpochAsync(request),
             "confirm_timeline_overlay" => ExecuteConfirmTimelineOverlayAsync(),
             "choose_map_node" => ExecuteChooseMapNodeAsync(request),
+            "close_map_screen" => ExecuteCloseMapScreenAsync(),
             "collect_rewards_and_proceed" => ExecuteCollectRewardsAndProceedAsync(),
             "claim_reward" => ExecuteClaimRewardAsync(request),
             "choose_reward_card" => ExecuteChooseRewardCardAsync(request),

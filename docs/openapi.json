@@ -43,6 +43,7 @@
               "choose_timeline_epoch",
               "confirm_timeline_overlay",
               "choose_map_node",
+              "close_map_screen",
               "collect_rewards_and_proceed",
               "claim_reward",
               "choose_reward_card",
@@ -503,6 +504,12 @@
       "ChestRelicOptionPayload": {
         "additionalProperties": true,
         "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "index": {
             "format": "int32",
             "type": "integer"
@@ -2196,6 +2203,12 @@
                 "type": "null"
               }
             ]
+          },
+          "underlying_room": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "type": "object"
@@ -2936,6 +2949,19 @@
           "star_costs_x": {
             "type": "boolean"
           },
+          "upgrade_energy_cost": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "upgrade_rules_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "upgraded": {
             "type": "boolean"
           }
@@ -3196,6 +3222,12 @@
       "ShopRelicPayload": {
         "additionalProperties": true,
         "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "enough_gold": {
             "type": "boolean"
           },

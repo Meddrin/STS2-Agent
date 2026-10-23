@@ -89,6 +89,7 @@ Rooms / flow advancement:
 - `dismiss_game_over_wait`
 - `confirm_unlock`
 - `close_cards_view`
+- `close_map_screen`
 - `open_chest`
 - `choose_treasure_relic`
 - `choose_event_option`

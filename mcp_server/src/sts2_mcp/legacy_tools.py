@@ -84,6 +84,7 @@ LEGACY_ACTION_TOOLS: tuple[ActionToolSpec, ...] = (
     ActionToolSpec("dismiss_game_over_wait", "no_args", "Stop waiting on the native game-over summary and continue."),
     ActionToolSpec("confirm_unlock", "no_args", "Confirm the unlock reveal screen."),
     ActionToolSpec("close_cards_view", "no_args", "Close the open card list view."),
+    ActionToolSpec("close_map_screen", "no_args", "Close a map opened over an unfinished room and return to that room (see map.underlying_room)."),
     ActionToolSpec("host_multiplayer_lobby", "no_args", "Host a local multiplayer lobby."),
     ActionToolSpec("join_multiplayer_lobby", "no_args", "Join the available local multiplayer lobby."),
     ActionToolSpec("ready_multiplayer_lobby", "no_args", "Mark the local player ready in the multiplayer lobby."),

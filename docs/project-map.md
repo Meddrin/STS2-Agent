@@ -294,6 +294,8 @@ one action runs at a time.
 - `STS2AIAgent/Game/RewardSkipScope.cs` — scope of a reward skip.
 - `STS2AIAgent/Game/CardPlayCounterPolicy.cs` — confirms that a card play actually happened (play counters).
 - `STS2AIAgent/Game/LocalCancelPolicy.cs` — when the mod may cancel a running game action itself (never in co-op, never while a card waits for a choice).
+- `STS2AIAgent/Game/CardUpgradePreview.cs` — what a card becomes after its next upgrade, read from a detached copy, for upgrade selection screens.
+- `STS2AIAgent/Game/MapOverlayPolicy.cs` — names the unfinished room under an open map overlay and decides when `close_map_screen` is offered.
 - `STS2AIAgent/Game/CombatTurnReadinessPolicy.cs` — when the player's combat turn is ready for input.
 - `STS2AIAgent/Game/CrystalSphereSettlePolicy.cs` — crystal sphere reveal settle rule.
 - `STS2AIAgent/Game/FtueModalPolicy.cs` — first-time-user modals that block actions and how to clear them.

@@ -419,7 +419,17 @@ internal static partial class GameStateService
             max = selection.max_select,
             selected = selection.selected_count,
             confirm = selection.can_confirm,
-            cards = selection.cards.Select(card => BuildAgentChoiceCardPayload(card.index, card.card_id, card.name, card.upgraded, card.energy_cost, card.star_cost, card.costs_x, card.star_costs_x, GetPreferredCardRulesText(card.rules_text, card.resolved_rules_text), glossaryTerms, card.selected)).ToArray()
+            cards = selection.cards.Select(card => BuildAgentChoiceCardPayload(card.index, card.card_id, card.name, card.upgraded, card.energy_cost, card.star_cost, card.costs_x, card.star_costs_x, GetPreferredCardRulesText(card.rules_text, card.resolved_rules_text), glossaryTerms, card.selected)).ToArray(),
+            // What each card becomes, on upgrade screens only, so the choice is not a guess.
+            upgrades = selection.cards
+                .Where(card => card.upgrade_rules_text != null)
+                .Select(card => new
+                {
+                    i = card.index,
+                    upgrade_energy_cost = card.upgrade_energy_cost,
+                    upgrade_rules_text = card.upgrade_rules_text
+                })
+                .ToArray()
         };
     }
 
@@ -529,6 +539,7 @@ internal static partial class GameStateService
                 i = relic.index,
                 relic_id = relic.relic_id,
                 line = $"{relic.name} [{relic.rarity}] | {relic.price}g",
+                description = relic.description,
                 affordable = relic.enough_gold,
                 stocked = relic.is_stocked
             }).ToArray(),
@@ -590,6 +601,8 @@ internal static partial class GameStateService
         {
             current = map.current_node == null ? null : $"{map.current_node.row},{map.current_node.col}",
             local_vote = map.local_vote == null ? null : $"{map.local_vote.row},{map.local_vote.col}",
+            // Set when the map is an overlay on an unfinished room; close_map_screen goes back to it.
+            underlying_room = map.underlying_room,
             boss_node = map.boss_node == null ? null : $"{map.boss_node.row},{map.boss_node.col}",
             second_boss_node = map.second_boss_node == null ? null : $"{map.second_boss_node.row},{map.second_boss_node.col}",
             // Route planning needs the graph, not just the immediate options: every node's type,
@@ -681,7 +694,8 @@ internal static partial class GameStateService
             {
                 i = relic.index,
                 relic_id = relic.relic_id,
-                line = $"{relic.name} [{relic.rarity}]"
+                line = $"{relic.name} [{relic.rarity}]",
+                description = relic.description
             }).ToArray()
         };
     }

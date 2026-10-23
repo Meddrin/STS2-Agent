@@ -449,6 +449,16 @@ internal static partial class GameStateService
             });
         }
 
+        if (CanCloseMapScreen(currentScreen, runState))
+        {
+            descriptors.Add(new ActionDescriptor
+            {
+                name = "close_map_screen",
+                requires_target = false,
+                requires_index = false
+            });
+        }
+
         if (CanCollectRewardsAndProceed(currentScreen))
         {
             descriptors.Add(new ActionDescriptor

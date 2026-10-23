@@ -235,6 +235,42 @@ internal static partial class GameActionService
         };
     }
 
+    private static async Task<ActionResponsePayload> ExecuteCloseMapScreenAsync()
+    {
+        var currentScreen = ActiveScreenContext.Instance.GetCurrentScreen();
+        var runState = RunManager.Instance.DebugOnlyGetState();
+        if (!GameStateService.CanCloseMapScreen(currentScreen, runState) || currentScreen is not NMapScreen mapScreen)
+        {
+            throw new ApiException(409, "invalid_action", "Action is not available in the current state.", new
+            {
+                action = "close_map_screen",
+                screen = GameStateService.ResolveScreen(currentScreen)
+            });
+        }
+
+        // Same call as the map's own back button: a local UI change, nothing is sent to the host.
+        mapScreen.Close();
+        var stable = false;
+        for (var frame = 0; frame < 30 && NGame.Instance != null; frame++)
+        {
+            await GameThread.WaitForNextFrameAsync();
+            if (GameStateService.ResolveScreen(ActiveScreenContext.Instance.GetCurrentScreen()) != "MAP")
+            {
+                stable = true;
+                break;
+            }
+        }
+
+        return new ActionResponsePayload
+        {
+            action = "close_map_screen",
+            status = stable ? "completed" : "pending",
+            stable = stable,
+            message = stable ? "Action completed." : "Action queued but state is still transitioning.",
+            state = GameStateService.BuildStatePayload()
+        };
+    }
+
     private static async Task<ActionResponsePayload> ExecuteChooseMapNodeAsync(ActionRequest request)
     {
         var currentScreen = ActiveScreenContext.Instance.GetCurrentScreen();

@@ -130,8 +130,30 @@ internal static partial class GameStateService
                 .ToArray(),
             available_nodes = availableNodes.Select((node, index) => BuildMapNodePayload(node, index, votesByCoord)).ToArray(),
             local_vote = localVote,
-            player_votes = playerVotes
+            player_votes = playerVotes,
+            underlying_room = GetMapUnderlyingRoom(runState)
         };
+    }
+
+    /// <summary>The unfinished room under an open map overlay (Shop, RestSite ...), or null.</summary>
+    internal static string? GetMapUnderlyingRoom(RunState? runState)
+    {
+        return MapOverlayPolicy.UnderlyingRoom(runState?.CurrentRoom?.GetType().Name);
+    }
+
+    internal static bool CanCloseMapScreen(IScreenContext? currentScreen, RunState? runState)
+    {
+        if (currentScreen is not NMapScreen mapScreen || !GodotObject.IsInstanceValid(mapScreen))
+        {
+            return false;
+        }
+
+        // The game enables the map's back button only when the map was opened over a room it can
+        // return to; closing through the same rule keeps us from leaving a forced map.
+        var backButtonEnabled = ReflectedGameMembers.Field(typeof(NMapScreen), "_backButton")?.GetValue(mapScreen)
+            is NClickableControl backButton && GodotObject.IsInstanceValid(backButton) && backButton.IsEnabled;
+        return MapOverlayPolicy.CanClose(
+            mapScreen.IsOpen, mapScreen.IsTraveling, backButtonEnabled, GetMapUnderlyingRoom(runState));
     }
 
     private static MapNodePayload BuildMapNodePayload(

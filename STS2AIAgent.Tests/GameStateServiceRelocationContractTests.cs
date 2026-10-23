@@ -43,6 +43,12 @@ namespace STS2AIAgent.Tests;
 /// deck, relics and potions. Each client simulates the whole run, so a partner's
 /// <c>Player.Deck</c> is as current as the local one, and an external agent planning for the party
 /// needs it.
+///
+/// <c>EnumerateAvailableActions</c>, <c>BuildMapPayload</c>, <c>BuildSelectionPayload</c>,
+/// <c>BuildSelectionCardPayload</c>, <c>BuildTreasureRelicOptions</c> and <c>BuildShopRelicPayload</c> were
+/// regenerated when the map gained <c>close_map_screen</c> and <c>underlying_room</c> (a map opened over an
+/// unfinished room), upgrade screens gained the card's next-upgrade text, and shop and chest relics
+/// gained their description.
 /// </remarks>
 internal static class GameStateServiceRelocationContractTests
 {
@@ -65,7 +71,7 @@ internal static class GameStateServiceRelocationContractTests
         ["BuildStatePayload"] = ("STS2AIAgent/Game/GameStateService.cs", "819a16b1a8a7994557570d3317291a290f751a4934d85925b6c1f3308ebd9710"),
         ["BuildSessionPayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "c5ba61aed0a963ac73c60c7ac9890a010329625a5db703557d300b66ffc53795"),
         ["BuildAvailableActionsPayload"] = ("STS2AIAgent/Game/GameStateService.cs", "f94bfce253aebe76836b96be74844eac681be85f9448f50c96a7617bcd7fb1ad"),
-        ["EnumerateAvailableActions"] = ("STS2AIAgent/Game/GameStateService.cs", "933b45a4c8c765a5bfd09471d850e956f54385168d3dc3ab02eed2643b9a66da"),
+        ["EnumerateAvailableActions"] = ("STS2AIAgent/Game/GameStateService.cs", "54720c99452d0273144e30dca501bb986f448a3d6d1ed37d926f457102cc9992"),
         ["ResolveScreen"] = ("STS2AIAgent/Game/GameStateService.cs", "2d5f3c899e556f73ecd366debaee5110c253eedcb86b0b85de591e5a95d37ed3"),
         ["FindActiveCombatRoom"] = ("STS2AIAgent/Game/GameStateService.cs", "42717fd1bfc51e6798bf5336d03ee7dad905a31236f6424d0c0702a16de6b60f"),
         ["GetLocalPlayer"] = ("STS2AIAgent/Game/GameStateService.cs", "4d521866d4f33356a64c6346f8151bc401181c256b001360a729386efbf612df"),
@@ -134,8 +140,8 @@ internal static class GameStateServiceRelocationContractTests
         ["TryGetMemberValue"] = ("STS2AIAgent/Game/GameStateService.cs", "e836d94766bdb94033d236744ba1614100023dc4fcfa20c663e207041f9022d9"),
         ["BuildMultiplayerPayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "fd638afff65048407a7b5a592a642176c7f8b8867ab0022c471b55ea25c158cd"),
         ["BuildMultiplayerLobbyPayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "0370cd7fb6abc690af47ac5b0f3cc7db1424d214f5efa840af620d5761add1aa"),
-        ["BuildMapPayload"] = ("STS2AIAgent/Game/GameStateService.Map.cs", "fe1149246895f8ccb82a3e6627328ac4442037e59e73f540bf3accf4580785e2"),
-        ["BuildSelectionPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "9043e2ec637810972058b06ea3d437ebc2b428539922bdbbd4feadbcb0c067e3"),
+        ["BuildMapPayload"] = ("STS2AIAgent/Game/GameStateService.Map.cs", "7e00af7ca09e047151c6f48d679e2fd403daed7bd1abf102f2bb663eb89763a0"),
+        ["BuildSelectionPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "65ae35a02d89c19985ad3dd5dec047d7931c9990bfc34bc4f4804f974eef9670"),
         ["BuildCharacterSelectPayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "c7e28df2cbbdb89eb640d940a41803dc11bf66babcaef667e55b6a8e2a3e1d96"),
         ["BuildEventPayload"] = ("STS2AIAgent/Game/GameStateService.Rooms.cs", "072fb8972e2738c52551e7c6e4902daa8d62747f826cfeb60060a58f5c6f5da6"),
         ["BuildCrystalSpherePayload"] = ("STS2AIAgent/Game/GameStateService.Rooms.cs", "c25d3e74c33cb001be8e1d6dbdceda1fc15c77f49149793c26f6b45eb1b66fcd"),
@@ -144,7 +150,7 @@ internal static class GameStateServiceRelocationContractTests
         ["BuildTimelinePayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "55429d92bc128646dbe1fd75b3fe7ec0557b5a09893811da0988f4a7fc11b198"),
         ["BuildUnlockPayload"] = ("STS2AIAgent/Game/GameStateService.Menus.cs", "381074670c939c328228fa0fb3211e2a6cc85817f6cea702bcb143a395b4bc0c"),
         ["BuildChestPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "74bc5f11e0d71eec527e0b00b040a2b7d614459d24673f45e1300618b5c6a339"),
-        ["BuildTreasureRelicOptions"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "a8ff8817b414c1380a77ec3c224ccaf954ffd3b7bfbecadabe83a1ea2819502d"),
+        ["BuildTreasureRelicOptions"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "e1aac87173c222edf74f6c111cf991a36aaebc56e3d58a6e863fd2084c3d66f0"),
         ["BuildRewardPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "b81266997e9f77fc59e5b8d7233f610f77e0f28f3b6dc0b4c0d9936b6f27ef9a"),
         ["BuildBundlePayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "0e53cc5c87fec6b0d83235d0facb6e6ae401270949d5551b3df3abef536909fa"),
         ["BuildModalPayload"] = ("STS2AIAgent/Game/GameStateService.Rooms.cs", "e50fe34507468878d3af92cf543889a8dbc320d1a93a086db164e3c0b973d7b6"),
@@ -182,12 +188,12 @@ internal static class GameStateServiceRelocationContractTests
         ["GetCardTargetIndices"] = ("STS2AIAgent/Game/GameStateService.Combat.cs", "7195b047180d7c0e157357744404eac01315c0aee8081420cd75e4bd42b1d73c"),
         ["GetPotionTargetIndices"] = ("STS2AIAgent/Game/GameStateService.Combat.cs", "b287e273ee92973549d5959efa6013371a9be50bf33b567ff9e107e7834f3305"),
         ["BuildShopCardPayload"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "6e96745b18c8b66daf49e965b79ac2080d4deb3c151d09e6bb68450569040c46"),
-        ["BuildShopRelicPayload"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "2ccdea27f9141aeb13ae80559bf3898432301e42147c8b21851a4e75c4df1800"),
+        ["BuildShopRelicPayload"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "6bd076e920b08a7cb417f848490650823a9541fe5d3eaeed9587869ad512c555"),
         ["BuildShopPotionPayload"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "9b5701474ccd07ffa6ae609d0efc07f4e38c6fb19a9cf441122f1494db291ce7"),
         ["CanPurchaseShopPotion"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "aac9a1749118ecf0a5921b65b03bc0bced6c74de6ee7e3cbfea985c096e18846"),
         ["BuildShopCardRemovalPayload"] = ("STS2AIAgent/Game/GameStateService.Shop.cs", "66755a6d0c4a1501767b88c976aad0c42eb6e71de82f9cdef8e3945b26c77675"),
         ["BuildDeckCardPayload"] = ("STS2AIAgent/Game/GameStateService.Run.cs", "bbfc22dd36826543fcc6ef0c53ae8ae596204c5bbebd8b1567b9e76f36585842"),
-        ["BuildSelectionCardPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "038f0cc8d0656672f0cc1b0deb3f878d6f9b90fd677f46bd94e59eb8768fcc18"),
+        ["BuildSelectionCardPayload"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "ca51404d5f8c790caa68b9fa69bcc3e523a7fff22d972783ca5f6538c8fb7226"),
         ["IsProceedButtonUsable"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "b8eeab21313e1b8f10b04724fef5948ca66237a4681bd056d90f4d02f0795294"),
         ["GetRewardTypeName"] = ("STS2AIAgent/Game/GameStateService.Rewards.cs", "c836bc3619e72de1c1d4911ff040dc0af3d7b31fa49d2da3773166e049ab00a6"),
         ["IsPotionUsable"] = ("STS2AIAgent/Game/GameStateService.Potions.cs", "439c7d17437a8e61f64c224f3d726cb2c7998498ea78c1f35ed158b9433c6b00"),

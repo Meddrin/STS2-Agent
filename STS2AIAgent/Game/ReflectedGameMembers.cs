@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Nodes.Debug.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Events.Custom.CrystalSphere;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.PauseMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Timeline.UnlockScreens;
 
@@ -68,6 +69,7 @@ internal static class ReflectedGameMembers
     private static readonly Entry[] Entries =
     {
         new(typeof(NEndTurnButton), "_longPressBar", MemberKind.Field, false, "end_turn long-press detection"),
+        new(typeof(NMapScreen), "_backButton", MemberKind.Field, false, "close_map_screen availability"),
         // Private getter, so it cannot be compile-checked. Without it the readiness check answers
         // "ready" unconditionally -- the same kind of invented answer as the rest of this list.
         new(typeof(NEndTurnButton), "CanTurnBeEnded", MemberKind.Property, false, "combat.action_readiness end_turn"),

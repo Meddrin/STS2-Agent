@@ -154,6 +154,7 @@ internal static partial class GameStateService
             relic_id = relic?.Id.Entry ?? string.Empty,
             name = relic?.Title.GetFormattedText() ?? string.Empty,
             rarity = relic?.Rarity.ToString() ?? string.Empty,
+            description = relic == null ? null : RawTextOrNull(() => relic.DynamicDescription),
             price = entry.IsStocked ? entry.Cost : 0,
             is_stocked = entry.IsStocked,
             enough_gold = entry.IsStocked && entry.EnoughGold

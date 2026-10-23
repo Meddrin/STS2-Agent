@@ -706,6 +706,7 @@ The `run.players[]` of the compact `agent_view` carries these three arrays uncha
 | `nodes[]` | object[] | The complete map graph structure |
 | `local_vote` | object \| null | The coordinates the local player has voted for `{ row, col }`; **non-null means the vote is cast, so wait instead of voting again** |
 | `player_votes[]` | object[] | Votes of each player in a multiplayer run, see below |
+| `underlying_room` | string \| null | Set when the map is open on top of a room the player has not left yet (`Shop`, `RestSite`, `Treasure`, `Event`, `Combat`), for example after a co-op partner voted while you were still shopping. `close_map_screen` goes back to that room. `null` when the map is the room itself |
 
 #### `map.available_nodes[]`
 
@@ -813,6 +814,8 @@ Non-empty only in a multiplayer run. Advancing the map needs a **vote from every
 | `star_cost` | number | Star cost (with modifiers) |
 | `rules_text` | string | Original compatibility rules text |
 | `resolved_rules_text` | string | Rules text expanded with the current instance's dynamic variables |
+| `upgrade_rules_text` | string \| null | Upgrade screens only (`deck_upgrade_select`, `combat_hand_upgrade_select`): the rules text of the card after its next upgrade, read from a detached copy (enchantments not included). `null` on other screens or when the card cannot be upgraded further |
+| `upgrade_energy_cost` | number \| null | Upgrade screens only: the energy cost after the next upgrade |
 | `dynamic_values` | object[] | List of the current instance's dynamic variables |
 
 ### `chest` object
@@ -833,6 +836,7 @@ Present when `screen` is `CHEST`.
 | `relic_id` | string | Relic internal ID |
 | `name` | string | Relic name |
 | `rarity` | string | Rarity (`Common`, `Uncommon`, `Rare` and so on) |
+| `description` | string \| null | Relic effect text, if readable |
 
 ### `event` object
 
@@ -939,6 +943,7 @@ Present when `screen` is `SHOP`.
 | `index` | number | The `option_index` of the matching `buy_card` / `buy_relic` / `buy_potion` |
 | `name` | string | Item name |
 | `price` | number | Current price |
+| `description` | string \| null | `shop.relics[]` only: relic effect text, if readable |
 | `is_stocked` | boolean | The shelf slot still has stock (false once bought) |
 | `enough_gold` | boolean | Still in stock **and** enough gold. **This is the field for "can I buy it now"**; looking at `is_stocked` alone gives a 409 when gold is short |
 
@@ -1096,6 +1101,9 @@ applies equally to what MCP `get_game_state` returns. **This is the agent's pref
 | `map` | `boss_node` / `second_boss_node` | Coordinates of Boss 1 / Boss 2 (`"row,col"`); the `boss_node` object of `/state` is flattened into a string here |
 | `run` | `players[]` | Team summary, same fields as `combat.players[]`, plus `gold` and each player's `deck[]` / `relics[]` / `potions[]` (same shape as `/state`) |
 | `chest.relics[]` | `relic_id` | Chest relic ID, used with `i` for `choose_treasure_relic` |
+| `chest.relics[]` / `shop.relics[]` | `description` | Relic effect text, so a choice does not rely on the name alone |
+| `selection` | `upgrades[]` | Upgrade screens only: `i`, `upgrade_energy_cost`, `upgrade_rules_text` for each card that can still be upgraded (what it becomes) |
+| `map` | `underlying_room` | The unfinished room under an open map overlay, or `null`; see `close_map_screen` |
 | `modal` | `underlying_screen` | Logical screen name under the overlay, used for "resolve the overlay first, then plan the room" |
 | `rest.options[]` | `option_id` | Stable identifier of a rest site option (`HEAL` / `SMITH` ...). `line` is localized text for humans, so **branching on the id does not drift with the language** |
 | `event.options[]` | `text_key` | The **full** localization key of an event option (such as `NEOW.pages.INITIAL.options.ARCANE_SCROLL`, and **not** `INITIAL.options.IMMERSE`). The two tables of the offline event risk table `docs/game-knowledge/events.md` are indexed by `event_id` (`NEOW`) and by the option key with the `<EVENT>.pages.` prefix removed (`INITIAL.options.ARCANE_SCROLL`) respectively, and matching by `i` does not work. `canonical_option_key` inside `screen_guidance` does this prefix stripping, and the contract test `mcp_server/tests/test_scene_guidance.py` pins it with real values |
@@ -1587,6 +1595,7 @@ This block is compared as a set by `scripts/check_verification_gates.py` against
 - `choose_timeline_epoch`: choose a timeline epoch (`option_index` = `timeline.slots[].index`)
 - `confirm_timeline_overlay`: confirm the timeline overlay
 - `choose_map_node`: choose a map node (`option_index`)
+- `close_map_screen`: close a map opened over an unfinished room and return to that room (see `map.underlying_room`)
 - `collect_rewards_and_proceed`: collect, then proceed
 - `claim_reward`: claim a single reward (`option_index`)
 - `choose_reward_card`: choose a reward card (`option_index`)
@@ -2190,6 +2199,25 @@ Route planning should be based on the parent-child links of the full graph in `m
 {
   "action": "choose_map_node",
   "option_index": 0
+}
+```
+
+### `close_map_screen`
+
+Closes the map when it was opened on top of a room the player has not finished, and returns to that room.
+In co-op the map can open while you are still in a shop, rest site or event, for example when a partner
+votes for the next node. Voting from there leaves the room unfinished; close the map first, finish the
+room, then proceed.
+
+- **Precondition**: `screen = "MAP"`, `map.underlying_room` is not `null`, the map is not traveling, and
+  the map's own back button is enabled (the game enables it only in this case)
+- **Parameters**: none
+- **Effect**: the same local UI call as the map's back button; nothing is sent to the host
+- **Stable condition**: the screen is no longer `MAP`
+
+```json
+{
+  "action": "close_map_screen"
 }
 ```
 

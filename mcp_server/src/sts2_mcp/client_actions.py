@@ -133,6 +133,15 @@ class Sts2ActionMethods:
             },
         )
 
+    def close_map_screen(self) -> dict[str, Any]:
+        return self.execute_action(
+            "close_map_screen",
+            client_context={
+                "source": "mcp",
+                "tool_name": "close_map_screen",
+            },
+        )
+
     def close_cards_view(self) -> dict[str, Any]:
         return self.execute_action(
             "close_cards_view",

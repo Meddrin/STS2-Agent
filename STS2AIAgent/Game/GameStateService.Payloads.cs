@@ -375,6 +375,8 @@ internal sealed class MapPayload
     public MapCoordPayload? local_vote { get; init; }
 
     public MapPlayerVotePayload[] player_votes { get; init; } = Array.Empty<MapPlayerVotePayload>();
+
+    public string? underlying_room { get; init; }
 }
 
 internal sealed class SelectionPayload
@@ -527,6 +529,8 @@ internal sealed class ChestRelicOptionPayload
     public string name { get; init; } = string.Empty;
 
     public string rarity { get; init; } = string.Empty;
+
+    public string? description { get; init; }
 }
 
 internal sealed class EventPayload
@@ -700,6 +704,8 @@ internal sealed class ShopRelicPayload
     public string name { get; init; } = string.Empty;
 
     public string rarity { get; init; } = string.Empty;
+
+    public string? description { get; init; }
 
     public int price { get; init; }
 
@@ -1226,6 +1232,10 @@ internal sealed class DeckCardPayload
 
 internal sealed class SelectionCardPayload
 {
+    public string? upgrade_rules_text { get; init; }
+
+    public int? upgrade_energy_cost { get; init; }
+
     public int index { get; init; }
 
     public bool selected { get; init; }

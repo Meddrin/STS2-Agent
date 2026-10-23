@@ -632,6 +632,10 @@ internal static class TestRunner
         yield return ("LocalCancel.SoloStuckOnly", () => Task.Run(LocalCancelPolicyTests.SoloCancelsOnlyAStuckAction));
         yield return ("LocalCancel.ChoiceNotRecovered", () => Task.Run(LocalCancelPolicyTests.ACardWaitingForAChoiceIsNotRecovered));
         yield return ("LocalCancel.PathsAskPolicy", () => Task.Run(LocalCancelPolicyTests.BothCancelPathsAskThePolicy));
+        yield return ("MapOverlay.UnderlyingRoom", () => Task.Run(MapOverlayAndPreviewTests.UnderlyingRoomNamesTheRoomUnderTheMap));
+        yield return ("MapOverlay.CanClose", () => Task.Run(MapOverlayAndPreviewTests.MapClosesOnlyOverARoomWithItsBackButtonEnabled));
+        yield return ("MapOverlay.Wired", () => Task.Run(MapOverlayAndPreviewTests.CloseMapScreenIsWiredEndToEnd));
+        yield return ("UpgradePreview.Wired", () => Task.Run(MapOverlayAndPreviewTests.UpgradeScreensAndRelicsCarryWhatTheModelNeeds));
         yield return ("ActionTrust.NoRewardFallback", () => Task.Run(GameActionTrustContractTests.RewardConsumeNeverFallsBackToTheFirstOption));
         yield return ("ActionTrust.RewardRequestValidation", () => Task.Run(GameActionTrustContractTests.RewardRequestRejectsAnOutOfRangeIndexBeforeClicking));
         yield return ("ActionTrust.ShopRemovalFailure", () => Task.Run(GameActionTrustContractTests.ShopRemovalPurchaseFailureSurfaces));
