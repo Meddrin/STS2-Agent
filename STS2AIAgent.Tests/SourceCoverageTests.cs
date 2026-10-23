@@ -97,6 +97,8 @@ internal static class SourceCoverageTests
         // overlay host it serves.
         "STS2AIAgent/Ui/SegmentedSwitch.cs",
         "STS2AIAgent/Game/GameDataExportService.cs",
+        // Upgrades a detached canonical card from ModelDb; the game assemblies are not linked offline.
+        "STS2AIAgent/Game/CardUpgradePreview.cs",
         "STS2AIAgent/Server/Router.cs",
         "STS2AIAgent/Server/GameEventService.cs",
         "STS2AIAgent/Multiplayer/LocalDualInstanceLauncher.cs",
