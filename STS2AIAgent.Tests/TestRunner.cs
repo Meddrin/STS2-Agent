@@ -628,6 +628,10 @@ internal static class TestRunner
         yield return ("CardPlayCounter.StillInHand", () => Task.Run(CardPlayCounterPolicyTests.APlayStillInHandRollsBack));
         yield return ("CardPlayCounter.Settled", () => Task.Run(CardPlayCounterPolicyTests.ASettledPlayKeepsTheCounters));
         yield return ("CardPlayCounter.LeftHand", () => Task.Run(CardPlayCounterPolicyTests.LeftHandOrEndedCombatKeepsTheCounters));
+        yield return ("PartyInventory.Populated", () => Task.Run(PartyInventoryReaderTests.APopulatedInventoryKeepsEveryItemAndValue));
+        yield return ("PartyInventory.Empty", () => Task.Run(PartyInventoryReaderTests.AnEmptyInventoryIsAnEmptyArrayNotNull));
+        yield return ("PartyInventory.FailedRead", () => Task.Run(PartyInventoryReaderTests.AFailedReadIsNullAndWarnsOncePerInterval));
+        yield return ("PartyInventory.BuildersUseReader", () => Task.Run(PartyInventoryReaderTests.TheBuildersGoThroughTheReader));
         yield return ("LocalCancel.CoopNever", () => Task.Run(LocalCancelPolicyTests.CoopNeverCancelsLocally));
         yield return ("LocalCancel.SoloStuckOnly", () => Task.Run(LocalCancelPolicyTests.SoloCancelsOnlyAStuckAction));
         yield return ("LocalCancel.ChoiceNotRecovered", () => Task.Run(LocalCancelPolicyTests.ACardWaitingForAChoiceIsNotRecovered));

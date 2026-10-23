@@ -293,6 +293,7 @@ one action runs at a time.
 - `STS2AIAgent/Game/RewardChoicePolicy.cs` — which reward is auto-claimable versus a real decision (cards are never auto-picked).
 - `STS2AIAgent/Game/RewardSkipScope.cs` — scope of a reward skip.
 - `STS2AIAgent/Game/CardPlayCounterPolicy.cs` — confirms that a card play actually happened (play counters).
+- `STS2AIAgent/Game/PartyInventoryReader.cs` — reads one part of a player's inventory for `run.players[]`: null on a failed read, throttled warning.
 - `STS2AIAgent/Game/LocalCancelPolicy.cs` — when the mod may cancel a running game action itself (never in co-op, never while a card waits for a choice).
 - `STS2AIAgent/Game/CardUpgradePreview.cs` — what a card becomes after its next upgrade, read from a detached copy, for upgrade selection screens.
 - `STS2AIAgent/Game/MapOverlayPolicy.cs` — names the unfinished room under an open map overlay and decides when `close_map_screen` is offered.

@@ -623,13 +623,13 @@ Allied pets do not appear in `combat.enemies[]`, so they are listed separately.
 #### Deck, relics and potions of `run.players[]`
 
 Every client simulates the whole run in full (lockstep synchronization with checksum comparison), so a teammate's `Player.Deck` / `Relics` / `PotionSlots`
-are exactly as fresh on this machine as the local player's. An external agent uses them to plan for the whole team. When reading one of them throws, that array is empty (meaning unknown) and does not take down the whole `/state`.
+are exactly as fresh on this machine as the local player's. An external agent uses them to plan for the whole team. When reading one of them throws, that field is `null` (unknown, unlike an empty array) and does not take down the whole `/state`; the failure is logged, at most once per 30 seconds per part.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `deck[]` | object[] | The player's deck: `card_id`, `name`, `upgraded`, `card_type` |
-| `relics[]` | object[] | The player's relics: `relic_id`, `name` |
-| `potions[]` | object[] | The player's potion slots: `potion_id`, `name` (null for an empty slot), `occupied` |
+| `deck[]` | object[] \| null | The player's deck: `card_id`, `name`, `upgraded`, `card_type`. `null` when it could not be read |
+| `relics[]` | object[] \| null | The player's relics: `relic_id`, `name`, `is_melted` (melted, its effect no longer applies). `null` when it could not be read |
+| `potions[]` | object[] \| null | The player's potion slots: `potion_id`, `name` (null for an empty slot), `occupied`. `null` when it could not be read |
 
 The `run.players[]` of the compact `agent_view` carries these three arrays unchanged.
 
